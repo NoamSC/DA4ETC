@@ -1,0 +1,3 @@
+[submodule "classifiers/FlowPic"]
+	path = classifiers/FlowPic
+	url = https://github.com/talshapira/FlowPic.git
