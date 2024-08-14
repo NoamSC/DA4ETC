@@ -1,0 +1,3 @@
+[submodule "FlowPic"]
+	path = FlowPic
+	url = https://github.com/talshapira/FlowPic.git
