@@ -28,42 +28,40 @@ def session_2d_histogram(ts, sizes):
 
 def sessions_to_flowpic(sessions):
     """
-    Convert session data to FlowPic format.
+    Convert all sessions in a given dictionary into FlowPic format.
     """
     dataset = []
-    for session_key, (start_ts, ts_list, sizes) in sessions.items():
-        ts = np.array(ts_list)
-        sizes = np.array(sizes)
+    for session_key, session in sessions.items():
+        ts = np.array(session['time_deltas'])
+        sizes = np.array(session['sizes'])
 
         if len(ts) > 1:  # Consider sessions with at least 2 packets
-            for t in range(int(ts[-1] / DELTA_T - TPS / DELTA_T) + 1):
-                mask = (ts >= t * DELTA_T) & (ts <= (t * DELTA_T + TPS))
-                ts_mask = ts[mask]
-                sizes_mask = sizes[mask]
-
-                if len(ts_mask) > 1:  # Adjust packet count check here
-                    h = session_2d_histogram(ts_mask, sizes_mask)
-                    dataset.append(h)
+            h = session_2d_histogram(ts, sizes)
+            dataset.append(h)
 
     return dataset
 
-def parse_pcap(pcap_path):
+
+def parse_pcap(pcap_path, min_flow_length=2):
     """
     Parse a pcap file assuming raw IP packets.
-    Each session is a tuple of (session_key, [timestamps], [sizes]).
+    Each session is a dictionary with 'start_time', 'time_deltas', and 'sizes'.
+
+    Args:
+    - pcap_path (str): Path to the PCAP file.
+    - min_flow_length (int): Minimum number of packets required for a session to be considered.
     """
     sessions = {}
-
     packets = rdpcap(pcap_path)
+    
     for packet in packets:
-
         if IP not in packet:  # Ensure it's an IP packet
             continue
 
         ip = packet[IP]  # Extract the IP layer
         proto = packet[IP].payload  # Extract the transport layer (TCP/UDP)
 
-        if not (proto.haslayer(TCP) or proto.haslayer(UDP)):  # Ensure TCP or UDP
+        if not (proto.haslayer(TCP) or proto.haslayer(UDP)):  # Ensure it's TCP or UDP
             continue
 
         # Extract source and destination IPs and ports
@@ -72,17 +70,27 @@ def parse_pcap(pcap_path):
         sport = proto.sport if proto.haslayer(TCP) or proto.haslayer(UDP) else None
         dport = proto.dport if proto.haslayer(TCP) or proto.haslayer(UDP) else None
 
+        # Use a tuple of source IP, destination IP, source port, and destination port as the session key
         session_key = (src_ip, sport, dst_ip, dport)
+        
+        # Initialize the session if it's new
         if session_key not in sessions:
-            sessions[session_key] = (packet.time, [], [])
+            sessions[session_key] = {
+                'start_time': packet.time,  # Start timestamp of the session
+                'time_deltas': [],  # List to hold time deltas
+                'sizes': []  # List to hold packet sizes
+            }
 
-        d = sessions[session_key]
-        size = len(packet)  # Packet size
-        d[1].append(packet.time - d[0])  # Time delta
-        d[2].append(size)  # Packet size
+        # Update the session data with the current packet's info
+        session = sessions[session_key]
+        size = len(packet)  # Get packet size
+        session['time_deltas'].append(packet.time - session['start_time'])  # Append time delta
+        session['sizes'].append(size)  # Append packet size
 
-    return sessions
-
+    # Filter out sessions that don't meet the min_flow_length criterion
+    filtered_sessions = {k: v for k, v in sessions.items() if len(v['time_deltas']) >= min_flow_length}
+    
+    return filtered_sessions
 
 def temporal_split(sessions, split_ratio=0.8):
     """
@@ -131,7 +139,7 @@ def temporal_split(sessions, split_ratio=0.8):
     return train_sessions, test_sessions
 
 
-class PcapDataLoader(Dataset):
+class PcapFlowPicDataset(Dataset):
     def __init__(self, pcap_paths, labels, split_ratio=0.8, train_mode=True):
         """
         Initialize the dataset with PCAP paths and labels, applying a train-test split.
@@ -211,11 +219,11 @@ def create_dataloader(pcap_paths, labels, batch_size=64, shuffle=True, split_rat
     - test_loader (DataLoader): A PyTorch DataLoader for the testing dataset.
     """
     # Create training dataset and DataLoader
-    train_dataset = PcapDataLoader(pcap_paths, labels, split_ratio=split_ratio, train_mode=True)
+    train_dataset = PcapFlowPicDataset(pcap_paths, labels, split_ratio=split_ratio, train_mode=True)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
 
     # Create testing dataset and DataLoader
-    test_dataset = PcapDataLoader(pcap_paths, labels, split_ratio=split_ratio, train_mode=False)
+    test_dataset = PcapFlowPicDataset(pcap_paths, labels, split_ratio=split_ratio, train_mode=False)
     test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)  # No need to shuffle test data
     
     return train_loader, test_loader
