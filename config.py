@@ -5,7 +5,7 @@ from pathlib import Path
 
 # ---------- Experiment details ----------
 
-EXPERIMENT_NAME = '1d'
+EXPERIMENT_NAME = '1d_simple_test_overfit_2'
 EXPERIMENT_PATH = Path(f'exps/{EXPERIMENT_NAME}')
 
 # ---------- Environment and reproducibility ----------
@@ -14,26 +14,28 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # ---------- Dataset Parameters ----------
 DATA_PATH = Path('data/ben_bucket')
-SAMPLE_FRAC = 0.3  # Fraction of the HujiPC data to sample
+SAMPLE_FRAC = 1.0  # Fraction of the HujiPC data to sample
 TRAIN_SPLIT_RATIO = 0.7
 BATCH_SIZE = 8
 
 # ---------- FlowPic Generation Parameters ----------
 MIN_FLOW_LENGTH = 100
-RESOLUTION = 2048
+RESOLUTION = 64
 
 # ---------- Model Parameters ----------
 MODEL_PARAMS = {
     'num_classes': None,  # Will be set after dataset loading
     'conv_type': '1d',  # Options: '1d' for 1D convolutions, '2d' for 2D convolutions
-    'input_shape': 2048,  # Changed from 'image_size' to a more general 'input_shape'
+    'input_shape': RESOLUTION,  # Changed from 'image_size' to a more general 'input_shape'
     'conv_layers': [
-        {'out_channels': 8, 'kernel_size': 3, 'stride': 1, 'padding': 1, 'type': '1d'},
+        {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1, 'type': '1d'},
         {'out_channels': 16, 'kernel_size': 3, 'stride': 1, 'padding': 1, 'type': '1d'},
         {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1, 'type': '1d'},
+        {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1, 'type': '1d'},
+        {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1, 'type': '1d'},
+        {'out_channels': 1, 'kernel_size': 3, 'stride': 1, 'padding': 1, 'type': '1d'},
         # Additional layers can be defined as needed
     ],
-    'in_channels': 2048,
     'pool_kernel_size': 1,
     'pool_stride': 1,
     'fc1_out_features': 16,
@@ -46,4 +48,7 @@ NUM_EPOCHS = 7
 
 # ---------- Logging and Checkpoint Parameters ----------
 SAVE_PLOTS = True
-SAVE_MODEL_CHECKPOINT = EXPERIMENT_PATH / 'model_checkpoint.pth'
+EXPERIMENT_PLOTS_PATH = EXPERIMENT_PATH / 'plots'
+
+EXPERIMENT_WEIGHTS_PATH = EXPERIMENT_PATH / 'weights'
+SAVE_MODEL_CHECKPOINT = EXPERIMENT_WEIGHTS_PATH / 'model_checkpoint_epoch_{epoch}.pth'

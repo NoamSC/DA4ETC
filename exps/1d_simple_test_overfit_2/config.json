@@ -1,0 +1,72 @@
+{
+    "BATCH_SIZE": 8,
+    "DATA_PATH": "data/ben_bucket",
+    "DEVICE": "cuda",
+    "EXPERIMENT_NAME": "1d_simple_test_overfit_2",
+    "EXPERIMENT_PATH": "exps/1d_simple_test_overfit_2",
+    "EXPERIMENT_PLOTS_PATH": "exps/1d_simple_test_overfit_2/plots",
+    "EXPERIMENT_WEIGHTS_PATH": "exps/1d_simple_test_overfit_2/weights",
+    "LEARNING_RATE": 0.001,
+    "MIN_FLOW_LENGTH": 100,
+    "MODEL_PARAMS": {
+        "num_classes": null,
+        "conv_type": "1d",
+        "input_shape": 2048,
+        "conv_layers": [
+            {
+                "out_channels": 8,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            },
+            {
+                "out_channels": 16,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            },
+            {
+                "out_channels": 32,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            },
+            {
+                "out_channels": 64,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            },
+            {
+                "out_channels": 128,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            },
+            {
+                "out_channels": 1,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            }
+        ],
+        "pool_kernel_size": 1,
+        "pool_stride": 1,
+        "fc1_out_features": 16,
+        "dropout_prob": 0.4
+    },
+    "NUM_EPOCHS": 7,
+    "Path": "<class 'pathlib.Path'>",
+    "RESOLUTION": 2048,
+    "SAMPLE_FRAC": 0.3,
+    "SAVE_MODEL_CHECKPOINT": "exps/1d_simple_test_overfit_2/weights/model_checkpoint_epoch_{epoch}.pth",
+    "SAVE_PLOTS": true,
+    "SEED": 42,
+    "TRAIN_SPLIT_RATIO": 0.7
+}

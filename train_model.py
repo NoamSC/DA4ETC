@@ -31,9 +31,10 @@ def set_seed(seed):
 set_seed(cfg.SEED)
 
 def load_and_prepare_data():
-    pcaps = list(cfg.DATA_PATH.glob('**/*.pcap'))
+    # pcaps = list(cfg.DATA_PATH.glob('**/*.pcap'))
+    pcaps = pd.read_csv('pcap_paths.csv').values[:, 1]
     df = pd.DataFrame([(str(p), *extract_pcap_info(p)) for p in pcaps], columns=['pcap_path', 'location', 'date', 'app', 'vpn_type'])
-    df = df[df.location == 'TLVunContainer1'].sample(frac=cfg.SAMPLE_FRAC).sort_values(by='date').head(10)
+    df = df[df.location == 'TLVunContainer1'].sample(frac=cfg.SAMPLE_FRAC).sort_values(by='date').sample(10)
     
     split_index = int(len(df) * cfg.TRAIN_SPLIT_RATIO)
     df_train, df_val = df[:split_index], df[split_index:]
@@ -56,7 +57,7 @@ class ConfigurableCNN(nn.Module):
         self.conv_type = params['conv_type']  # '1d' or '2d' determined in config file
 
         layers = []
-        in_channels = params['in_channels']
+        in_channels = params['input_shape']
         
         # Create convolutional layers based on specified type in each layer config
         for conv_layer in params['conv_layers']:
@@ -107,7 +108,7 @@ class ConfigurableCNN(nn.Module):
     def _get_flattened_size(self, input_shape):
         # Determine input size dynamically based on conv_type ('1d' or '2d')
         if self.conv_type == '1d':
-            x = torch.randn(1, self.params['in_channels'], input_shape)  # Assuming single channel 1D input
+            x = torch.randn(1, self.params['input_shape'], input_shape)  # Assuming single channel 1D input
         else:
             x = torch.randn(1, 1, input_shape, input_shape)  # Assuming single channel 2D input
 
@@ -116,6 +117,7 @@ class ConfigurableCNN(nn.Module):
         return x.numel()
 
     def forward(self, x):
+        x = x.transpose(1, 2) # apply 1d on cols and not on rows
         x = self.conv_layers(x)
         x = self.pool(x)
         x = x.view(x.size(0), -1)  # Flatten
@@ -125,7 +127,7 @@ class ConfigurableCNN(nn.Module):
         return x
 
 # ---------- Training Function ----------
-def train_and_validate(model, train_loader, val_loader, num_epochs=10, device='cpu'):
+def train_and_validate(model, train_loader, val_loader, num_epochs=10, device='cpu', weights_save_path_format=None):
     train_batch_losses = []
     train_batch_accuracies = []
     val_batch_losses = []
@@ -200,6 +202,9 @@ def train_and_validate(model, train_loader, val_loader, num_epochs=10, device='c
         mean_val_loss = running_val_loss / total_val_samples
         mean_val_accuracy = (correct_val_predictions / total_val_samples) * 100
 
+        if weights_save_path_format:
+            torch.save(model.state_dict(), weights_save_path_format.format(epoch=epoch))
+
         # Print mean statistics for the epoch
         print(f"Epoch [{epoch+1}/{num_epochs}]")
         print(f"  Training - Mean Loss: {mean_train_loss:.4f}, Mean Accuracy: {mean_train_accuracy:.2f}%")
@@ -254,10 +259,18 @@ def save_config_to_json(config_module, output_file_path):
     with open(output_file_path, "w") as f:
         json.dump(config_dict, f, indent=4)
 
+
+def init_exp(cfg):
+    cfg.EXPERIMENT_PATH.mkdir(exist_ok=True)
+    cfg.EXPERIMENT_PLOTS_PATH.mkdir(exist_ok=True)
+    cfg.EXPERIMENT_WEIGHTS_PATH.mkdir(exist_ok=True)
+
+    save_config_to_json(cfg, cfg.EXPERIMENT_PATH / "config.json")
+
+
 # ---------- Main Execution ----------
 if __name__ == "__main__":
-    cfg.EXPERIMENT_PATH.mkdir(exist_ok=True)
-    save_config_to_json(cfg, cfg.EXPERIMENT_PATH / "config.json")
+    init_exp(cfg)
 
     print("preparing data")
     train_loader, val_loader, num_classes = load_and_prepare_data()
