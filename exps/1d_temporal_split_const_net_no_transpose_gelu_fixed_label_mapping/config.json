@@ -1,0 +1,65 @@
+{
+    "BATCH_SIZE": 8,
+    "DATA_PATH": "data/ben_bucket",
+    "DEVICE": "cuda:0",
+    "EXPERIMENT_NAME": "1d_temporal_split_const_net_no_transpose_gelu_fixed_label_mapping",
+    "EXPERIMENT_PATH": "exps/1d_temporal_split_const_net_no_transpose_gelu_fixed_label_mapping",
+    "EXPERIMENT_PLOTS_PATH": "exps/1d_temporal_split_const_net_no_transpose_gelu_fixed_label_mapping/plots",
+    "EXPERIMENT_WEIGHTS_PATH": "exps/1d_temporal_split_const_net_no_transpose_gelu_fixed_label_mapping/weights",
+    "LEARNING_RATE": 0.0001,
+    "MIN_FLOW_LENGTH": 100,
+    "MODEL_PARAMS": {
+        "num_classes": null,
+        "conv_type": "1d",
+        "input_shape": 64,
+        "conv_layers": [
+            {
+                "out_channels": 64,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            },
+            {
+                "out_channels": 64,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            },
+            {
+                "out_channels": 64,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            },
+            {
+                "out_channels": 64,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            },
+            {
+                "out_channels": 64,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            }
+        ],
+        "pool_kernel_size": 1,
+        "pool_stride": 1,
+        "fc1_out_features": 16,
+        "dropout_prob": 0.0
+    },
+    "NUM_EPOCHS": 7,
+    "Path": "<class 'pathlib.Path'>",
+    "RESOLUTION": 64,
+    "SAMPLE_FRAC": 1.0,
+    "SAVE_MODEL_CHECKPOINT": "exps/1d_temporal_split_const_net_no_transpose_gelu_fixed_label_mapping/weights/model_checkpoint_epoch_{epoch}.pth",
+    "SAVE_PLOTS": true,
+    "SEED": 42,
+    "TRAIN_SPLIT_RATIO": 0.7
+}
