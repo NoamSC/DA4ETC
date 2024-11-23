@@ -3,6 +3,7 @@ import random
 import json
 from pathlib import Path
 import inspect
+import pickle
 
 import torch
 import torch.nn as nn
@@ -11,11 +12,10 @@ import torch.nn.functional as F
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-
-from simple_dataloader import create_dataloader
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 
-# Importing parameters from config.py
+from simple_dataloader import create_dataloader
 import config as cfg
 
 # ---------- Helper Functions ----------
@@ -31,18 +31,36 @@ def set_seed(seed):
 set_seed(cfg.SEED)
 
 def load_and_prepare_data():
-    # pcaps = list(cfg.DATA_PATH.glob('**/*.pcap'))
+    pcaps = list(cfg.DATA_PATH.glob('**/*.pcap'))
     pcaps = pd.read_csv('pcap_paths.csv').values[:, 1]
     df = pd.DataFrame([(str(p), *extract_pcap_info(p)) for p in pcaps], columns=['pcap_path', 'location', 'date', 'app', 'vpn_type'])
-    df = df[df.location == 'TLVunContainer1'].sample(frac=cfg.SAMPLE_FRAC).sort_values(by='date').sample(10)
+    df = df[df.location == 'TLVunContainer1'].sample(frac=cfg.SAMPLE_FRAC).sample(5000).sort_values(by='date')
     
     split_index = int(len(df) * cfg.TRAIN_SPLIT_RATIO)
     df_train, df_val = df[:split_index], df[split_index:]
+
+    # # Shuffle the DataFrame
+    # df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+
+    # # Calculate the split index based on the ratio
+    # split_index = int(len(df) * cfg.TRAIN_SPLIT_RATIO)
+
+    # # Split into training and validation sets
+    # df_train = df.iloc[:split_index]
+    # df_val = df.iloc[split_index:]
+
+    # with open('cached_dataloaders_64.pkl', 'rb') as f:
+    #     train_loader, val_loader = pickle.load(f)
+    #     label_mapping = {'Google Search': 0, 'Amazon': 1, 'Twitch': 2, 'Youtube': 3}
     
-    train_loader = create_dataloader(df_train['pcap_path'], df_train['app'], cfg.BATCH_SIZE, True, cfg.MIN_FLOW_LENGTH, cfg.RESOLUTION)
-    val_loader = create_dataloader(df_val['pcap_path'], df_val['app'], cfg.BATCH_SIZE, False, cfg.MIN_FLOW_LENGTH, cfg.RESOLUTION)
-    
-    return train_loader, val_loader, len(df_train['app'].unique())
+    unique_labels = df['app'].unique()
+    label_mapping = {label: idx for idx, label in enumerate(sorted(unique_labels))}
+    print(label_mapping)
+
+    train_loader = create_dataloader(df_train['pcap_path'], df_train['app'], cfg.BATCH_SIZE, True, cfg.MIN_FLOW_LENGTH, cfg.RESOLUTION, label_mapping=label_mapping)
+    val_loader = create_dataloader(df_val['pcap_path'], df_val['app'], cfg.BATCH_SIZE, False, cfg.MIN_FLOW_LENGTH, cfg.RESOLUTION, label_mapping=label_mapping)
+
+    return train_loader, val_loader, label_mapping
 
 def extract_pcap_info(path):
     parts = Path(path).parts
@@ -56,15 +74,16 @@ class ConfigurableCNN(nn.Module):
         self.params = params
         self.conv_type = params['conv_type']  # '1d' or '2d' determined in config file
 
-        layers = []
+        # Use nn.ModuleList instead of a regular list to store layers
+        self.layers = nn.ModuleList()
         in_channels = params['input_shape']
-        
+
         # Create convolutional layers based on specified type in each layer config
         for conv_layer in params['conv_layers']:
             layer_type = conv_layer.get('type', self.conv_type)  # Use specified layer type or default to conv_type
 
             if layer_type == '1d':
-                layers.append(
+                self.layers.append(
                     nn.Conv1d(
                         in_channels=in_channels,
                         out_channels=conv_layer['out_channels'],
@@ -73,10 +92,11 @@ class ConfigurableCNN(nn.Module):
                         padding=conv_layer['padding']
                     )
                 )
-                layers.append(nn.ReLU())
+                self.layers.append(nn.GELU())
+                self.layers.append(nn.MaxPool1d(kernel_size=params['pool_kernel_size'], stride=params['pool_stride']))
                 in_channels = conv_layer['out_channels']
             elif layer_type == '2d':
-                layers.append(
+                self.layers.append(
                     nn.Conv2d(
                         in_channels=in_channels,
                         out_channels=conv_layer['out_channels'],
@@ -85,17 +105,11 @@ class ConfigurableCNN(nn.Module):
                         padding=(conv_layer['padding'], conv_layer['padding'])
                     )
                 )
-                layers.append(nn.ReLU())
+                self.layers.append(nn.ReLU())
+                self.layers.append(nn.MaxPool2d(kernel_size=params['pool_kernel_size'], stride=params['pool_stride']))
                 in_channels = conv_layer['out_channels']
             else:
                 raise ValueError(f"Unsupported layer type: {layer_type}")
-
-        # Sequential container for conv layers
-        self.conv_layers = nn.Sequential(*layers)
-        
-        # Pooling layer (type determined by conv_type)
-        PoolLayer = nn.MaxPool1d if self.conv_type == '1d' else nn.MaxPool2d
-        self.pool = PoolLayer(kernel_size=params['pool_kernel_size'], stride=params['pool_stride'])
 
         # Calculate the flattened size after convolutions and pooling
         self.flattened_size = self._get_flattened_size(params['input_shape'])
@@ -108,25 +122,29 @@ class ConfigurableCNN(nn.Module):
     def _get_flattened_size(self, input_shape):
         # Determine input size dynamically based on conv_type ('1d' or '2d')
         if self.conv_type == '1d':
-            x = torch.randn(1, self.params['input_shape'], input_shape)  # Assuming single channel 1D input
+            x = torch.randn(1, self.params['input_shape'], input_shape).to(next(self.parameters()).device)
         else:
-            x = torch.randn(1, 1, input_shape, input_shape)  # Assuming single channel 2D input
+            x = torch.randn(1, 1, input_shape, input_shape).to(next(self.parameters()).device)
 
-        x = self.conv_layers(x)
-        x = self.pool(x)
+        for layer in self.layers:
+            x = layer(x)  # Pass through each layer in the list
         return x.numel()
 
     def forward(self, x):
-        x = x.transpose(1, 2) # apply 1d on cols and not on rows
-        x = self.conv_layers(x)
-        x = self.pool(x)
+        x = x.transpose(1, 2)
+        for layer in self.layers:
+            x = layer(x)  # Explicitly apply each layer
+
         x = x.view(x.size(0), -1)  # Flatten
-        x = F.relu(self.fc1(x))
+        x = F.gelu(self.fc1(x))
         x = self.dropout(x)
         x = self.fc2(x)
         return x
 
+
 # ---------- Training Function ----------
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
 def train_and_validate(model, train_loader, val_loader, num_epochs=10, device='cpu', weights_save_path_format=None):
     train_batch_losses = []
     train_batch_accuracies = []
@@ -142,78 +160,72 @@ def train_and_validate(model, train_loader, val_loader, num_epochs=10, device='c
         # Training loop with progress bar
         with tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs} (Train)", leave=False) as pbar:
             for i, (flowpics, labels) in enumerate(pbar):
-                # Move inputs and labels to the device (GPU or CPU)
-                # flowpics = flowpics.unsqueeze(1)  # add a channels dimension
                 flowpics, labels = flowpics.to(device), labels.to(device).long()
 
-                # Zero the gradients
                 optimizer.zero_grad()
-
-                # Forward pass
                 outputs = model(flowpics)
                 loss = criterion(outputs, labels)
 
-                # Backward pass and optimization
                 loss.backward()
                 optimizer.step()
 
-                # Accumulate training loss and accuracy
                 running_train_loss += loss.item() * flowpics.size(0)
                 total_train_samples += flowpics.size(0)
                 _, predicted = torch.max(outputs, 1)
                 correct_train_predictions += (predicted == labels).sum().item()
 
-                # Store batch-level training metrics
                 train_batch_losses.append(loss.item())
                 train_batch_accuracies.append((correct_train_predictions / total_train_samples) * 100)
 
-        # Calculate epoch-level training loss and accuracy
         mean_train_loss = running_train_loss / total_train_samples
         mean_train_accuracy = (correct_train_predictions / total_train_samples) * 100
 
-        # Validation loop with progress bar
-        model.eval()  # Set the model to evaluation mode
+        # Validation loop
+        model.eval()
         running_val_loss = 0.0
         correct_val_predictions = 0
         total_val_samples = 0
+        all_labels = []
+        all_predictions = []
 
-        with torch.no_grad():  # Disable gradient computation for validation
+        with torch.no_grad():
             with tqdm(val_loader, desc=f"Epoch {epoch+1}/{num_epochs} (Val)", leave=False) as pbar:
                 for i, (flowpics, labels) in enumerate(pbar):
-                    # Move inputs and labels to the device (GPU or CPU)
-                    # flowpics = flowpics.unsqueeze(1)  # add a channels dimension
                     flowpics, labels = flowpics.to(device), labels.to(device).long()
-
-                    # Forward pass
                     outputs = model(flowpics)
                     loss = criterion(outputs, labels)
 
-                    # Accumulate validation loss and accuracy
                     running_val_loss += loss.item() * flowpics.size(0)
                     total_val_samples += flowpics.size(0)
                     _, predicted = torch.max(outputs, 1)
                     correct_val_predictions += (predicted == labels).sum().item()
 
-                    # Store batch-level validation metrics
                     val_batch_losses.append(loss.item())
                     val_batch_accuracies.append((correct_val_predictions / total_val_samples) * 100)
 
-        # Calculate epoch-level validation loss and accuracy
+                    all_labels.extend(labels.cpu().numpy())
+                    all_predictions.extend(predicted.cpu().numpy())
+
         mean_val_loss = running_val_loss / total_val_samples
         mean_val_accuracy = (correct_val_predictions / total_val_samples) * 100
 
         if weights_save_path_format:
-            torch.save(model.state_dict(), weights_save_path_format.format(epoch=epoch))
+            torch.save(model.state_dict(), str(weights_save_path_format).format(epoch=epoch))
 
-        # Print mean statistics for the epoch
+        # Save confusion matrix for validation
+        cm = confusion_matrix(all_labels, all_predictions)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=list(range(num_classes)))
+        disp.plot(cmap=plt.cm.Blues, xticks_rotation='vertical')
+        plt.title(f"Confusion Matrix - Epoch {epoch+1}")
+        plt.savefig(cfg.EXPERIMENT_PLOTS_PATH / f'confusion_matrix_epoch_{epoch+1}.png')
+        plt.close()
+
         print(f"Epoch [{epoch+1}/{num_epochs}]")
         print(f"  Training - Mean Loss: {mean_train_loss:.4f}, Mean Accuracy: {mean_train_accuracy:.2f}%")
         print(f"  Validation - Mean Loss: {mean_val_loss:.4f}, Mean Accuracy: {mean_val_accuracy:.2f}%")
 
-        # Plot and save the figure after each epoch
+        # Plot training and validation metrics
         plt.figure(figsize=(10, 5))
-        
-        # Plot training and validation losses per batch
         plt.subplot(1, 2, 1)
         plt.plot(train_batch_losses, label='Training Loss per Batch')
         plt.plot(val_batch_losses, label='Validation Loss per Batch')
@@ -222,7 +234,6 @@ def train_and_validate(model, train_loader, val_loader, num_epochs=10, device='c
         plt.title('Training and Validation Loss per Batch')
         plt.legend()
 
-        # Plot training and validation accuracies per batch
         plt.subplot(1, 2, 2)
         plt.plot(train_batch_accuracies, label='Training Accuracy per Batch')
         plt.plot(val_batch_accuracies, label='Validation Accuracy per Batch')
@@ -232,7 +243,7 @@ def train_and_validate(model, train_loader, val_loader, num_epochs=10, device='c
         plt.legend()
 
         plt.suptitle(f'Epoch {epoch+1}/{num_epochs}')
-        plt.savefig(cfg.EXPERIMENT_PATH / f'training_progress_epoch_{epoch+1}.png')
+        plt.savefig(cfg.EXPERIMENT_PLOTS_PATH / f'training_progress_epoch_{epoch+1}.png')
         plt.close()
 
 def save_config_to_json(config_module, output_file_path):
@@ -273,7 +284,8 @@ if __name__ == "__main__":
     init_exp(cfg)
 
     print("preparing data")
-    train_loader, val_loader, num_classes = load_and_prepare_data()
+    train_loader, val_loader, label_mapping = load_and_prepare_data()
+    num_classes = len(label_mapping)
     cfg.MODEL_PARAMS['num_classes'] = num_classes
     model = ConfigurableCNN(cfg.MODEL_PARAMS).to(cfg.DEVICE)
     criterion = nn.CrossEntropyLoss()
@@ -281,7 +293,8 @@ if __name__ == "__main__":
     
     print("starting training")
     train_and_validate(model, train_loader, val_loader,
-                       num_epochs=cfg.NUM_EPOCHS, device=cfg.DEVICE)
+                       num_epochs=cfg.NUM_EPOCHS, device=cfg.DEVICE,
+                       weights_save_path_format=cfg.EXPERIMENT_WEIGHTS_PATH / 'model_weights_epoch_{epoch}.pth')
 
     if cfg.SAVE_MODEL_CHECKPOINT:
         torch.save(model.state_dict(), cfg.SAVE_MODEL_CHECKPOINT)

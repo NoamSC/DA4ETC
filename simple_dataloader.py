@@ -100,23 +100,27 @@ def parse_pcap(pcap_path, min_flow_length=2):
 
 
 class PcapDataset(Dataset):
-    def __init__(self, pcap_paths, labels, min_flow_length=2, resolution=MTU):
+    def __init__(self, pcap_paths, labels, min_flow_length=2, resolution=MTU, label_mapping=None):
         """
-        Initialize the dataset with PCAP paths and labels, and dynamically create label mapping.
+        Initialize the dataset with PCAP paths and labels, enforcing a consistent label mapping.
 
         Args:
         - pcap_paths (iterable): Iterable of PCAP file paths.
         - labels (iterable): Corresponding labels for each PCAP file.
         - min_flow_length (int): Minimum number of packets for each flow.
+        - resolution (int): Resolution of FlowPic histograms.
+        - label_mapping (dict, optional): Pre-defined label mapping for consistency.
         """
         self.Xs = []
         self.ys = []
-        self.label_mapping = {}
-        self.label_counter = 0
+        
+        # Use pre-defined label mapping if provided; otherwise, create one dynamically
+        self.label_mapping = label_mapping if label_mapping is not None else {}
+        self.label_counter = len(self.label_mapping)
 
         # Process each PCAP file
         for pcap_path, label in tqdm(zip(pcap_paths, labels), total=len(pcap_paths)):
-            # Create label mapping dynamically if not already present
+            # Add new labels to the mapping dynamically if not already present
             if label not in self.label_mapping:
                 self.label_mapping[label] = self.label_counter
                 self.label_counter += 1
@@ -137,8 +141,7 @@ class PcapDataset(Dataset):
         
         return torch.Tensor(flowpic), torch.Tensor(label)
 
-
-def create_dataloader(pcap_paths, labels, batch_size=64, shuffle=True, min_flow_length=2, resolution=MTU):
+def create_dataloader(pcap_paths, labels, batch_size=64, shuffle=True, min_flow_length=2, resolution=MTU, label_mapping=None):
     """
     Creates a DataLoader that yields FlowPics and their corresponding labels.
 
@@ -152,7 +155,8 @@ def create_dataloader(pcap_paths, labels, batch_size=64, shuffle=True, min_flow_
     Returns:
     - loader (DataLoader): A PyTorch DataLoader for the dataset.
     """
-    dataset = PcapDataset(pcap_paths, labels, min_flow_length=min_flow_length, resolution=resolution)
+
+    dataset = PcapDataset(pcap_paths, labels, min_flow_length=min_flow_length, resolution=resolution, label_mapping=label_mapping)
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
     
     return loader
