@@ -1,9 +1,9 @@
 import os
 import numpy as np
-import torch
-from torch.utils.data import Dataset, DataLoader
 from scapy.all import rdpcap, IP, TCP, UDP
 from tqdm import tqdm
+import torch
+from torch.utils.data import Dataset
 
 MTU = 2048  # Maximum Transmission Unit
 
@@ -14,8 +14,8 @@ def session_2d_histogram(ts, sizes, resolution=MTU, max_delta_time=10):
     Args:
     - ts (array): Timestamps of the packets.
     - sizes (array): Packet sizes.
-    - resolution (int): Resolution of the output FlowPic (default is 500x500).
-    - max_delta_time (float): time axis length [secs] of the flowpic
+    - resolution (int): Resolution of the output FlowPic (default is MTU).
+    - max_delta_time (float): Time axis length [secs] of the FlowPic.
     
     Returns:
     - H (array): 2D histogram of size [resolution x resolution].
@@ -140,23 +140,3 @@ class PcapDataset(Dataset):
         label = np.array(self.ys[idx], dtype=np.float32)
         
         return torch.Tensor(flowpic), torch.Tensor(label)
-
-def create_dataloader(pcap_paths, labels, batch_size=64, shuffle=True, min_flow_length=2, resolution=MTU, label_mapping=None):
-    """
-    Creates a DataLoader that yields FlowPics and their corresponding labels.
-
-    Args:
-    - pcap_paths (iterable): List of PCAP file paths.
-    - labels (iterable): Corresponding labels for each PCAP file.
-    - batch_size (int): Batch size for the DataLoader.
-    - shuffle (bool): Whether to shuffle the data.
-    - min_flow_length (int): Minimum number of packets for each flow.
-    
-    Returns:
-    - loader (DataLoader): A PyTorch DataLoader for the dataset.
-    """
-
-    dataset = PcapDataset(pcap_paths, labels, min_flow_length=min_flow_length, resolution=resolution, label_mapping=label_mapping)
-    loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
-    
-    return loader

@@ -4,8 +4,8 @@ import torch
 from pathlib import Path
 
 # ---------- Experiment details ----------
-# EXPERIMENT_NAME = 'tmp'
-EXPERIMENT_NAME = '1d_temporal_split_net_v2_no_transpose_gelu_fixed_label_mapping'
+# EXPERIMENT_NAME = '1d_temporal_split_net_v2_no_transpose_gelu_fixed_label_mapping'
+EXPERIMENT_NAME = 'tmp'
 EXPERIMENT_PATH = Path(f'exps/{EXPERIMENT_NAME}')
 
 # ---------- Environment and reproducibility ----------
@@ -14,7 +14,7 @@ DEVICE = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # ---------- Dataset Parameters ----------
 DATA_PATH = Path('data/ben_bucket')
-SAMPLE_FRAC = 1.0  # Fraction of the HujiPC data to sample
+SAMPLE_FRAC = 1.0 
 TRAIN_SPLIT_RATIO = 0.7
 BATCH_SIZE = 8
 
