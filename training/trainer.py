@@ -2,7 +2,7 @@ import torch
 from tqdm import tqdm
 from training.visualization import plot_confusion_matrix, plot_metrics
 
-def train_and_validate(model, train_loader, val_loader, criterion, optimizer, num_epochs, device, save_dir, num_classes):
+def train_and_validate(model, train_loader, val_loader, criterion, optimizer, num_epochs, device, weights_save_dir, plots_save_dir, label_mapping):
     train_losses, val_losses = [], []
     train_accuracies, val_accuracies = [], []
 
@@ -45,14 +45,15 @@ def train_and_validate(model, train_loader, val_loader, criterion, optimizer, nu
         val_accuracies.append(100.0 * val_correct / val_total)
 
         print(f"Epoch {epoch+1}: Train Loss={train_losses[-1]:.4f}, Accuracy={train_accuracies[-1]:.2f}%")
-        print(f"              Val Loss={val_losses[-1]:.4f}, Accuracy={val_accuracies[-1]:.2f}%")
+        print(f"         Val Loss={val_losses[-1]:.4f}, Accuracy={val_accuracies[-1]:.2f}%")
 
         # Save confusion matrix
-        plot_confusion_matrix(all_labels, all_predictions, class_names=range(num_classes), epoch=epoch+1, save_dir=save_dir)
+        class_names = sorted(label_mapping, key=label_mapping.get)
+        plot_confusion_matrix(all_labels, all_predictions, class_names=class_names, epoch=epoch+1, save_dir=plots_save_dir)
 
         # Save metrics plot
-        plot_metrics(train_losses, val_losses, train_accuracies, val_accuracies, epoch=epoch+1, save_dir=save_dir)
+        plot_metrics(train_losses, val_losses, train_accuracies, val_accuracies, epoch=epoch+1, save_dir=plots_save_dir)
 
         # Save model weights
-        model_save_path = save_dir / f"model_weights_epoch_{epoch+1}.pth"
+        model_save_path = weights_save_dir / f"model_weights_epoch_{epoch+1}.pth"
         torch.save(model.state_dict(), model_save_path)

@@ -7,6 +7,7 @@ class ConfigurableCNN(nn.Module):
         super(ConfigurableCNN, self).__init__()
         self.params = params
         self.conv_type = params['conv_type']
+        self.use_batch_norm = params.get('use_batch_norm', False)
 
         self.layers = nn.ModuleList()
         in_channels = params['input_shape']
@@ -18,6 +19,8 @@ class ConfigurableCNN(nn.Module):
                                              kernel_size=conv_layer['kernel_size'],
                                              stride=conv_layer['stride'],
                                              padding=conv_layer['padding']))
+                if self.use_batch_norm:
+                    self.layers.append(nn.BatchNorm1d(conv_layer['out_channels']))
                 self.layers.append(nn.GELU())
                 self.layers.append(nn.MaxPool1d(kernel_size=params['pool_kernel_size'], stride=params['pool_stride']))
                 in_channels = conv_layer['out_channels']
@@ -26,6 +29,8 @@ class ConfigurableCNN(nn.Module):
                                              kernel_size=conv_layer['kernel_size'],
                                              stride=conv_layer['stride'],
                                              padding=conv_layer['padding']))
+                if self.use_batch_norm:
+                    self.layers.append(nn.BatchNorm2d(conv_layer['out_channels']))
                 self.layers.append(nn.ReLU())
                 self.layers.append(nn.MaxPool2d(kernel_size=params['pool_kernel_size'], stride=params['pool_stride']))
                 in_channels = conv_layer['out_channels']

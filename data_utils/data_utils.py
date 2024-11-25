@@ -4,6 +4,8 @@ from scapy.all import rdpcap, IP, TCP, UDP
 from tqdm import tqdm
 import torch
 from torch.utils.data import Dataset
+from pathlib import Path
+import pandas as pd
 
 MTU = 2048  # Maximum Transmission Unit
 
@@ -140,3 +142,17 @@ class PcapDataset(Dataset):
         label = np.array(self.ys[idx], dtype=np.float32)
         
         return torch.Tensor(flowpic), torch.Tensor(label)
+
+def extract_pcap_info(path):
+    """
+    Extract metadata (location, date, app, vpn type) from PCAP file path.
+
+    Args:
+    - path (str): Path to the PCAP file.
+
+    Returns:
+    - Tuple (location, date, app, vpn_type).
+    """
+    parts = Path(path).parts
+    location, date, app, vpn_type = parts[3], pd.to_datetime(parts[4], format='%Y%m%d_%H%M%S'), parts[5], parts[6]
+    return location, date, app, vpn_type

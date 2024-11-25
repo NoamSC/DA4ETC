@@ -6,11 +6,12 @@ import pandas as pd
 
 import config as cfg
 from data_utils.pcap_dataloader import PcapDataLoader
+from data_utils.data_utils import extract_pcap_info
 from models.configurable_cnn import ConfigurableCNN
 from training.trainer import train_and_validate
 from training.utils import set_seed, save_config_to_json
 
-def load_and_prepare_data():
+def load_and_prepare_data(location):
     """
     Load PCAP paths, extract metadata, and create train/validation DataLoaders.
 
@@ -30,7 +31,7 @@ def load_and_prepare_data():
     )
     
     # Filter and sample data
-    df = df[df.location == 'TLVunContainer1'].sample(frac=cfg.SAMPLE_FRAC).sample(1500).sort_values(by='date')
+    df = df[df.location == location].sample(frac=cfg.SAMPLE_FRAC).sample(1500).sort_values(by='date')
     
     # Split into train/validation
     split_index = int(len(df) * cfg.TRAIN_SPLIT_RATIO)
@@ -54,22 +55,6 @@ def load_and_prepare_data():
     
     return train_loader, val_loader, label_mapping
 
-
-def extract_pcap_info(path):
-    """
-    Extract metadata (location, date, app, vpn type) from PCAP file path.
-
-    Args:
-    - path (str): Path to the PCAP file.
-
-    Returns:
-    - Tuple (location, date, app, vpn_type).
-    """
-    parts = Path(path).parts
-    location, date, app, vpn_type = parts[3], pd.to_datetime(parts[4], format='%Y%m%d_%H%M%S'), parts[5], parts[6]
-    return location, date, app, vpn_type
-
-
 if __name__ == "__main__":
     # Initialize directories for experiment
     cfg.EXPERIMENT_PATH.mkdir(parents=True, exist_ok=True)
@@ -84,7 +69,7 @@ if __name__ == "__main__":
 
     # Load and prepare data
     print("Loading and preparing data...")
-    train_loader, val_loader, label_mapping = load_and_prepare_data()
+    train_loader, val_loader, label_mapping = load_and_prepare_data(location=cfg.LOCATION)
     num_classes = len(label_mapping)
     cfg.MODEL_PARAMS['num_classes'] = num_classes
 
@@ -105,7 +90,8 @@ if __name__ == "__main__":
         optimizer=optimizer,
         num_epochs=cfg.NUM_EPOCHS,
         device=cfg.DEVICE,
-        save_dir=cfg.EXPERIMENT_PATH,
+        weights_save_dir=cfg.EXPERIMENT_PLOTS_PATH,
+        plots_save_dir=cfg.EXPERIMENT_PLOTS_PATH,
         num_classes=num_classes
     )
 
