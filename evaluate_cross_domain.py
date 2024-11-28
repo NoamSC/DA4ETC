@@ -10,6 +10,22 @@ from models.configurable_cnn import ConfigurableCNN
 from training.utils import set_seed
 import config as cfg
 
+def adapt_batch_norm_statistics(model, loader, device):
+    """
+    Update the batch normalization statistics of a model using a given DataLoader.
+    
+    Args:
+    - model (torch.nn.Module): The model whose batch norm statistics will be updated.
+    - loader (DataLoader): DataLoader used to recompute the batch norm statistics.
+    - device (torch.device): Device to run the adaptation on.
+    """
+    model.train()  # Set to training mode to enable updating of BatchNorm stats
+    with torch.no_grad():
+        for inputs, _ in loader:
+            inputs = inputs.to(device)
+            model(inputs)  # Forward pass to update the BatchNorm running statistics
+    model.eval()  # Set back to evaluation mode
+
 def load_cached_val_loader(location):
     """
     Load a cached validation dataset for a specific location.
@@ -59,15 +75,14 @@ def main():
     # Set random seed for reproducibility
     set_seed(cfg.SEED)
 
-    final_models_epochs = {'AwsCont': 4, 'BenContainer': 4, 'CabSpicy1': 4,
-        'GCP-Iowa': 4, 'HujiPC': 4, 'TLVunContainer1': 4, 'TLVunContainer2': 4
-
-    }
+    final_models_epochs = {'AwsCont': 5, 'BenContainer': 16, 'CabSpicy1': 4,
+        'HujiPC': 15, 'TLVunContainer1': 16, 'TLVunContainer2': 9
+    } # 'GCP-Iowa' has almost no samples
 
     # Define locations and initialize accuracy matrix
     locations = [
         'AwsCont', 'BenContainer', 'CabSpicy1',
-        'GCP-Iowa', 'HujiPC', 'TLVunContainer1', 'TLVunContainer2'
+        'HujiPC', 'TLVunContainer1', 'TLVunContainer2'
     ]
     num_locations = len(locations)
     accuracy_matrix = np.zeros((num_locations, num_locations))
@@ -92,8 +107,17 @@ def main():
 
         # Evaluate on each validation dataset
         for j, eval_loc in enumerate(locations):
+            model.load_state_dict(torch.load(model_path, map_location=cfg.DEVICE, weights_only=False))
+            model.to(cfg.DEVICE)
+
             print(f"  Testing on validation dataset from {eval_loc}")
             val_loader = val_loaders[eval_loc]
+            
+            # Domain adaptation: Update BatchNorm statistics
+            print("    Adapting BatchNorm statistics to validation domain...")
+            adapt_batch_norm_statistics(model, val_loader, cfg.DEVICE)
+            
+            # Evaluate adapted model on validation dataset
             accuracy = evaluate_model_on_loader(model, val_loader, cfg.DEVICE)
             accuracy_matrix[i, j] = accuracy
             print(f"    Accuracy: {accuracy:.4f}")
@@ -103,8 +127,8 @@ def main():
     print(accuracy_matrix)
 
     # Optionally save the matrix to a file
-    np.save(cfg.EXPERIMENT_PATH / "cross_domain_accuracy_matrix.npy", accuracy_matrix)
-    print(f"Accuracy matrix saved to: {cfg.EXPERIMENT_PATH / 'cross_domain_accuracy_matrix.npy'}")
+    np.save(cfg.EXPERIMENT_PATH / "cross_domain_accuracy_matrix_bn.npy", accuracy_matrix)
+    print(f"Accuracy matrix saved to: {cfg.EXPERIMENT_PATH / 'cross_domain_accuracy_matrix_bn.npy'}")
 
     # Create a plot
     plt.figure(figsize=(8, 8))
@@ -117,7 +141,7 @@ def main():
     rows, cols = accuracy_matrix.shape
     for i in range(rows):
         for j in range(cols):
-            plt.text(j, i, f'{accuracy_matrix[i, j]:.2f}',  # Format to 2 decimal places
+            plt.text(j, i, f'{accuracy_matrix[i, j]:.2f}',
                     ha='center', va='center', color='white', fontsize=8)
 
     # Set the tick labels to the names
@@ -125,13 +149,13 @@ def main():
     plt.yticks(ticks=np.arange(rows), labels=locations)
 
     # Add labels (optional)
-    plt.title('Matrix with Values and Named Locations')
-    plt.xlabel('Locations')
-    plt.ylabel('Locations')
+    plt.title('Accuracy of model for different train and evaluation domains')
+    plt.xlabel('Evaluation Domain')
+    plt.ylabel('Training Domain')
 
     # Save the plot as an image
     plt.tight_layout()
-    plt.savefig(cfg.EXPERIMENT_PATH / 'cross_domain_accuracy_matrix.png', dpi=300)
+    plt.savefig(cfg.EXPERIMENT_PATH / 'cross_domain_accuracy_matrix_bn.png', dpi=300)
 
 
 if __name__ == "__main__":
