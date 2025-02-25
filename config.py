@@ -2,7 +2,7 @@ import torch
 from pathlib import Path
 
 # ---------- Experiment details ----------
-EXPERIMENT_NAME = '1d_temporal_split_net_v3'
+EXPERIMENT_NAME = '1d_temporal_split_net_v3_mmd_1e2'
 EXPERIMENT_PATH = Path(f'exps/{EXPERIMENT_NAME}')
 
 # ---------- Environment and reproducibility ----------

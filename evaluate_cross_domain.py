@@ -5,61 +5,56 @@ import numpy as np
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
-
 from models.configurable_cnn import ConfigurableCNN
 from training.utils import set_seed
 import config as cfg
 
+
 def adapt_batch_norm_statistics(model, loader, device):
     """
     Update the batch normalization statistics of a model using a given DataLoader.
-    
-    Args:
-    - model (torch.nn.Module): The model whose batch norm statistics will be updated.
-    - loader (DataLoader): DataLoader used to recompute the batch norm statistics.
-    - device (torch.device): Device to run the adaptation on.
     """
-    model.train()  # Set to training mode to enable updating of BatchNorm stats
+    model.train()  # Enable BatchNorm stats updating
     with torch.no_grad():
         for inputs, _ in loader:
             inputs = inputs.to(device)
-            model(inputs)  # Forward pass to update the BatchNorm running statistics
-    model.eval()  # Set back to evaluation mode
+            model(inputs)  # Forward pass updates BatchNorm stats
+    model.eval()
+
 
 def load_cached_val_loader(location):
     """
     Load a cached validation dataset for a specific location.
-
-    Args:
-    - location (str): The location whose validation dataset should be loaded.
-
-    Returns:
-    - val_loader: DataLoader for validation data.
     """
     dataset_path = cfg.DATA_PATH / f"cached_datasets/datasets_{location}_256.pkl"
+    if not dataset_path.exists():
+        raise FileNotFoundError(f"Validation dataset not found at: {dataset_path}")
     print(f"Loading validation dataset from: {dataset_path}")
     
     with open(dataset_path, "rb") as f:
         _, val_dataset = pickle.load(f)
 
-    val_loader = DataLoader(val_dataset, batch_size=cfg.BATCH_SIZE, shuffle=False)
-    return val_loader
+    return DataLoader(val_dataset, batch_size=cfg.BATCH_SIZE, shuffle=False)
+
+
+def find_latest_model_path(train_loc, test_loc, epoch='*'):
+    """
+    Find the latest model for the given train-test pair.
+    """
+    weights_dir = cfg.EXPERIMENT_PATH / f"{train_loc}_to_{test_loc}" / "weights"
+    if not weights_dir.exists():
+        return None
+
+    model_files = sorted(weights_dir.glob(f"model_weights_epoch_{epoch}.pth"))
+    return model_files[-1] if model_files else None
+
 
 def evaluate_model_on_loader(model, val_loader, device):
     """
     Evaluate a model on a given DataLoader and return the accuracy.
-
-    Args:
-    - model (torch.nn.Module): Trained model to evaluate.
-    - val_loader (DataLoader): Validation DataLoader to test the model on.
-    - device (torch.device): Device to run the evaluation.
-
-    Returns:
-    - accuracy (float): Accuracy of the model on the validation dataset.
     """
     model.eval()
-    correct = 0
-    total = 0
+    correct, total = 0, 0
 
     with torch.no_grad():
         for inputs, labels in val_loader:
@@ -69,93 +64,71 @@ def evaluate_model_on_loader(model, val_loader, device):
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
 
-    return correct / total
+    return correct / total if total > 0 else 0
+
 
 def main():
     # Set random seed for reproducibility
     set_seed(cfg.SEED)
 
-    final_models_epochs = {'AwsCont': 5, 'BenContainer': 16, 'CabSpicy1': 4,
-        'HujiPC': 15, 'TLVunContainer1': 16, 'TLVunContainer2': 9
-    } # 'GCP-Iowa' has almost no samples
-
-    # Define locations and initialize accuracy matrix
+    # Define train and test locations
     locations = [
         'AwsCont', 'BenContainer', 'CabSpicy1',
         'HujiPC', 'TLVunContainer1', 'TLVunContainer2'
     ]
+
     num_locations = len(locations)
     accuracy_matrix = np.zeros((num_locations, num_locations))
 
-    # Load all validation DataLoaders
+    # Load validation DataLoaders
     print("Loading validation loaders for all locations...")
     val_loaders = {loc: load_cached_val_loader(loc) for loc in locations}
 
-    # Iterate through each model and evaluate on all validation datasets
+    # Iterate over train-test pairs
     for i, train_loc in enumerate(locations):
-        print(f"\nEvaluating model trained on {train_loc}")
-        
-        # Load the model weights for the current training location
-        chosen_epoch = final_models_epochs[train_loc]
-        model_path = cfg.EXPERIMENT_PATH / train_loc / "weights" / f"model_weights_epoch_{chosen_epoch}.pth"
-        print(f"Loading model weights from: {model_path}")
-        
-        # Initialize model
-        model = ConfigurableCNN(cfg.MODEL_PARAMS)
-        model.load_state_dict(torch.load(model_path, map_location=cfg.DEVICE))
-        model.to(cfg.DEVICE)
-
-        # Evaluate on each validation dataset
-        for j, eval_loc in enumerate(locations):
-            model.load_state_dict(torch.load(model_path, map_location=cfg.DEVICE, weights_only=False))
+        for j, test_loc in enumerate(locations):
+            print(f"Evaluating train domain: {train_loc}, test domain: {test_loc}")
+            
+            # Find latest model for train-test pair
+            model_path = find_latest_model_path(train_loc, test_loc, epoch=5)
+            if model_path is None:
+                print(f"  No model found for {train_loc} -> {test_loc}. Setting accuracy to 0.")
+                accuracy_matrix[i, j] = 0
+                continue
+            
+            print(f"  Loading model weights from: {model_path}")
+            model = ConfigurableCNN(cfg.MODEL_PARAMS)
+            model.load_state_dict(torch.load(model_path, map_location=cfg.DEVICE))
             model.to(cfg.DEVICE)
 
-            print(f"  Testing on validation dataset from {eval_loc}")
-            val_loader = val_loaders[eval_loc]
+            # Adapt to test domain
+            # print(f"  Adapting BatchNorm statistics for test domain: {test_loc}")
+            # adapt_batch_norm_statistics(model, val_loaders[test_loc], cfg.DEVICE)
             
-            # Domain adaptation: Update BatchNorm statistics
-            print("    Adapting BatchNorm statistics to validation domain...")
-            adapt_batch_norm_statistics(model, val_loader, cfg.DEVICE)
-            
-            # Evaluate adapted model on validation dataset
-            accuracy = evaluate_model_on_loader(model, val_loader, cfg.DEVICE)
+            # Evaluate model
+            accuracy = evaluate_model_on_loader(model, val_loaders[test_loc], cfg.DEVICE)
             accuracy_matrix[i, j] = accuracy
-            print(f"    Accuracy: {accuracy:.4f}")
+            print(f"  Accuracy: {accuracy:.4f}")
 
-    # Save and print the accuracy matrix
+    # Save accuracy matrix
     print("\nCross-Domain Accuracy Matrix:")
     print(accuracy_matrix)
+    np.save(cfg.EXPERIMENT_PATH / "cross_domain_accuracy_matrix.npy", accuracy_matrix)
 
-    # Optionally save the matrix to a file
-    np.save(cfg.EXPERIMENT_PATH / "cross_domain_accuracy_matrix_bn.npy", accuracy_matrix)
-    print(f"Accuracy matrix saved to: {cfg.EXPERIMENT_PATH / 'cross_domain_accuracy_matrix_bn.npy'}")
-
-    # Create a plot
+    # Plot accuracy matrix
     plt.figure(figsize=(8, 8))
     plt.imshow(accuracy_matrix, cmap='viridis', interpolation='none', vmin=0, vmax=1)
-
-    # Add color bar
-    plt.colorbar(label='Value')
-
-    # Add values in each cell
-    rows, cols = accuracy_matrix.shape
-    for i in range(rows):
-        for j in range(cols):
-            plt.text(j, i, f'{accuracy_matrix[i, j]:.2f}',
-                    ha='center', va='center', color='white', fontsize=8)
-
-    # Set the tick labels to the names
-    plt.xticks(ticks=np.arange(cols), labels=locations, rotation=45, ha='right')
-    plt.yticks(ticks=np.arange(rows), labels=locations)
-
-    # Add labels (optional)
-    plt.title('Accuracy of model for different train and evaluation domains')
-    plt.xlabel('Evaluation Domain')
-    plt.ylabel('Training Domain')
-
-    # Save the plot as an image
+    plt.colorbar(label='Accuracy')
+    for i in range(num_locations):
+        for j in range(num_locations):
+            plt.text(j, i, f'{accuracy_matrix[i, j]:.2f}', ha='center', va='center', color='white', fontsize=8)
+    plt.xticks(ticks=np.arange(num_locations), labels=locations, rotation=45, ha='right')
+    plt.yticks(ticks=np.arange(num_locations), labels=locations)
+    plt.title('Cross-Domain Accuracy Matrix')
+    plt.xlabel('Test Domain')
+    plt.ylabel('Train Domain')
     plt.tight_layout()
-    plt.savefig(cfg.EXPERIMENT_PATH / 'cross_domain_accuracy_matrix_bn.png', dpi=300)
+    plt.savefig(cfg.EXPERIMENT_PATH / 'cross_domain_accuracy_matrix.png', dpi=300)
 
 
 if __name__ == "__main__":
