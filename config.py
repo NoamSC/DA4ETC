@@ -2,7 +2,7 @@ import torch
 from pathlib import Path
 
 # ---------- Experiment details ----------
-EXPERIMENT_NAME = '1d_temporal_split_net_v3_mmd_1e2'
+EXPERIMENT_NAME = 'CNN_advanced_mmd_features_mmd_1e-5'
 EXPERIMENT_PATH = Path(f'exps/{EXPERIMENT_NAME}')
 
 # ---------- Environment and reproducibility ----------
@@ -44,6 +44,9 @@ MODEL_PARAMS = {
 # ---------- Training Parameters ----------
 LEARNING_RATE = 3e-4
 NUM_EPOCHS = 20
+
+# ---------- DA Parameters ----------
+LAMBDA_MMD = 1e-5
 
 # ---------- Logging and Checkpoint Parameters ----------
 SAVE_PLOTS = True
