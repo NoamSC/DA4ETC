@@ -53,7 +53,7 @@ class ConfigurableCNN(nn.Module):
         for layer in self.layers:
             x = layer(x)
         x = x.view(x.size(0), -1)  # Flatten
-        # x = self.dropout(x)
+        x = self.dropout(x)
         x = F.gelu(self.fc1(x))
         return x  # Return feature representation before FC layers
 

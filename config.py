@@ -2,7 +2,7 @@ import torch
 from pathlib import Path
 
 # ---------- Experiment details ----------
-EXPERIMENT_NAME = 'CNN_advanced_mmd_features_mmd_1e-5'
+EXPERIMENT_NAME = 'fast_CNN_advanced_mmd_on_features_mmd_1e0'
 EXPERIMENT_PATH = Path(f'exps/{EXPERIMENT_NAME}')
 
 # ---------- Environment and reproducibility ----------
@@ -37,7 +37,7 @@ MODEL_PARAMS = {
     'pool_kernel_size': 2,
     'pool_stride': 2,
     'fc1_out_features': 64,
-    'dropout_prob': 0.4,
+    'dropout_prob': 0.25,
     'use_batch_norm': True,
 }
 
@@ -46,7 +46,7 @@ LEARNING_RATE = 3e-4
 NUM_EPOCHS = 20
 
 # ---------- DA Parameters ----------
-LAMBDA_MMD = 1e-5
+LAMBDA_MMD = 1
 
 # ---------- Logging and Checkpoint Parameters ----------
 SAVE_PLOTS = True

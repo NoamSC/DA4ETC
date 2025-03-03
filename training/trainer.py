@@ -5,24 +5,27 @@ from tqdm import tqdm
 
 from training.visualization import plot_confusion_matrix, plot_metrics
 
-def compute_mmd_loss(source_features, target_features, kernel='rbf', bandwidth=1.0):
-    """
-    Compute Maximum Mean Discrepancy (MMD) loss between source and target features.
-    """
+def compute_mmd_loss(source_features, target_features, kernel='rbf', bandwidths=[0.1, 1, 10]):
     def rbf_kernel(x, y, bandwidth):
         x_norm = (x ** 2).sum(dim=1, keepdim=True)
         y_norm = (y ** 2).sum(dim=1, keepdim=True)
         dist = x_norm + y_norm.T - 2 * torch.mm(x, y.T)
-        return torch.exp(-dist / (2 * bandwidth ** 2 + 1e-6))  # Adding small value to denominator
+        return torch.exp(-dist / (2 * bandwidth ** 2 + 1e-6))
     
     if kernel != 'rbf':
         raise ValueError("Unsupported kernel type")
 
-    xx = rbf_kernel(source_features, source_features, bandwidth).mean()
-    yy = rbf_kernel(target_features, target_features, bandwidth).mean()
-    xy = rbf_kernel(source_features, target_features, bandwidth).mean()
+    # normalize features for mmd
+    normalized_source_features = (source_features - source_features.mean(dim=0)) / (source_features.std(dim=0) + 1e-6)
+    normalized_target_features = (target_features - target_features.mean(dim=0)) / (target_features.std(dim=0) + 1e-6)
 
-    return xx + yy - 2 * xy
+    loss = 0
+    for bw in bandwidths:
+        xx = rbf_kernel(normalized_source_features, normalized_source_features, bw).mean()
+        yy = rbf_kernel(normalized_target_features, normalized_target_features, bw).mean()
+        xy = rbf_kernel(normalized_source_features, normalized_target_features, bw).mean()
+        loss += xx + yy - 2 * xy
+    return loss / len(bandwidths)
 
 
 def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mmd=0.0, test_loader=None):
@@ -48,7 +51,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
         if test_loader is not None and lambda_mmd > 0:
             train_features = model.get_features(train_inputs)
             test_features = model.get_features(test_inputs)
-            mmd_loss = compute_mmd_loss(train_features, test_features, bandwidth=1e1)
+            mmd_loss = compute_mmd_loss(train_features, test_features, bandwidths=[0.1, 1, 10])
             total_loss = regular_loss + lambda_mmd * mmd_loss
             mmd_loss_total += mmd_loss.item()
         else:
