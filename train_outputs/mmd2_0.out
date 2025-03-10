@@ -1,0 +1,2463 @@
+Running MMD experiment for train domain: AwsCont and test domain: AwsCont
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Epoch 1: Train Loss=0.2354, Accuracy=92.72%
+         Val Loss=0.1496, Accuracy=96.26%
+         MMD Loss=0.0000, Regular Loss=0.2353
+Epoch 2: Train Loss=0.0560, Accuracy=98.29%
+         Val Loss=0.1024, Accuracy=96.97%
+         MMD Loss=0.0000, Regular Loss=0.0559
+Epoch 3: Train Loss=0.0324, Accuracy=99.00%
+         Val Loss=0.0991, Accuracy=96.94%
+         MMD Loss=0.0000, Regular Loss=0.0324
+Epoch 4: Train Loss=0.0243, Accuracy=99.30%
+         Val Loss=0.0603, Accuracy=98.19%
+         MMD Loss=0.0000, Regular Loss=0.0243
+Epoch 5: Train Loss=0.0202, Accuracy=99.29%
+         Val Loss=0.0918, Accuracy=97.79%
+         MMD Loss=0.0000, Regular Loss=0.0201
+Epoch 6: Train Loss=0.0128, Accuracy=99.59%
+         Val Loss=0.1057, Accuracy=97.81%
+         MMD Loss=0.0000, Regular Loss=0.0128
+Epoch 7: Train Loss=0.0141, Accuracy=99.53%
+         Val Loss=0.1256, Accuracy=97.39%
+         MMD Loss=0.0000, Regular Loss=0.0141
+Epoch 8: Train Loss=0.0133, Accuracy=99.53%
+         Val Loss=0.0944, Accuracy=97.99%
+         MMD Loss=0.0000, Regular Loss=0.0133
+Epoch 9: Train Loss=0.0113, Accuracy=99.66%
+         Val Loss=0.0586, Accuracy=98.49%
+         MMD Loss=0.0000, Regular Loss=0.0113
+Epoch 10: Train Loss=0.0085, Accuracy=99.69%
+         Val Loss=0.0627, Accuracy=98.58%
+         MMD Loss=0.0000, Regular Loss=0.0085
+Epoch 11: Train Loss=0.0063, Accuracy=99.80%
+         Val Loss=0.0757, Accuracy=98.46%
+         MMD Loss=0.0000, Regular Loss=0.0063
+Epoch 12: Train Loss=0.0075, Accuracy=99.76%
+         Val Loss=0.0879, Accuracy=98.57%
+         MMD Loss=0.0000, Regular Loss=0.0075
+Epoch 13: Train Loss=0.0075, Accuracy=99.78%
+         Val Loss=0.0787, Accuracy=98.58%
+         MMD Loss=0.0000, Regular Loss=0.0075
+Epoch 14: Train Loss=0.0076, Accuracy=99.85%
+         Val Loss=0.1225, Accuracy=97.95%
+         MMD Loss=0.0000, Regular Loss=0.0075
+Epoch 15: Train Loss=0.0045, Accuracy=99.86%
+         Val Loss=0.0917, Accuracy=98.53%
+         MMD Loss=0.0000, Regular Loss=0.0045
+Epoch 16: Train Loss=0.0045, Accuracy=99.84%
+         Val Loss=0.1011, Accuracy=98.58%
+         MMD Loss=0.0000, Regular Loss=0.0045
+Epoch 17: Train Loss=0.0045, Accuracy=99.85%
+         Val Loss=0.1313, Accuracy=98.08%
+         MMD Loss=0.0000, Regular Loss=0.0045
+Epoch 18: Train Loss=0.0049, Accuracy=99.81%
+         Val Loss=0.0897, Accuracy=98.52%
+         MMD Loss=0.0000, Regular Loss=0.0049
+Epoch 19: Train Loss=0.0051, Accuracy=99.84%
+         Val Loss=0.1441, Accuracy=98.00%
+         MMD Loss=0.0000, Regular Loss=0.0051
+Epoch 20: Train Loss=0.0053, Accuracy=99.84%
+         Val Loss=0.1706, Accuracy=97.70%
+         MMD Loss=0.0000, Regular Loss=0.0053
+Training completed.
+Model for train domain AwsCont to test domain AwsCont saved to exps/CNN_mmd2_0/AwsCont_to_AwsCont/weights/model_final_AwsCont_to_AwsCont.pth
+Running MMD experiment for train domain: AwsCont and test domain: BenContainer
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Epoch 1: Train Loss=0.2391, Accuracy=92.76%
+         Val Loss=0.9383, Accuracy=72.13%
+         MMD Loss=0.0000, Regular Loss=0.2389
+Epoch 2: Train Loss=0.0560, Accuracy=98.28%
+         Val Loss=1.3019, Accuracy=72.64%
+         MMD Loss=0.0000, Regular Loss=0.0559
+Epoch 3: Train Loss=0.0339, Accuracy=98.91%
+         Val Loss=0.9706, Accuracy=75.31%
+         MMD Loss=0.0000, Regular Loss=0.0339
+Epoch 4: Train Loss=0.0212, Accuracy=99.23%
+         Val Loss=1.2585, Accuracy=76.15%
+         MMD Loss=0.0000, Regular Loss=0.0215
+Epoch 5: Train Loss=0.0217, Accuracy=99.30%
+         Val Loss=1.0724, Accuracy=80.00%
+         MMD Loss=0.0000, Regular Loss=0.0217
+Epoch 6: Train Loss=0.0186, Accuracy=99.45%
+         Val Loss=1.8803, Accuracy=74.06%
+         MMD Loss=0.0000, Regular Loss=0.0186
+Epoch 7: Train Loss=0.0121, Accuracy=99.57%
+         Val Loss=1.5292, Accuracy=78.58%
+         MMD Loss=0.0000, Regular Loss=0.0120
+Epoch 8: Train Loss=0.0105, Accuracy=99.64%
+         Val Loss=1.2110, Accuracy=80.50%
+         MMD Loss=0.0000, Regular Loss=0.0105
+Epoch 9: Train Loss=0.0106, Accuracy=99.63%
+         Val Loss=2.1242, Accuracy=74.73%
+         MMD Loss=0.0000, Regular Loss=0.0106
+Epoch 10: Train Loss=0.0090, Accuracy=99.65%
+         Val Loss=1.5300, Accuracy=78.33%
+         MMD Loss=0.0000, Regular Loss=0.0090
+Epoch 11: Train Loss=0.0084, Accuracy=99.70%
+         Val Loss=1.5757, Accuracy=77.91%
+         MMD Loss=0.0000, Regular Loss=0.0084
+Epoch 12: Train Loss=0.0074, Accuracy=99.78%
+         Val Loss=3.3969, Accuracy=68.79%
+         MMD Loss=0.0000, Regular Loss=0.0074
+Epoch 13: Train Loss=0.0099, Accuracy=99.66%
+         Val Loss=1.8584, Accuracy=76.23%
+         MMD Loss=0.0000, Regular Loss=0.0099
+Epoch 14: Train Loss=0.0022, Accuracy=99.92%
+         Val Loss=2.0110, Accuracy=77.91%
+         MMD Loss=0.0000, Regular Loss=0.0022
+Epoch 15: Train Loss=0.0066, Accuracy=99.81%
+         Val Loss=1.8653, Accuracy=77.24%
+         MMD Loss=0.0000, Regular Loss=0.0066
+Epoch 16: Train Loss=0.0053, Accuracy=99.81%
+         Val Loss=2.9157, Accuracy=73.72%
+         MMD Loss=0.0000, Regular Loss=0.0053
+Epoch 17: Train Loss=0.0048, Accuracy=99.84%
+         Val Loss=3.7581, Accuracy=76.82%
+         MMD Loss=0.0000, Regular Loss=0.0048
+Epoch 18: Train Loss=0.0053, Accuracy=99.85%
+         Val Loss=3.7199, Accuracy=75.73%
+         MMD Loss=0.0000, Regular Loss=0.0053
+Epoch 19: Train Loss=0.0040, Accuracy=99.86%
+         Val Loss=2.6119, Accuracy=77.24%
+         MMD Loss=0.0000, Regular Loss=0.0040
+Epoch 20: Train Loss=0.0013, Accuracy=99.96%
+         Val Loss=3.1307, Accuracy=76.07%
+         MMD Loss=0.0000, Regular Loss=0.0013
+Training completed.
+Model for train domain AwsCont to test domain BenContainer saved to exps/CNN_mmd2_0/AwsCont_to_BenContainer/weights/model_final_AwsCont_to_BenContainer.pth
+Running MMD experiment for train domain: AwsCont and test domain: CabSpicy1
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_CabSpicy1_256.pkl
+Epoch 1: Train Loss=0.2240, Accuracy=92.99%
+         Val Loss=0.9512, Accuracy=73.70%
+         MMD Loss=0.0000, Regular Loss=0.2249
+Epoch 2: Train Loss=0.0592, Accuracy=98.16%
+         Val Loss=0.7974, Accuracy=79.44%
+         MMD Loss=0.0000, Regular Loss=0.0592
+Epoch 3: Train Loss=0.0376, Accuracy=98.80%
+         Val Loss=1.3652, Accuracy=67.75%
+         MMD Loss=0.0000, Regular Loss=0.0376
+Epoch 4: Train Loss=0.0248, Accuracy=99.14%
+         Val Loss=1.0919, Accuracy=75.34%
+         MMD Loss=0.0000, Regular Loss=0.0247
+Epoch 5: Train Loss=0.0192, Accuracy=99.42%
+         Val Loss=1.3058, Accuracy=78.02%
+         MMD Loss=0.0000, Regular Loss=0.0192
+Epoch 6: Train Loss=0.0165, Accuracy=99.38%
+         Val Loss=0.9483, Accuracy=81.29%
+         MMD Loss=0.0000, Regular Loss=0.0165
+Epoch 7: Train Loss=0.0177, Accuracy=99.45%
+         Val Loss=1.3202, Accuracy=71.32%
+         MMD Loss=0.0000, Regular Loss=0.0177
+Epoch 8: Train Loss=0.0166, Accuracy=99.42%
+         Val Loss=1.2104, Accuracy=81.13%
+         MMD Loss=0.0000, Regular Loss=0.0166
+Epoch 9: Train Loss=0.0106, Accuracy=99.68%
+         Val Loss=1.5642, Accuracy=77.14%
+         MMD Loss=0.0000, Regular Loss=0.0107
+Epoch 10: Train Loss=0.0113, Accuracy=99.62%
+         Val Loss=1.7844, Accuracy=70.89%
+         MMD Loss=0.0000, Regular Loss=0.0113
+Epoch 11: Train Loss=0.0070, Accuracy=99.77%
+         Val Loss=1.5247, Accuracy=79.87%
+         MMD Loss=0.0000, Regular Loss=0.0070
+Epoch 12: Train Loss=0.0090, Accuracy=99.71%
+         Val Loss=1.2695, Accuracy=81.44%
+         MMD Loss=0.0000, Regular Loss=0.0090
+Epoch 13: Train Loss=0.0083, Accuracy=99.73%
+         Val Loss=1.3436, Accuracy=76.47%
+         MMD Loss=0.0000, Regular Loss=0.0083
+Epoch 14: Train Loss=0.0054, Accuracy=99.82%
+         Val Loss=1.0523, Accuracy=83.25%
+         MMD Loss=0.0000, Regular Loss=0.0054
+Epoch 15: Train Loss=0.0098, Accuracy=99.71%
+         Val Loss=1.4322, Accuracy=77.53%
+         MMD Loss=0.0000, Regular Loss=0.0098
+Epoch 16: Train Loss=0.0036, Accuracy=99.90%
+         Val Loss=1.5144, Accuracy=80.37%
+         MMD Loss=0.0000, Regular Loss=0.0036
+Epoch 17: Train Loss=0.0072, Accuracy=99.77%
+         Val Loss=1.6228, Accuracy=79.67%
+         MMD Loss=0.0000, Regular Loss=0.0072
+Epoch 18: Train Loss=0.0064, Accuracy=99.80%
+         Val Loss=1.4640, Accuracy=80.33%
+         MMD Loss=0.0000, Regular Loss=0.0064
+Epoch 19: Train Loss=0.0038, Accuracy=99.86%
+         Val Loss=1.7415, Accuracy=79.33%
+         MMD Loss=0.0000, Regular Loss=0.0038
+Epoch 20: Train Loss=0.0066, Accuracy=99.81%
+         Val Loss=1.1487, Accuracy=85.77%
+         MMD Loss=0.0000, Regular Loss=0.0069
+Training completed.
+Model for train domain AwsCont to test domain CabSpicy1 saved to exps/CNN_mmd2_0/AwsCont_to_CabSpicy1/weights/model_final_AwsCont_to_CabSpicy1.pth
+Running MMD experiment for train domain: AwsCont and test domain: HujiPC
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_HujiPC_256.pkl
+Epoch 1: Train Loss=0.2250, Accuracy=93.17%
+         Val Loss=0.7669, Accuracy=80.77%
+         MMD Loss=0.0000, Regular Loss=0.2249
+Epoch 2: Train Loss=0.0572, Accuracy=98.18%
+         Val Loss=0.8004, Accuracy=81.07%
+         MMD Loss=0.0000, Regular Loss=0.0572
+Epoch 3: Train Loss=0.0340, Accuracy=98.94%
+         Val Loss=0.8370, Accuracy=80.05%
+         MMD Loss=0.0000, Regular Loss=0.0340
+Epoch 4: Train Loss=0.0227, Accuracy=99.30%
+         Val Loss=0.7735, Accuracy=82.80%
+         MMD Loss=0.0000, Regular Loss=0.0227
+Epoch 5: Train Loss=0.0200, Accuracy=99.40%
+         Val Loss=0.8089, Accuracy=83.29%
+         MMD Loss=0.0000, Regular Loss=0.0200
+Epoch 6: Train Loss=0.0138, Accuracy=99.52%
+         Val Loss=0.8470, Accuracy=83.09%
+         MMD Loss=0.0000, Regular Loss=0.0138
+Epoch 7: Train Loss=0.0130, Accuracy=99.55%
+         Val Loss=1.0478, Accuracy=78.59%
+         MMD Loss=0.0000, Regular Loss=0.0130
+Epoch 8: Train Loss=0.0129, Accuracy=99.58%
+         Val Loss=1.1199, Accuracy=82.30%
+         MMD Loss=0.0000, Regular Loss=0.0132
+Epoch 9: Train Loss=0.0097, Accuracy=99.68%
+         Val Loss=1.1296, Accuracy=76.21%
+         MMD Loss=0.0000, Regular Loss=0.0097
+Epoch 10: Train Loss=0.0107, Accuracy=99.68%
+         Val Loss=1.2800, Accuracy=79.54%
+         MMD Loss=0.0000, Regular Loss=0.0107
+Epoch 11: Train Loss=0.0065, Accuracy=99.81%
+         Val Loss=1.2447, Accuracy=79.69%
+         MMD Loss=0.0000, Regular Loss=0.0065
+Epoch 12: Train Loss=0.0064, Accuracy=99.82%
+         Val Loss=1.4206, Accuracy=79.11%
+         MMD Loss=0.0000, Regular Loss=0.0064
+Epoch 13: Train Loss=0.0097, Accuracy=99.67%
+         Val Loss=1.7874, Accuracy=78.00%
+         MMD Loss=0.0000, Regular Loss=0.0097
+Epoch 14: Train Loss=0.0045, Accuracy=99.86%
+         Val Loss=1.1895, Accuracy=81.47%
+         MMD Loss=0.0000, Regular Loss=0.0045
+Epoch 15: Train Loss=0.0053, Accuracy=99.83%
+         Val Loss=1.3736, Accuracy=79.48%
+         MMD Loss=0.0000, Regular Loss=0.0053
+Epoch 16: Train Loss=0.0039, Accuracy=99.86%
+         Val Loss=1.2844, Accuracy=83.21%
+         MMD Loss=0.0000, Regular Loss=0.0039
+Epoch 17: Train Loss=0.0061, Accuracy=99.83%
+         Val Loss=1.0881, Accuracy=83.14%
+         MMD Loss=0.0000, Regular Loss=0.0061
+Epoch 18: Train Loss=0.0053, Accuracy=99.80%
+         Val Loss=1.7055, Accuracy=79.59%
+         MMD Loss=0.0000, Regular Loss=0.0053
+Epoch 19: Train Loss=0.0017, Accuracy=99.96%
+         Val Loss=1.9260, Accuracy=79.28%
+         MMD Loss=0.0000, Regular Loss=0.0017
+Epoch 20: Train Loss=0.0068, Accuracy=99.83%
+         Val Loss=1.3362, Accuracy=84.38%
+         MMD Loss=0.0000, Regular Loss=0.0068
+Training completed.
+Model for train domain AwsCont to test domain HujiPC saved to exps/CNN_mmd2_0/AwsCont_to_HujiPC/weights/model_final_AwsCont_to_HujiPC.pth
+Running MMD experiment for train domain: AwsCont and test domain: TLVunContainer1
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer1_256.pkl
+Epoch 1: Train Loss=0.2144, Accuracy=93.65%
+         Val Loss=1.1257, Accuracy=70.65%
+         MMD Loss=0.0000, Regular Loss=0.2143
+Epoch 2: Train Loss=0.0531, Accuracy=98.47%
+         Val Loss=1.2143, Accuracy=70.03%
+         MMD Loss=0.0000, Regular Loss=0.0531
+Epoch 3: Train Loss=0.0366, Accuracy=98.88%
+         Val Loss=1.5598, Accuracy=70.03%
+         MMD Loss=0.0000, Regular Loss=0.0366
+Epoch 4: Train Loss=0.0218, Accuracy=99.30%
+         Val Loss=2.7672, Accuracy=61.89%
+         MMD Loss=0.0000, Regular Loss=0.0218
+Epoch 5: Train Loss=0.0185, Accuracy=99.45%
+         Val Loss=2.5901, Accuracy=66.90%
+         MMD Loss=0.0000, Regular Loss=0.0185
+Epoch 6: Train Loss=0.0172, Accuracy=99.48%
+         Val Loss=1.8516, Accuracy=71.07%
+         MMD Loss=0.0000, Regular Loss=0.0172
+Epoch 7: Train Loss=0.0139, Accuracy=99.55%
+         Val Loss=2.9663, Accuracy=66.11%
+         MMD Loss=0.0000, Regular Loss=0.0139
+Epoch 8: Train Loss=0.0112, Accuracy=99.64%
+         Val Loss=1.4068, Accuracy=77.55%
+         MMD Loss=0.0000, Regular Loss=0.0112
+Epoch 9: Train Loss=0.0110, Accuracy=99.66%
+         Val Loss=3.0524, Accuracy=70.13%
+         MMD Loss=0.0000, Regular Loss=0.0110
+Epoch 10: Train Loss=0.0121, Accuracy=99.56%
+         Val Loss=3.0073, Accuracy=68.74%
+         MMD Loss=0.0000, Regular Loss=0.0121
+Epoch 11: Train Loss=0.0071, Accuracy=99.73%
+         Val Loss=2.4243, Accuracy=70.74%
+         MMD Loss=0.0000, Regular Loss=0.0071
+Epoch 12: Train Loss=0.0066, Accuracy=99.80%
+         Val Loss=2.4682, Accuracy=70.74%
+         MMD Loss=0.0000, Regular Loss=0.0066
+Epoch 13: Train Loss=0.0104, Accuracy=99.66%
+         Val Loss=4.0456, Accuracy=65.36%
+         MMD Loss=0.0000, Regular Loss=0.0104
+Epoch 14: Train Loss=0.0079, Accuracy=99.78%
+         Val Loss=2.6075, Accuracy=70.63%
+         MMD Loss=0.0000, Regular Loss=0.0079
+Epoch 15: Train Loss=0.0032, Accuracy=99.88%
+         Val Loss=3.4736, Accuracy=71.15%
+         MMD Loss=0.0000, Regular Loss=0.0032
+Epoch 16: Train Loss=0.0096, Accuracy=99.75%
+         Val Loss=2.8381, Accuracy=71.71%
+         MMD Loss=0.0000, Regular Loss=0.0095
+Epoch 17: Train Loss=0.0052, Accuracy=99.85%
+         Val Loss=3.9996, Accuracy=69.47%
+         MMD Loss=0.0000, Regular Loss=0.0052
+Epoch 18: Train Loss=0.0062, Accuracy=99.81%
+         Val Loss=3.8484, Accuracy=70.84%
+         MMD Loss=0.0000, Regular Loss=0.0062
+Epoch 19: Train Loss=0.0062, Accuracy=99.83%
+         Val Loss=2.7036, Accuracy=68.70%
+         MMD Loss=0.0000, Regular Loss=0.0062
+Epoch 20: Train Loss=0.0037, Accuracy=99.91%
+         Val Loss=3.7670, Accuracy=66.65%
+         MMD Loss=0.0000, Regular Loss=0.0037
+Training completed.
+Model for train domain AwsCont to test domain TLVunContainer1 saved to exps/CNN_mmd2_0/AwsCont_to_TLVunContainer1/weights/model_final_AwsCont_to_TLVunContainer1.pth
+Running MMD experiment for train domain: AwsCont and test domain: TLVunContainer2
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer2_256.pkl
+Epoch 1: Train Loss=0.2346, Accuracy=92.98%
+         Val Loss=1.2037, Accuracy=68.18%
+         MMD Loss=0.0000, Regular Loss=0.2347
+Epoch 2: Train Loss=0.0596, Accuracy=98.27%
+         Val Loss=1.2732, Accuracy=71.63%
+         MMD Loss=0.0000, Regular Loss=0.0596
+Epoch 3: Train Loss=0.0351, Accuracy=98.89%
+         Val Loss=2.3137, Accuracy=69.68%
+         MMD Loss=0.0000, Regular Loss=0.0350
+Epoch 4: Train Loss=0.0242, Accuracy=99.19%
+         Val Loss=3.0146, Accuracy=68.52%
+         MMD Loss=0.0000, Regular Loss=0.0241
+Epoch 5: Train Loss=0.0148, Accuracy=99.54%
+         Val Loss=2.5483, Accuracy=72.07%
+         MMD Loss=0.0000, Regular Loss=0.0148
+Epoch 6: Train Loss=0.0140, Accuracy=99.58%
+         Val Loss=2.2888, Accuracy=72.59%
+         MMD Loss=0.0000, Regular Loss=0.0140
+Epoch 7: Train Loss=0.0166, Accuracy=99.53%
+         Val Loss=2.1112, Accuracy=71.05%
+         MMD Loss=0.0000, Regular Loss=0.0167
+Epoch 8: Train Loss=0.0109, Accuracy=99.59%
+         Val Loss=3.0420, Accuracy=69.68%
+         MMD Loss=0.0000, Regular Loss=0.0109
+Epoch 9: Train Loss=0.0104, Accuracy=99.67%
+         Val Loss=3.0133, Accuracy=69.35%
+         MMD Loss=0.0000, Regular Loss=0.0104
+Epoch 10: Train Loss=0.0116, Accuracy=99.70%
+         Val Loss=2.7478, Accuracy=71.20%
+         MMD Loss=0.0000, Regular Loss=0.0116
+Epoch 11: Train Loss=0.0062, Accuracy=99.79%
+         Val Loss=3.0923, Accuracy=69.66%
+         MMD Loss=0.0000, Regular Loss=0.0062
+Epoch 12: Train Loss=0.0059, Accuracy=99.77%
+         Val Loss=2.7596, Accuracy=69.58%
+         MMD Loss=0.0000, Regular Loss=0.0059
+Epoch 13: Train Loss=0.0076, Accuracy=99.78%
+         Val Loss=2.4218, Accuracy=74.69%
+         MMD Loss=0.0000, Regular Loss=0.0075
+Epoch 14: Train Loss=0.0067, Accuracy=99.77%
+         Val Loss=3.9694, Accuracy=70.59%
+         MMD Loss=0.0000, Regular Loss=0.0067
+Epoch 15: Train Loss=0.0068, Accuracy=99.79%
+         Val Loss=2.7228, Accuracy=72.51%
+         MMD Loss=0.0000, Regular Loss=0.0068
+Epoch 16: Train Loss=0.0069, Accuracy=99.77%
+         Val Loss=3.2864, Accuracy=70.55%
+         MMD Loss=0.0000, Regular Loss=0.0069
+Epoch 17: Train Loss=0.0049, Accuracy=99.88%
+         Val Loss=4.0194, Accuracy=68.72%
+         MMD Loss=0.0000, Regular Loss=0.0049
+Epoch 18: Train Loss=0.0078, Accuracy=99.78%
+         Val Loss=3.7636, Accuracy=69.01%
+         MMD Loss=0.0000, Regular Loss=0.0078
+Epoch 19: Train Loss=0.0031, Accuracy=99.91%
+         Val Loss=3.0250, Accuracy=71.76%
+         MMD Loss=0.0000, Regular Loss=0.0031
+Epoch 20: Train Loss=0.0041, Accuracy=99.87%
+         Val Loss=3.3835, Accuracy=70.78%
+         MMD Loss=0.0000, Regular Loss=0.0041
+Training completed.
+Model for train domain AwsCont to test domain TLVunContainer2 saved to exps/CNN_mmd2_0/AwsCont_to_TLVunContainer2/weights/model_final_AwsCont_to_TLVunContainer2.pth
+Running MMD experiment for train domain: BenContainer and test domain: AwsCont
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Epoch 1: Train Loss=0.5930, Accuracy=82.21%
+         Val Loss=1.0553, Accuracy=58.37%
+         MMD Loss=0.0000, Regular Loss=0.5931
+Epoch 2: Train Loss=0.2963, Accuracy=91.30%
+         Val Loss=1.1290, Accuracy=60.29%
+         MMD Loss=0.0000, Regular Loss=0.2957
+Epoch 3: Train Loss=0.1793, Accuracy=94.62%
+         Val Loss=0.9751, Accuracy=66.72%
+         MMD Loss=0.0000, Regular Loss=0.1788
+Epoch 4: Train Loss=0.1565, Accuracy=95.24%
+         Val Loss=0.9236, Accuracy=70.52%
+         MMD Loss=0.0000, Regular Loss=0.1561
+Epoch 5: Train Loss=0.1129, Accuracy=96.82%
+         Val Loss=1.1531, Accuracy=72.44%
+         MMD Loss=0.0000, Regular Loss=0.1137
+Epoch 6: Train Loss=0.0936, Accuracy=97.41%
+         Val Loss=0.9864, Accuracy=79.41%
+         MMD Loss=0.0000, Regular Loss=0.0944
+Epoch 7: Train Loss=0.0829, Accuracy=97.50%
+         Val Loss=1.2169, Accuracy=73.25%
+         MMD Loss=0.0000, Regular Loss=0.0829
+Epoch 8: Train Loss=0.0583, Accuracy=98.19%
+         Val Loss=0.9308, Accuracy=76.38%
+         MMD Loss=0.0000, Regular Loss=0.0582
+Epoch 9: Train Loss=0.0589, Accuracy=97.93%
+         Val Loss=1.0480, Accuracy=78.80%
+         MMD Loss=0.0000, Regular Loss=0.0588
+Epoch 10: Train Loss=0.0600, Accuracy=98.33%
+         Val Loss=0.7623, Accuracy=83.34%
+         MMD Loss=0.0000, Regular Loss=0.0599
+Epoch 11: Train Loss=0.0387, Accuracy=98.82%
+         Val Loss=1.1925, Accuracy=76.53%
+         MMD Loss=0.0000, Regular Loss=0.0386
+Epoch 12: Train Loss=0.0343, Accuracy=98.82%
+         Val Loss=1.0960, Accuracy=78.61%
+         MMD Loss=0.0000, Regular Loss=0.0351
+Epoch 13: Train Loss=0.0467, Accuracy=98.79%
+         Val Loss=1.1082, Accuracy=76.98%
+         MMD Loss=0.0000, Regular Loss=0.0465
+Epoch 14: Train Loss=0.0253, Accuracy=99.21%
+         Val Loss=1.2322, Accuracy=78.48%
+         MMD Loss=0.0000, Regular Loss=0.0252
+Epoch 15: Train Loss=0.0388, Accuracy=98.75%
+         Val Loss=1.4754, Accuracy=74.68%
+         MMD Loss=0.0000, Regular Loss=0.0387
+Epoch 16: Train Loss=0.0281, Accuracy=99.08%
+         Val Loss=1.2337, Accuracy=78.58%
+         MMD Loss=0.0000, Regular Loss=0.0297
+Epoch 17: Train Loss=0.0333, Accuracy=99.08%
+         Val Loss=1.0860, Accuracy=80.91%
+         MMD Loss=0.0000, Regular Loss=0.0332
+Epoch 18: Train Loss=0.0175, Accuracy=99.31%
+         Val Loss=1.3059, Accuracy=79.30%
+         MMD Loss=0.0000, Regular Loss=0.0174
+Epoch 19: Train Loss=0.0219, Accuracy=99.24%
+         Val Loss=1.3238, Accuracy=79.62%
+         MMD Loss=0.0000, Regular Loss=0.0219
+Epoch 20: Train Loss=0.0205, Accuracy=99.41%
+         Val Loss=1.1105, Accuracy=81.25%
+         MMD Loss=0.0000, Regular Loss=0.0205
+Training completed.
+Model for train domain BenContainer to test domain AwsCont saved to exps/CNN_mmd2_0/BenContainer_to_AwsCont/weights/model_final_BenContainer_to_AwsCont.pth
+Running MMD experiment for train domain: BenContainer and test domain: BenContainer
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Epoch 1: Train Loss=0.5779, Accuracy=80.96%
+         Val Loss=0.6493, Accuracy=79.50%
+         MMD Loss=0.0000, Regular Loss=0.5791
+Epoch 2: Train Loss=0.2872, Accuracy=91.20%
+         Val Loss=0.5816, Accuracy=81.76%
+         MMD Loss=0.0000, Regular Loss=0.2869
+Epoch 3: Train Loss=0.2011, Accuracy=93.89%
+         Val Loss=0.5182, Accuracy=83.93%
+         MMD Loss=0.0000, Regular Loss=0.2005
+Epoch 4: Train Loss=0.1485, Accuracy=95.27%
+         Val Loss=0.4200, Accuracy=86.28%
+         MMD Loss=0.0000, Regular Loss=0.1533
+Epoch 5: Train Loss=0.1202, Accuracy=96.16%
+         Val Loss=0.4229, Accuracy=86.53%
+         MMD Loss=0.0000, Regular Loss=0.1204
+Epoch 6: Train Loss=0.0873, Accuracy=97.67%
+         Val Loss=0.4846, Accuracy=87.36%
+         MMD Loss=0.0000, Regular Loss=0.0906
+Epoch 7: Train Loss=0.0777, Accuracy=97.50%
+         Val Loss=0.5048, Accuracy=85.94%
+         MMD Loss=0.0000, Regular Loss=0.0780
+Epoch 8: Train Loss=0.0762, Accuracy=97.67%
+         Val Loss=0.4380, Accuracy=88.62%
+         MMD Loss=0.0000, Regular Loss=0.0760
+Epoch 9: Train Loss=0.0567, Accuracy=98.19%
+         Val Loss=0.4974, Accuracy=88.70%
+         MMD Loss=0.0000, Regular Loss=0.0566
+Epoch 10: Train Loss=0.0463, Accuracy=98.52%
+         Val Loss=0.4303, Accuracy=90.38%
+         MMD Loss=0.0000, Regular Loss=0.0485
+Epoch 11: Train Loss=0.0534, Accuracy=98.16%
+         Val Loss=0.5082, Accuracy=88.95%
+         MMD Loss=0.0000, Regular Loss=0.0532
+Epoch 12: Train Loss=0.0250, Accuracy=99.41%
+         Val Loss=0.5391, Accuracy=88.87%
+         MMD Loss=0.0000, Regular Loss=0.0250
+Epoch 13: Train Loss=0.0284, Accuracy=99.21%
+         Val Loss=0.3996, Accuracy=90.88%
+         MMD Loss=0.0000, Regular Loss=0.0283
+Epoch 14: Train Loss=0.0291, Accuracy=99.05%
+         Val Loss=0.2982, Accuracy=91.80%
+         MMD Loss=0.0000, Regular Loss=0.0290
+Epoch 15: Train Loss=0.0567, Accuracy=98.19%
+         Val Loss=0.6410, Accuracy=88.70%
+         MMD Loss=0.0000, Regular Loss=0.0573
+Epoch 16: Train Loss=0.0244, Accuracy=99.24%
+         Val Loss=0.4437, Accuracy=90.63%
+         MMD Loss=0.0000, Regular Loss=0.0243
+Epoch 17: Train Loss=0.0382, Accuracy=98.72%
+         Val Loss=0.4496, Accuracy=91.13%
+         MMD Loss=0.0000, Regular Loss=0.0381
+Epoch 18: Train Loss=0.0187, Accuracy=99.41%
+         Val Loss=0.3065, Accuracy=92.38%
+         MMD Loss=0.0000, Regular Loss=0.0187
+Epoch 19: Train Loss=0.0150, Accuracy=99.41%
+         Val Loss=0.3161, Accuracy=92.13%
+         MMD Loss=0.0000, Regular Loss=0.0150
+Epoch 20: Train Loss=0.0107, Accuracy=99.77%
+         Val Loss=0.4167, Accuracy=91.97%
+         MMD Loss=0.0000, Regular Loss=0.0107
+Training completed.
+Model for train domain BenContainer to test domain BenContainer saved to exps/CNN_mmd2_0/BenContainer_to_BenContainer/weights/model_final_BenContainer_to_BenContainer.pth
+Running MMD experiment for train domain: BenContainer and test domain: CabSpicy1
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_CabSpicy1_256.pkl
+Epoch 1: Train Loss=0.5496, Accuracy=82.76%
+         Val Loss=0.8445, Accuracy=70.92%
+         MMD Loss=0.0000, Regular Loss=0.5493
+Epoch 2: Train Loss=0.2880, Accuracy=91.37%
+         Val Loss=0.6428, Accuracy=79.55%
+         MMD Loss=0.0000, Regular Loss=0.2899
+Epoch 3: Train Loss=0.2050, Accuracy=93.83%
+         Val Loss=0.6255, Accuracy=80.78%
+         MMD Loss=0.0000, Regular Loss=0.2051
+Epoch 4: Train Loss=0.1448, Accuracy=95.70%
+         Val Loss=0.6101, Accuracy=84.38%
+         MMD Loss=0.0000, Regular Loss=0.1461
+Epoch 5: Train Loss=0.1239, Accuracy=96.09%
+         Val Loss=0.5074, Accuracy=85.84%
+         MMD Loss=0.0000, Regular Loss=0.1235
+Epoch 6: Train Loss=0.1042, Accuracy=96.55%
+         Val Loss=0.5953, Accuracy=83.56%
+         MMD Loss=0.0000, Regular Loss=0.1041
+Epoch 7: Train Loss=0.0818, Accuracy=97.34%
+         Val Loss=0.6938, Accuracy=84.20%
+         MMD Loss=0.0000, Regular Loss=0.0816
+Epoch 8: Train Loss=0.0693, Accuracy=97.73%
+         Val Loss=0.6682, Accuracy=84.61%
+         MMD Loss=0.0000, Regular Loss=0.0692
+Epoch 9: Train Loss=0.0559, Accuracy=97.96%
+         Val Loss=0.6535, Accuracy=85.78%
+         MMD Loss=0.0000, Regular Loss=0.0557
+Epoch 10: Train Loss=0.0462, Accuracy=98.62%
+         Val Loss=0.6739, Accuracy=86.46%
+         MMD Loss=0.0000, Regular Loss=0.0460
+Epoch 11: Train Loss=0.0537, Accuracy=98.16%
+         Val Loss=0.5678, Accuracy=86.55%
+         MMD Loss=0.0000, Regular Loss=0.0536
+Epoch 12: Train Loss=0.0414, Accuracy=98.75%
+         Val Loss=0.7490, Accuracy=84.50%
+         MMD Loss=0.0000, Regular Loss=0.0412
+Epoch 13: Train Loss=0.0399, Accuracy=98.65%
+         Val Loss=0.6863, Accuracy=86.21%
+         MMD Loss=0.0000, Regular Loss=0.0399
+Epoch 14: Train Loss=0.0412, Accuracy=98.85%
+         Val Loss=0.8662, Accuracy=83.31%
+         MMD Loss=0.0000, Regular Loss=0.0411
+Epoch 15: Train Loss=0.0347, Accuracy=98.75%
+         Val Loss=0.7783, Accuracy=84.14%
+         MMD Loss=0.0000, Regular Loss=0.0346
+Epoch 16: Train Loss=0.0299, Accuracy=99.05%
+         Val Loss=0.6699, Accuracy=85.91%
+         MMD Loss=0.0000, Regular Loss=0.0300
+Epoch 17: Train Loss=0.0232, Accuracy=99.31%
+         Val Loss=0.9584, Accuracy=84.70%
+         MMD Loss=0.0000, Regular Loss=0.0232
+Epoch 18: Train Loss=0.0190, Accuracy=99.51%
+         Val Loss=1.1263, Accuracy=83.70%
+         MMD Loss=0.0000, Regular Loss=0.0189
+Epoch 19: Train Loss=0.0175, Accuracy=99.44%
+         Val Loss=0.9563, Accuracy=84.86%
+         MMD Loss=0.0000, Regular Loss=0.0175
+Epoch 20: Train Loss=0.0171, Accuracy=99.41%
+         Val Loss=0.9971, Accuracy=84.95%
+         MMD Loss=0.0000, Regular Loss=0.0170
+Training completed.
+Model for train domain BenContainer to test domain CabSpicy1 saved to exps/CNN_mmd2_0/BenContainer_to_CabSpicy1/weights/model_final_BenContainer_to_CabSpicy1.pth
+Running MMD experiment for train domain: BenContainer and test domain: HujiPC
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_HujiPC_256.pkl
+Epoch 1: Train Loss=0.5565, Accuracy=82.67%
+         Val Loss=0.8232, Accuracy=69.18%
+         MMD Loss=0.0000, Regular Loss=0.5554
+Epoch 2: Train Loss=0.2735, Accuracy=91.69%
+         Val Loss=0.7341, Accuracy=74.14%
+         MMD Loss=0.0000, Regular Loss=0.2758
+Epoch 3: Train Loss=0.1924, Accuracy=94.16%
+         Val Loss=0.6158, Accuracy=79.25%
+         MMD Loss=0.0000, Regular Loss=0.1922
+Epoch 4: Train Loss=0.1417, Accuracy=95.70%
+         Val Loss=0.6847, Accuracy=81.23%
+         MMD Loss=0.0000, Regular Loss=0.1413
+Epoch 5: Train Loss=0.1156, Accuracy=96.91%
+         Val Loss=0.6777, Accuracy=80.42%
+         MMD Loss=0.0000, Regular Loss=0.1165
+Epoch 6: Train Loss=0.0978, Accuracy=96.95%
+         Val Loss=0.6174, Accuracy=82.17%
+         MMD Loss=0.0000, Regular Loss=0.0976
+Epoch 7: Train Loss=0.0713, Accuracy=97.87%
+         Val Loss=0.7325, Accuracy=81.28%
+         MMD Loss=0.0000, Regular Loss=0.0722
+Epoch 8: Train Loss=0.0607, Accuracy=98.00%
+         Val Loss=0.9205, Accuracy=80.27%
+         MMD Loss=0.0000, Regular Loss=0.0611
+Epoch 9: Train Loss=0.0574, Accuracy=97.80%
+         Val Loss=0.6062, Accuracy=84.40%
+         MMD Loss=0.0000, Regular Loss=0.0573
+Epoch 10: Train Loss=0.0516, Accuracy=98.46%
+         Val Loss=0.7056, Accuracy=83.32%
+         MMD Loss=0.0000, Regular Loss=0.0521
+Epoch 11: Train Loss=0.0689, Accuracy=98.00%
+         Val Loss=0.6654, Accuracy=83.55%
+         MMD Loss=0.0000, Regular Loss=0.0687
+Epoch 12: Train Loss=0.0430, Accuracy=98.56%
+         Val Loss=0.6202, Accuracy=85.60%
+         MMD Loss=0.0000, Regular Loss=0.0429
+Epoch 13: Train Loss=0.0229, Accuracy=99.24%
+         Val Loss=0.6615, Accuracy=85.61%
+         MMD Loss=0.0000, Regular Loss=0.0228
+Epoch 14: Train Loss=0.0380, Accuracy=98.79%
+         Val Loss=0.5746, Accuracy=87.11%
+         MMD Loss=0.0000, Regular Loss=0.0392
+Epoch 15: Train Loss=0.0278, Accuracy=99.08%
+         Val Loss=0.6477, Accuracy=85.17%
+         MMD Loss=0.0000, Regular Loss=0.0278
+Epoch 16: Train Loss=0.0198, Accuracy=99.31%
+         Val Loss=0.7413, Accuracy=85.11%
+         MMD Loss=0.0000, Regular Loss=0.0198
+Epoch 17: Train Loss=0.0262, Accuracy=99.18%
+         Val Loss=0.7234, Accuracy=85.30%
+         MMD Loss=0.0000, Regular Loss=0.0264
+Epoch 18: Train Loss=0.0306, Accuracy=98.95%
+         Val Loss=0.7527, Accuracy=84.43%
+         MMD Loss=0.0000, Regular Loss=0.0305
+Epoch 19: Train Loss=0.0339, Accuracy=98.95%
+         Val Loss=0.6316, Accuracy=87.18%
+         MMD Loss=0.0000, Regular Loss=0.0338
+Epoch 20: Train Loss=0.0156, Accuracy=99.44%
+         Val Loss=0.6950, Accuracy=87.13%
+         MMD Loss=0.0000, Regular Loss=0.0155
+Training completed.
+Model for train domain BenContainer to test domain HujiPC saved to exps/CNN_mmd2_0/BenContainer_to_HujiPC/weights/model_final_BenContainer_to_HujiPC.pth
+Running MMD experiment for train domain: BenContainer and test domain: TLVunContainer1
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer1_256.pkl
+Epoch 1: Train Loss=0.5420, Accuracy=82.50%
+         Val Loss=0.9103, Accuracy=73.81%
+         MMD Loss=0.0000, Regular Loss=0.5404
+Epoch 2: Train Loss=0.2843, Accuracy=91.69%
+         Val Loss=0.6898, Accuracy=80.85%
+         MMD Loss=0.0000, Regular Loss=0.2834
+Epoch 3: Train Loss=0.2036, Accuracy=93.76%
+         Val Loss=0.6860, Accuracy=80.06%
+         MMD Loss=0.0000, Regular Loss=0.2030
+Epoch 4: Train Loss=0.1500, Accuracy=95.40%
+         Val Loss=0.7116, Accuracy=80.46%
+         MMD Loss=0.0000, Regular Loss=0.1533
+Epoch 5: Train Loss=0.1203, Accuracy=96.59%
+         Val Loss=0.7047, Accuracy=80.85%
+         MMD Loss=0.0000, Regular Loss=0.1200
+Epoch 6: Train Loss=0.0864, Accuracy=97.60%
+         Val Loss=0.8165, Accuracy=81.47%
+         MMD Loss=0.0000, Regular Loss=0.0861
+Epoch 7: Train Loss=0.0892, Accuracy=97.21%
+         Val Loss=0.7981, Accuracy=82.24%
+         MMD Loss=0.0000, Regular Loss=0.0889
+Epoch 8: Train Loss=0.0640, Accuracy=97.83%
+         Val Loss=0.8091, Accuracy=83.41%
+         MMD Loss=0.0000, Regular Loss=0.0639
+Epoch 9: Train Loss=0.0512, Accuracy=98.36%
+         Val Loss=0.7662, Accuracy=85.50%
+         MMD Loss=0.0000, Regular Loss=0.0512
+Epoch 10: Train Loss=0.0455, Accuracy=98.72%
+         Val Loss=0.8551, Accuracy=83.65%
+         MMD Loss=0.0000, Regular Loss=0.0453
+Epoch 11: Train Loss=0.0566, Accuracy=98.36%
+         Val Loss=0.7747, Accuracy=83.74%
+         MMD Loss=0.0000, Regular Loss=0.0577
+Epoch 12: Train Loss=0.0446, Accuracy=98.88%
+         Val Loss=0.9885, Accuracy=82.72%
+         MMD Loss=0.0000, Regular Loss=0.0445
+Epoch 13: Train Loss=0.0417, Accuracy=98.79%
+         Val Loss=0.8369, Accuracy=84.03%
+         MMD Loss=0.0000, Regular Loss=0.0415
+Epoch 14: Train Loss=0.0266, Accuracy=99.18%
+         Val Loss=0.9634, Accuracy=83.07%
+         MMD Loss=0.0000, Regular Loss=0.0265
+Epoch 15: Train Loss=0.0324, Accuracy=98.88%
+         Val Loss=0.8549, Accuracy=84.73%
+         MMD Loss=0.0000, Regular Loss=0.0323
+Epoch 16: Train Loss=0.0221, Accuracy=99.21%
+         Val Loss=0.8773, Accuracy=88.00%
+         MMD Loss=0.0000, Regular Loss=0.0220
+Epoch 17: Train Loss=0.0268, Accuracy=99.11%
+         Val Loss=0.8500, Accuracy=85.98%
+         MMD Loss=0.0000, Regular Loss=0.0267
+Epoch 18: Train Loss=0.0212, Accuracy=99.34%
+         Val Loss=1.0326, Accuracy=86.54%
+         MMD Loss=0.0000, Regular Loss=0.0212
+Epoch 19: Train Loss=0.0131, Accuracy=99.57%
+         Val Loss=0.9349, Accuracy=84.13%
+         MMD Loss=0.0000, Regular Loss=0.0131
+Epoch 20: Train Loss=0.0172, Accuracy=99.51%
+         Val Loss=0.9525, Accuracy=86.89%
+         MMD Loss=0.0000, Regular Loss=0.0172
+Training completed.
+Model for train domain BenContainer to test domain TLVunContainer1 saved to exps/CNN_mmd2_0/BenContainer_to_TLVunContainer1/weights/model_final_BenContainer_to_TLVunContainer1.pth
+Running MMD experiment for train domain: BenContainer and test domain: TLVunContainer2
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer2_256.pkl
+Epoch 1: Train Loss=0.5624, Accuracy=81.62%
+         Val Loss=0.6658, Accuracy=78.84%
+         MMD Loss=0.0000, Regular Loss=0.5620
+Epoch 2: Train Loss=0.2756, Accuracy=91.56%
+         Val Loss=0.5655, Accuracy=81.13%
+         MMD Loss=0.0000, Regular Loss=0.2753
+Epoch 3: Train Loss=0.1877, Accuracy=94.35%
+         Val Loss=0.5572, Accuracy=84.50%
+         MMD Loss=0.0000, Regular Loss=0.1871
+Epoch 4: Train Loss=0.1441, Accuracy=95.76%
+         Val Loss=0.5862, Accuracy=84.12%
+         MMD Loss=0.0000, Regular Loss=0.1437
+Epoch 5: Train Loss=0.1050, Accuracy=96.26%
+         Val Loss=0.5772, Accuracy=86.72%
+         MMD Loss=0.0000, Regular Loss=0.1047
+Epoch 6: Train Loss=0.0852, Accuracy=97.14%
+         Val Loss=0.5547, Accuracy=87.39%
+         MMD Loss=0.0000, Regular Loss=0.0851
+Epoch 7: Train Loss=0.0739, Accuracy=97.57%
+         Val Loss=0.5696, Accuracy=88.99%
+         MMD Loss=0.0000, Regular Loss=0.0740
+Epoch 8: Train Loss=0.0566, Accuracy=98.23%
+         Val Loss=0.5593, Accuracy=88.53%
+         MMD Loss=0.0000, Regular Loss=0.0565
+Epoch 9: Train Loss=0.0529, Accuracy=98.36%
+         Val Loss=0.5464, Accuracy=88.53%
+         MMD Loss=0.0000, Regular Loss=0.0541
+Epoch 10: Train Loss=0.0532, Accuracy=98.39%
+         Val Loss=0.4788, Accuracy=91.35%
+         MMD Loss=0.0000, Regular Loss=0.0531
+Epoch 11: Train Loss=0.0444, Accuracy=98.65%
+         Val Loss=0.5374, Accuracy=88.99%
+         MMD Loss=0.0000, Regular Loss=0.0443
+Epoch 12: Train Loss=0.0373, Accuracy=98.92%
+         Val Loss=0.5655, Accuracy=89.78%
+         MMD Loss=0.0000, Regular Loss=0.0372
+Epoch 13: Train Loss=0.0407, Accuracy=98.65%
+         Val Loss=0.5884, Accuracy=89.21%
+         MMD Loss=0.0000, Regular Loss=0.0406
+Epoch 14: Train Loss=0.0317, Accuracy=98.98%
+         Val Loss=0.5881, Accuracy=91.44%
+         MMD Loss=0.0000, Regular Loss=0.0316
+Epoch 15: Train Loss=0.0263, Accuracy=99.08%
+         Val Loss=0.5814, Accuracy=91.11%
+         MMD Loss=0.0000, Regular Loss=0.0263
+Epoch 16: Train Loss=0.0382, Accuracy=98.62%
+         Val Loss=0.5598, Accuracy=91.15%
+         MMD Loss=0.0000, Regular Loss=0.0382
+Epoch 17: Train Loss=0.0215, Accuracy=99.41%
+         Val Loss=0.6361, Accuracy=91.40%
+         MMD Loss=0.0000, Regular Loss=0.0215
+Epoch 18: Train Loss=0.0215, Accuracy=99.24%
+         Val Loss=0.8237, Accuracy=89.28%
+         MMD Loss=0.0000, Regular Loss=0.0214
+Epoch 19: Train Loss=0.0194, Accuracy=99.38%
+         Val Loss=0.6092, Accuracy=90.79%
+         MMD Loss=0.0000, Regular Loss=0.0193
+Epoch 20: Train Loss=0.0213, Accuracy=99.34%
+         Val Loss=0.6664, Accuracy=91.96%
+         MMD Loss=0.0000, Regular Loss=0.0212
+Training completed.
+Model for train domain BenContainer to test domain TLVunContainer2 saved to exps/CNN_mmd2_0/BenContainer_to_TLVunContainer2/weights/model_final_BenContainer_to_TLVunContainer2.pth
+Running MMD experiment for train domain: CabSpicy1 and test domain: AwsCont
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_CabSpicy1_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Epoch 1: Train Loss=0.2963, Accuracy=90.33%
+         Val Loss=0.6040, Accuracy=83.52%
+         MMD Loss=0.0000, Regular Loss=0.2968
+Epoch 2: Train Loss=0.0859, Accuracy=97.33%
+         Val Loss=0.5342, Accuracy=86.32%
+         MMD Loss=0.0000, Regular Loss=0.0859
+Epoch 3: Train Loss=0.0459, Accuracy=98.59%
+         Val Loss=0.7348, Accuracy=86.22%
+         MMD Loss=0.0000, Regular Loss=0.0459
+Epoch 4: Train Loss=0.0355, Accuracy=98.88%
+         Val Loss=0.7476, Accuracy=91.00%
+         MMD Loss=0.0000, Regular Loss=0.0355
+Epoch 5: Train Loss=0.0244, Accuracy=99.21%
+         Val Loss=0.7450, Accuracy=89.22%
+         MMD Loss=0.0000, Regular Loss=0.0244
+Epoch 6: Train Loss=0.0210, Accuracy=99.32%
+         Val Loss=0.4674, Accuracy=94.08%
+         MMD Loss=0.0000, Regular Loss=0.0210
+Epoch 7: Train Loss=0.0183, Accuracy=99.46%
+         Val Loss=0.6497, Accuracy=92.04%
+         MMD Loss=0.0000, Regular Loss=0.0182
+Epoch 8: Train Loss=0.0156, Accuracy=99.49%
+         Val Loss=0.6775, Accuracy=93.58%
+         MMD Loss=0.0000, Regular Loss=0.0162
+Epoch 9: Train Loss=0.0096, Accuracy=99.69%
+         Val Loss=0.6103, Accuracy=92.11%
+         MMD Loss=0.0000, Regular Loss=0.0096
+Epoch 10: Train Loss=0.0106, Accuracy=99.74%
+         Val Loss=0.5298, Accuracy=94.02%
+         MMD Loss=0.0000, Regular Loss=0.0106
+Epoch 11: Train Loss=0.0096, Accuracy=99.74%
+         Val Loss=0.7728, Accuracy=92.33%
+         MMD Loss=0.0000, Regular Loss=0.0096
+Epoch 12: Train Loss=0.0091, Accuracy=99.72%
+         Val Loss=0.7882, Accuracy=93.87%
+         MMD Loss=0.0000, Regular Loss=0.0090
+Epoch 13: Train Loss=0.0073, Accuracy=99.72%
+         Val Loss=0.6489, Accuracy=93.29%
+         MMD Loss=0.0000, Regular Loss=0.0073
+Epoch 14: Train Loss=0.0057, Accuracy=99.80%
+         Val Loss=0.9322, Accuracy=92.42%
+         MMD Loss=0.0000, Regular Loss=0.0057
+Epoch 15: Train Loss=0.0086, Accuracy=99.76%
+         Val Loss=0.7129, Accuracy=93.87%
+         MMD Loss=0.0000, Regular Loss=0.0086
+Epoch 16: Train Loss=0.0035, Accuracy=99.91%
+         Val Loss=0.8213, Accuracy=93.99%
+         MMD Loss=0.0000, Regular Loss=0.0035
+Epoch 17: Train Loss=0.0083, Accuracy=99.83%
+         Val Loss=0.7117, Accuracy=93.01%
+         MMD Loss=0.0000, Regular Loss=0.0083
+Epoch 18: Train Loss=0.0080, Accuracy=99.75%
+         Val Loss=0.7281, Accuracy=94.20%
+         MMD Loss=0.0000, Regular Loss=0.0080
+Epoch 19: Train Loss=0.0040, Accuracy=99.89%
+         Val Loss=0.6104, Accuracy=94.77%
+         MMD Loss=0.0000, Regular Loss=0.0040
+Epoch 20: Train Loss=0.0043, Accuracy=99.86%
+         Val Loss=0.9139, Accuracy=92.63%
+         MMD Loss=0.0000, Regular Loss=0.0043
+Training completed.
+Model for train domain CabSpicy1 to test domain AwsCont saved to exps/CNN_mmd2_0/CabSpicy1_to_AwsCont/weights/model_final_CabSpicy1_to_AwsCont.pth
+Running MMD experiment for train domain: CabSpicy1 and test domain: BenContainer
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_CabSpicy1_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Epoch 1: Train Loss=0.2917, Accuracy=90.81%
+         Val Loss=0.3020, Accuracy=91.80%
+         MMD Loss=0.0000, Regular Loss=0.2924
+Epoch 2: Train Loss=0.0807, Accuracy=97.53%
+         Val Loss=0.2396, Accuracy=93.97%
+         MMD Loss=0.0000, Regular Loss=0.0806
+Epoch 3: Train Loss=0.0420, Accuracy=98.62%
+         Val Loss=0.2397, Accuracy=94.56%
+         MMD Loss=0.0000, Regular Loss=0.0420
+Epoch 4: Train Loss=0.0307, Accuracy=99.06%
+         Val Loss=0.2628, Accuracy=94.14%
+         MMD Loss=0.0000, Regular Loss=0.0307
+Epoch 5: Train Loss=0.0210, Accuracy=99.38%
+         Val Loss=0.1827, Accuracy=96.15%
+         MMD Loss=0.0000, Regular Loss=0.0210
+Epoch 6: Train Loss=0.0164, Accuracy=99.48%
+         Val Loss=0.1543, Accuracy=96.40%
+         MMD Loss=0.0000, Regular Loss=0.0164
+Epoch 7: Train Loss=0.0171, Accuracy=99.55%
+         Val Loss=0.1806, Accuracy=96.74%
+         MMD Loss=0.0000, Regular Loss=0.0171
+Epoch 8: Train Loss=0.0133, Accuracy=99.54%
+         Val Loss=0.1860, Accuracy=96.15%
+         MMD Loss=0.0000, Regular Loss=0.0133
+Epoch 9: Train Loss=0.0087, Accuracy=99.71%
+         Val Loss=0.2175, Accuracy=96.65%
+         MMD Loss=0.0000, Regular Loss=0.0087
+Epoch 10: Train Loss=0.0096, Accuracy=99.72%
+         Val Loss=0.1898, Accuracy=96.82%
+         MMD Loss=0.0000, Regular Loss=0.0096
+Epoch 11: Train Loss=0.0103, Accuracy=99.65%
+         Val Loss=0.1544, Accuracy=97.15%
+         MMD Loss=0.0000, Regular Loss=0.0103
+Epoch 12: Train Loss=0.0092, Accuracy=99.67%
+         Val Loss=0.1613, Accuracy=96.40%
+         MMD Loss=0.0000, Regular Loss=0.0092
+Epoch 13: Train Loss=0.0052, Accuracy=99.86%
+         Val Loss=0.2057, Accuracy=96.23%
+         MMD Loss=0.0000, Regular Loss=0.0052
+Epoch 14: Train Loss=0.0093, Accuracy=99.72%
+         Val Loss=0.2229, Accuracy=96.40%
+         MMD Loss=0.0000, Regular Loss=0.0093
+Epoch 15: Train Loss=0.0092, Accuracy=99.73%
+         Val Loss=0.1681, Accuracy=96.57%
+         MMD Loss=0.0000, Regular Loss=0.0092
+Epoch 16: Train Loss=0.0073, Accuracy=99.80%
+         Val Loss=0.1811, Accuracy=97.24%
+         MMD Loss=0.0000, Regular Loss=0.0073
+Epoch 17: Train Loss=0.0078, Accuracy=99.75%
+         Val Loss=0.2802, Accuracy=96.40%
+         MMD Loss=0.0000, Regular Loss=0.0078
+Epoch 18: Train Loss=0.0040, Accuracy=99.86%
+         Val Loss=0.1951, Accuracy=96.82%
+         MMD Loss=0.0000, Regular Loss=0.0040
+Epoch 19: Train Loss=0.0035, Accuracy=99.89%
+         Val Loss=0.4237, Accuracy=89.54%
+         MMD Loss=0.0000, Regular Loss=0.0035
+Epoch 20: Train Loss=0.0072, Accuracy=99.82%
+         Val Loss=0.2494, Accuracy=96.49%
+         MMD Loss=0.0000, Regular Loss=0.0072
+Training completed.
+Model for train domain CabSpicy1 to test domain BenContainer saved to exps/CNN_mmd2_0/CabSpicy1_to_BenContainer/weights/model_final_CabSpicy1_to_BenContainer.pth
+Running MMD experiment for train domain: CabSpicy1 and test domain: CabSpicy1
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_CabSpicy1_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_CabSpicy1_256.pkl
+Epoch 1: Train Loss=0.2805, Accuracy=91.01%
+         Val Loss=0.1133, Accuracy=96.76%
+         MMD Loss=0.0000, Regular Loss=0.2804
+Epoch 2: Train Loss=0.0739, Accuracy=97.76%
+         Val Loss=0.0680, Accuracy=97.95%
+         MMD Loss=0.0000, Regular Loss=0.0740
+Epoch 3: Train Loss=0.0416, Accuracy=98.66%
+         Val Loss=0.0421, Accuracy=98.75%
+         MMD Loss=0.0000, Regular Loss=0.0416
+Epoch 4: Train Loss=0.0275, Accuracy=99.11%
+         Val Loss=0.0407, Accuracy=98.68%
+         MMD Loss=0.0000, Regular Loss=0.0275
+Epoch 5: Train Loss=0.0202, Accuracy=99.34%
+         Val Loss=0.0463, Accuracy=98.79%
+         MMD Loss=0.0000, Regular Loss=0.0202
+Epoch 6: Train Loss=0.0164, Accuracy=99.48%
+         Val Loss=0.0322, Accuracy=99.22%
+         MMD Loss=0.0000, Regular Loss=0.0164
+Epoch 7: Train Loss=0.0143, Accuracy=99.57%
+         Val Loss=0.0490, Accuracy=98.54%
+         MMD Loss=0.0000, Regular Loss=0.0156
+Epoch 8: Train Loss=0.0107, Accuracy=99.66%
+         Val Loss=0.0218, Accuracy=99.39%
+         MMD Loss=0.0000, Regular Loss=0.0107
+Epoch 9: Train Loss=0.0102, Accuracy=99.67%
+         Val Loss=0.0267, Accuracy=99.45%
+         MMD Loss=0.0000, Regular Loss=0.0102
+Epoch 10: Train Loss=0.0103, Accuracy=99.72%
+         Val Loss=0.0214, Accuracy=99.43%
+         MMD Loss=0.0000, Regular Loss=0.0103
+Epoch 11: Train Loss=0.0105, Accuracy=99.67%
+         Val Loss=0.0376, Accuracy=99.27%
+         MMD Loss=0.0000, Regular Loss=0.0104
+Epoch 12: Train Loss=0.0074, Accuracy=99.77%
+         Val Loss=0.0435, Accuracy=99.09%
+         MMD Loss=0.0000, Regular Loss=0.0074
+Epoch 13: Train Loss=0.0102, Accuracy=99.71%
+         Val Loss=0.0296, Accuracy=99.25%
+         MMD Loss=0.0000, Regular Loss=0.0102
+Epoch 14: Train Loss=0.0054, Accuracy=99.82%
+         Val Loss=0.0221, Accuracy=99.52%
+         MMD Loss=0.0000, Regular Loss=0.0054
+Epoch 15: Train Loss=0.0064, Accuracy=99.81%
+         Val Loss=0.0341, Accuracy=99.36%
+         MMD Loss=0.0000, Regular Loss=0.0064
+Epoch 16: Train Loss=0.0063, Accuracy=99.79%
+         Val Loss=0.0395, Accuracy=99.14%
+         MMD Loss=0.0000, Regular Loss=0.0063
+Epoch 17: Train Loss=0.0073, Accuracy=99.76%
+         Val Loss=0.0290, Accuracy=99.47%
+         MMD Loss=0.0000, Regular Loss=0.0073
+Epoch 18: Train Loss=0.0048, Accuracy=99.84%
+         Val Loss=0.0214, Accuracy=99.47%
+         MMD Loss=0.0000, Regular Loss=0.0048
+Epoch 19: Train Loss=0.0037, Accuracy=99.87%
+         Val Loss=0.0188, Accuracy=99.61%
+         MMD Loss=0.0000, Regular Loss=0.0037
+Epoch 20: Train Loss=0.0032, Accuracy=99.89%
+         Val Loss=0.0248, Accuracy=99.55%
+         MMD Loss=0.0000, Regular Loss=0.0032
+Training completed.
+Model for train domain CabSpicy1 to test domain CabSpicy1 saved to exps/CNN_mmd2_0/CabSpicy1_to_CabSpicy1/weights/model_final_CabSpicy1_to_CabSpicy1.pth
+Running MMD experiment for train domain: CabSpicy1 and test domain: HujiPC
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_CabSpicy1_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_HujiPC_256.pkl
+Epoch 1: Train Loss=0.2881, Accuracy=90.83%
+         Val Loss=0.5911, Accuracy=82.83%
+         MMD Loss=0.0000, Regular Loss=0.2879
+Epoch 2: Train Loss=0.0807, Accuracy=97.43%
+         Val Loss=0.4665, Accuracy=89.00%
+         MMD Loss=0.0000, Regular Loss=0.0806
+Epoch 3: Train Loss=0.0499, Accuracy=98.40%
+         Val Loss=0.4032, Accuracy=88.20%
+         MMD Loss=0.0000, Regular Loss=0.0499
+Epoch 4: Train Loss=0.0310, Accuracy=99.06%
+         Val Loss=0.4824, Accuracy=87.50%
+         MMD Loss=0.0000, Regular Loss=0.0310
+Epoch 5: Train Loss=0.0254, Accuracy=99.17%
+         Val Loss=0.4006, Accuracy=92.08%
+         MMD Loss=0.0000, Regular Loss=0.0253
+Epoch 6: Train Loss=0.0205, Accuracy=99.38%
+         Val Loss=0.4348, Accuracy=90.01%
+         MMD Loss=0.0000, Regular Loss=0.0205
+Epoch 7: Train Loss=0.0151, Accuracy=99.52%
+         Val Loss=0.4334, Accuracy=91.53%
+         MMD Loss=0.0000, Regular Loss=0.0151
+Epoch 8: Train Loss=0.0173, Accuracy=99.51%
+         Val Loss=0.4526, Accuracy=89.70%
+         MMD Loss=0.0000, Regular Loss=0.0173
+Epoch 9: Train Loss=0.0129, Accuracy=99.59%
+         Val Loss=0.3693, Accuracy=92.77%
+         MMD Loss=0.0000, Regular Loss=0.0129
+Epoch 10: Train Loss=0.0122, Accuracy=99.64%
+         Val Loss=0.4131, Accuracy=91.94%
+         MMD Loss=0.0000, Regular Loss=0.0123
+Epoch 11: Train Loss=0.0117, Accuracy=99.70%
+         Val Loss=0.6254, Accuracy=90.43%
+         MMD Loss=0.0000, Regular Loss=0.0117
+Epoch 12: Train Loss=0.0115, Accuracy=99.65%
+         Val Loss=0.3916, Accuracy=91.86%
+         MMD Loss=0.0000, Regular Loss=0.0115
+Epoch 13: Train Loss=0.0085, Accuracy=99.75%
+         Val Loss=0.4596, Accuracy=92.05%
+         MMD Loss=0.0000, Regular Loss=0.0085
+Epoch 14: Train Loss=0.0061, Accuracy=99.85%
+         Val Loss=0.4355, Accuracy=92.81%
+         MMD Loss=0.0000, Regular Loss=0.0061
+Epoch 15: Train Loss=0.0115, Accuracy=99.71%
+         Val Loss=0.3675, Accuracy=92.61%
+         MMD Loss=0.0000, Regular Loss=0.0115
+Epoch 16: Train Loss=0.0068, Accuracy=99.75%
+         Val Loss=0.4208, Accuracy=93.85%
+         MMD Loss=0.0000, Regular Loss=0.0068
+Epoch 17: Train Loss=0.0049, Accuracy=99.85%
+         Val Loss=0.3665, Accuracy=93.46%
+         MMD Loss=0.0000, Regular Loss=0.0048
+Epoch 18: Train Loss=0.0064, Accuracy=99.81%
+         Val Loss=0.3768, Accuracy=94.12%
+         MMD Loss=0.0000, Regular Loss=0.0064
+Epoch 19: Train Loss=0.0062, Accuracy=99.82%
+         Val Loss=0.4560, Accuracy=93.33%
+         MMD Loss=0.0000, Regular Loss=0.0062
+Epoch 20: Train Loss=0.0048, Accuracy=99.86%
+         Val Loss=0.3505, Accuracy=93.61%
+         MMD Loss=0.0000, Regular Loss=0.0048
+Training completed.
+Model for train domain CabSpicy1 to test domain HujiPC saved to exps/CNN_mmd2_0/CabSpicy1_to_HujiPC/weights/model_final_CabSpicy1_to_HujiPC.pth
+Running MMD experiment for train domain: CabSpicy1 and test domain: TLVunContainer1
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_CabSpicy1_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer1_256.pkl
+Epoch 1: Train Loss=0.2903, Accuracy=90.58%
+         Val Loss=0.5177, Accuracy=86.50%
+         MMD Loss=0.0000, Regular Loss=0.2901
+Epoch 2: Train Loss=0.0798, Accuracy=97.66%
+         Val Loss=0.5687, Accuracy=88.04%
+         MMD Loss=0.0000, Regular Loss=0.0797
+Epoch 3: Train Loss=0.0410, Accuracy=98.75%
+         Val Loss=0.5372, Accuracy=91.32%
+         MMD Loss=0.0000, Regular Loss=0.0410
+Epoch 4: Train Loss=0.0300, Accuracy=99.07%
+         Val Loss=0.5338, Accuracy=89.33%
+         MMD Loss=0.0000, Regular Loss=0.0299
+Epoch 5: Train Loss=0.0217, Accuracy=99.27%
+         Val Loss=0.5162, Accuracy=92.17%
+         MMD Loss=0.0000, Regular Loss=0.0217
+Epoch 6: Train Loss=0.0144, Accuracy=99.51%
+         Val Loss=0.5375, Accuracy=92.42%
+         MMD Loss=0.0000, Regular Loss=0.0148
+Epoch 7: Train Loss=0.0169, Accuracy=99.52%
+         Val Loss=0.4711, Accuracy=92.57%
+         MMD Loss=0.0000, Regular Loss=0.0169
+Epoch 8: Train Loss=0.0101, Accuracy=99.67%
+         Val Loss=0.5162, Accuracy=92.15%
+         MMD Loss=0.0000, Regular Loss=0.0101
+Epoch 9: Train Loss=0.0110, Accuracy=99.69%
+         Val Loss=0.5733, Accuracy=92.88%
+         MMD Loss=0.0000, Regular Loss=0.0109
+Epoch 10: Train Loss=0.0115, Accuracy=99.62%
+         Val Loss=0.5533, Accuracy=93.00%
+         MMD Loss=0.0000, Regular Loss=0.0115
+Epoch 11: Train Loss=0.0071, Accuracy=99.81%
+         Val Loss=0.5563, Accuracy=92.44%
+         MMD Loss=0.0000, Regular Loss=0.0070
+Epoch 12: Train Loss=0.0070, Accuracy=99.77%
+         Val Loss=0.5321, Accuracy=92.92%
+         MMD Loss=0.0000, Regular Loss=0.0070
+Epoch 13: Train Loss=0.0099, Accuracy=99.72%
+         Val Loss=0.8138, Accuracy=91.30%
+         MMD Loss=0.0000, Regular Loss=0.0099
+Epoch 14: Train Loss=0.0066, Accuracy=99.79%
+         Val Loss=0.7472, Accuracy=92.21%
+         MMD Loss=0.0000, Regular Loss=0.0066
+Epoch 15: Train Loss=0.0058, Accuracy=99.83%
+         Val Loss=0.7374, Accuracy=91.86%
+         MMD Loss=0.0000, Regular Loss=0.0058
+Epoch 16: Train Loss=0.0096, Accuracy=99.72%
+         Val Loss=1.0201, Accuracy=91.94%
+         MMD Loss=0.0000, Regular Loss=0.0096
+Epoch 17: Train Loss=0.0074, Accuracy=99.77%
+         Val Loss=0.5862, Accuracy=93.64%
+         MMD Loss=0.0000, Regular Loss=0.0073
+Epoch 18: Train Loss=0.0036, Accuracy=99.88%
+         Val Loss=0.6417, Accuracy=92.23%
+         MMD Loss=0.0000, Regular Loss=0.0036
+Epoch 19: Train Loss=0.0031, Accuracy=99.87%
+         Val Loss=0.8901, Accuracy=89.80%
+         MMD Loss=0.0000, Regular Loss=0.0031
+Epoch 20: Train Loss=0.0043, Accuracy=99.87%
+         Val Loss=0.7755, Accuracy=92.54%
+         MMD Loss=0.0000, Regular Loss=0.0043
+Training completed.
+Model for train domain CabSpicy1 to test domain TLVunContainer1 saved to exps/CNN_mmd2_0/CabSpicy1_to_TLVunContainer1/weights/model_final_CabSpicy1_to_TLVunContainer1.pth
+Running MMD experiment for train domain: CabSpicy1 and test domain: TLVunContainer2
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_CabSpicy1_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer2_256.pkl
+Epoch 1: Train Loss=0.2928, Accuracy=90.37%
+         Val Loss=0.4936, Accuracy=86.41%
+         MMD Loss=0.0000, Regular Loss=0.2928
+Epoch 2: Train Loss=0.0802, Accuracy=97.56%
+         Val Loss=0.4509, Accuracy=91.21%
+         MMD Loss=0.0000, Regular Loss=0.0802
+Epoch 3: Train Loss=0.0459, Accuracy=98.47%
+         Val Loss=0.5781, Accuracy=88.22%
+         MMD Loss=0.0000, Regular Loss=0.0459
+Epoch 4: Train Loss=0.0338, Accuracy=99.00%
+         Val Loss=0.5463, Accuracy=91.08%
+         MMD Loss=0.0000, Regular Loss=0.0338
+Epoch 5: Train Loss=0.0234, Accuracy=99.16%
+         Val Loss=0.5587, Accuracy=92.75%
+         MMD Loss=0.0000, Regular Loss=0.0234
+Epoch 6: Train Loss=0.0214, Accuracy=99.35%
+         Val Loss=0.4184, Accuracy=93.10%
+         MMD Loss=0.0000, Regular Loss=0.0214
+Epoch 7: Train Loss=0.0144, Accuracy=99.55%
+         Val Loss=0.4609, Accuracy=93.04%
+         MMD Loss=0.0000, Regular Loss=0.0144
+Epoch 8: Train Loss=0.0146, Accuracy=99.58%
+         Val Loss=0.5653, Accuracy=92.41%
+         MMD Loss=0.0000, Regular Loss=0.0146
+Epoch 9: Train Loss=0.0120, Accuracy=99.64%
+         Val Loss=0.5650, Accuracy=93.06%
+         MMD Loss=0.0000, Regular Loss=0.0120
+Epoch 10: Train Loss=0.0116, Accuracy=99.60%
+         Val Loss=0.6209, Accuracy=92.60%
+         MMD Loss=0.0000, Regular Loss=0.0116
+Epoch 11: Train Loss=0.0079, Accuracy=99.72%
+         Val Loss=0.6401, Accuracy=91.02%
+         MMD Loss=0.0000, Regular Loss=0.0079
+Epoch 12: Train Loss=0.0077, Accuracy=99.77%
+         Val Loss=0.7325, Accuracy=91.46%
+         MMD Loss=0.0000, Regular Loss=0.0077
+Epoch 13: Train Loss=0.0097, Accuracy=99.69%
+         Val Loss=0.6543, Accuracy=93.04%
+         MMD Loss=0.0000, Regular Loss=0.0097
+Epoch 14: Train Loss=0.0074, Accuracy=99.73%
+         Val Loss=0.7616, Accuracy=91.04%
+         MMD Loss=0.0000, Regular Loss=0.0074
+Epoch 15: Train Loss=0.0061, Accuracy=99.80%
+         Val Loss=0.7222, Accuracy=93.00%
+         MMD Loss=0.0000, Regular Loss=0.0062
+Epoch 16: Train Loss=0.0057, Accuracy=99.87%
+         Val Loss=0.7404, Accuracy=92.58%
+         MMD Loss=0.0000, Regular Loss=0.0057
+Epoch 17: Train Loss=0.0044, Accuracy=99.87%
+         Val Loss=0.7706, Accuracy=92.10%
+         MMD Loss=0.0000, Regular Loss=0.0044
+Epoch 18: Train Loss=0.0085, Accuracy=99.76%
+         Val Loss=0.8895, Accuracy=90.11%
+         MMD Loss=0.0000, Regular Loss=0.0085
+Epoch 19: Train Loss=0.0032, Accuracy=99.89%
+         Val Loss=0.6687, Accuracy=92.77%
+         MMD Loss=0.0000, Regular Loss=0.0032
+Epoch 20: Train Loss=0.0048, Accuracy=99.82%
+         Val Loss=0.7153, Accuracy=93.18%
+         MMD Loss=0.0000, Regular Loss=0.0048
+Training completed.
+Model for train domain CabSpicy1 to test domain TLVunContainer2 saved to exps/CNN_mmd2_0/CabSpicy1_to_TLVunContainer2/weights/model_final_CabSpicy1_to_TLVunContainer2.pth
+Running MMD experiment for train domain: HujiPC and test domain: AwsCont
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_HujiPC_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Epoch 1: Train Loss=0.2302, Accuracy=92.39%
+         Val Loss=0.6110, Accuracy=92.03%
+         MMD Loss=0.0000, Regular Loss=0.2300
+Epoch 2: Train Loss=0.0484, Accuracy=98.47%
+         Val Loss=0.4800, Accuracy=93.85%
+         MMD Loss=0.0000, Regular Loss=0.0484
+Epoch 3: Train Loss=0.0299, Accuracy=99.06%
+         Val Loss=0.6815, Accuracy=93.21%
+         MMD Loss=0.0000, Regular Loss=0.0299
+Epoch 4: Train Loss=0.0191, Accuracy=99.41%
+         Val Loss=0.5910, Accuracy=94.59%
+         MMD Loss=0.0000, Regular Loss=0.0217
+Epoch 5: Train Loss=0.0212, Accuracy=99.31%
+         Val Loss=0.6765, Accuracy=94.09%
+         MMD Loss=0.0000, Regular Loss=0.0212
+Epoch 6: Train Loss=0.0148, Accuracy=99.53%
+         Val Loss=0.6182, Accuracy=93.54%
+         MMD Loss=0.0000, Regular Loss=0.0148
+Epoch 7: Train Loss=0.0137, Accuracy=99.60%
+         Val Loss=0.6623, Accuracy=92.97%
+         MMD Loss=0.0000, Regular Loss=0.0137
+Epoch 8: Train Loss=0.0122, Accuracy=99.61%
+         Val Loss=0.6365, Accuracy=94.73%
+         MMD Loss=0.0000, Regular Loss=0.0122
+Epoch 9: Train Loss=0.0092, Accuracy=99.71%
+         Val Loss=0.7159, Accuracy=93.04%
+         MMD Loss=0.0000, Regular Loss=0.0092
+Epoch 10: Train Loss=0.0139, Accuracy=99.60%
+         Val Loss=0.6860, Accuracy=92.28%
+         MMD Loss=0.0000, Regular Loss=0.0138
+Epoch 11: Train Loss=0.0095, Accuracy=99.68%
+         Val Loss=0.8934, Accuracy=93.92%
+         MMD Loss=0.0000, Regular Loss=0.0098
+Epoch 12: Train Loss=0.0094, Accuracy=99.70%
+         Val Loss=0.7574, Accuracy=93.81%
+         MMD Loss=0.0000, Regular Loss=0.0094
+Epoch 13: Train Loss=0.0061, Accuracy=99.82%
+         Val Loss=0.8356, Accuracy=92.71%
+         MMD Loss=0.0000, Regular Loss=0.0061
+Epoch 14: Train Loss=0.0067, Accuracy=99.76%
+         Val Loss=0.7369, Accuracy=92.91%
+         MMD Loss=0.0000, Regular Loss=0.0067
+Epoch 15: Train Loss=0.0080, Accuracy=99.77%
+         Val Loss=0.9153, Accuracy=92.42%
+         MMD Loss=0.0000, Regular Loss=0.0196
+Epoch 16: Train Loss=0.0066, Accuracy=99.75%
+         Val Loss=1.0975, Accuracy=91.66%
+         MMD Loss=0.0000, Regular Loss=0.0066
+Epoch 17: Train Loss=0.0055, Accuracy=99.85%
+         Val Loss=0.7994, Accuracy=92.91%
+         MMD Loss=0.0000, Regular Loss=0.0055
+Epoch 18: Train Loss=0.0058, Accuracy=99.83%
+         Val Loss=0.9830, Accuracy=93.09%
+         MMD Loss=0.0000, Regular Loss=0.0058
+Epoch 19: Train Loss=0.0067, Accuracy=99.80%
+         Val Loss=0.8968, Accuracy=92.65%
+         MMD Loss=0.0000, Regular Loss=0.0067
+Epoch 20: Train Loss=0.0054, Accuracy=99.84%
+         Val Loss=0.9511, Accuracy=93.05%
+         MMD Loss=0.0000, Regular Loss=0.0054
+Training completed.
+Model for train domain HujiPC to test domain AwsCont saved to exps/CNN_mmd2_0/HujiPC_to_AwsCont/weights/model_final_HujiPC_to_AwsCont.pth
+Running MMD experiment for train domain: HujiPC and test domain: BenContainer
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_HujiPC_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Epoch 1: Train Loss=0.2247, Accuracy=92.59%
+         Val Loss=0.2879, Accuracy=87.11%
+         MMD Loss=0.0000, Regular Loss=0.2246
+Epoch 2: Train Loss=0.0521, Accuracy=98.40%
+         Val Loss=0.1392, Accuracy=96.15%
+         MMD Loss=0.0000, Regular Loss=0.0537
+Epoch 3: Train Loss=0.0318, Accuracy=99.08%
+         Val Loss=0.3200, Accuracy=88.37%
+         MMD Loss=0.0000, Regular Loss=0.0318
+Epoch 4: Train Loss=0.0216, Accuracy=99.33%
+         Val Loss=0.3761, Accuracy=88.70%
+         MMD Loss=0.0000, Regular Loss=0.0216
+Epoch 5: Train Loss=0.0177, Accuracy=99.46%
+         Val Loss=0.1342, Accuracy=97.15%
+         MMD Loss=0.0000, Regular Loss=0.0182
+Epoch 6: Train Loss=0.0171, Accuracy=99.43%
+         Val Loss=0.3602, Accuracy=91.13%
+         MMD Loss=0.0000, Regular Loss=0.0171
+Epoch 7: Train Loss=0.0119, Accuracy=99.62%
+         Val Loss=0.4996, Accuracy=87.87%
+         MMD Loss=0.0000, Regular Loss=0.0119
+Epoch 8: Train Loss=0.0145, Accuracy=99.55%
+         Val Loss=0.1173, Accuracy=98.08%
+         MMD Loss=0.0000, Regular Loss=0.0145
+Epoch 9: Train Loss=0.0107, Accuracy=99.68%
+         Val Loss=0.1894, Accuracy=95.56%
+         MMD Loss=0.0000, Regular Loss=0.0107
+Epoch 10: Train Loss=0.0088, Accuracy=99.70%
+         Val Loss=1.1607, Accuracy=84.60%
+         MMD Loss=0.0000, Regular Loss=0.0088
+Epoch 11: Train Loss=0.0101, Accuracy=99.69%
+         Val Loss=0.3700, Accuracy=92.22%
+         MMD Loss=0.0000, Regular Loss=0.0101
+Epoch 12: Train Loss=0.0087, Accuracy=99.72%
+         Val Loss=0.4161, Accuracy=89.12%
+         MMD Loss=0.0000, Regular Loss=0.0087
+Epoch 13: Train Loss=0.0088, Accuracy=99.72%
+         Val Loss=0.3016, Accuracy=92.22%
+         MMD Loss=0.0000, Regular Loss=0.0088
+Epoch 14: Train Loss=0.0062, Accuracy=99.81%
+         Val Loss=0.5252, Accuracy=89.54%
+         MMD Loss=0.0000, Regular Loss=0.0062
+Epoch 15: Train Loss=0.0081, Accuracy=99.76%
+         Val Loss=0.3172, Accuracy=91.72%
+         MMD Loss=0.0000, Regular Loss=0.0081
+Epoch 16: Train Loss=0.0065, Accuracy=99.80%
+         Val Loss=0.3128, Accuracy=91.88%
+         MMD Loss=0.0000, Regular Loss=0.0065
+Epoch 17: Train Loss=0.0060, Accuracy=99.87%
+         Val Loss=0.7148, Accuracy=85.77%
+         MMD Loss=0.0000, Regular Loss=0.0060
+Epoch 18: Train Loss=0.0072, Accuracy=99.80%
+         Val Loss=0.5458, Accuracy=88.28%
+         MMD Loss=0.0000, Regular Loss=0.0072
+Epoch 19: Train Loss=0.0049, Accuracy=99.84%
+         Val Loss=0.4375, Accuracy=90.63%
+         MMD Loss=0.0000, Regular Loss=0.0049
+Epoch 20: Train Loss=0.0076, Accuracy=99.76%
+         Val Loss=0.3919, Accuracy=91.30%
+         MMD Loss=0.0000, Regular Loss=0.0076
+Training completed.
+Model for train domain HujiPC to test domain BenContainer saved to exps/CNN_mmd2_0/HujiPC_to_BenContainer/weights/model_final_HujiPC_to_BenContainer.pth
+Running MMD experiment for train domain: HujiPC and test domain: CabSpicy1
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_HujiPC_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_CabSpicy1_256.pkl
+Epoch 1: Train Loss=0.2152, Accuracy=93.01%
+         Val Loss=0.2691, Accuracy=92.36%
+         MMD Loss=0.0000, Regular Loss=0.2150
+Epoch 2: Train Loss=0.0474, Accuracy=98.49%
+         Val Loss=0.3436, Accuracy=89.31%
+         MMD Loss=0.0000, Regular Loss=0.0474
+Epoch 3: Train Loss=0.0268, Accuracy=99.15%
+         Val Loss=0.2708, Accuracy=92.04%
+         MMD Loss=0.0000, Regular Loss=0.0268
+Epoch 4: Train Loss=0.0202, Accuracy=99.43%
+         Val Loss=0.2522, Accuracy=91.15%
+         MMD Loss=0.0000, Regular Loss=0.0202
+Epoch 5: Train Loss=0.0157, Accuracy=99.48%
+         Val Loss=0.3695, Accuracy=90.88%
+         MMD Loss=0.0000, Regular Loss=0.0157
+Epoch 6: Train Loss=0.0160, Accuracy=99.46%
+         Val Loss=0.2688, Accuracy=92.80%
+         MMD Loss=0.0000, Regular Loss=0.0160
+Epoch 7: Train Loss=0.0133, Accuracy=99.67%
+         Val Loss=0.5965, Accuracy=87.99%
+         MMD Loss=0.0000, Regular Loss=0.0133
+Epoch 8: Train Loss=0.0126, Accuracy=99.56%
+         Val Loss=0.4587, Accuracy=88.62%
+         MMD Loss=0.0000, Regular Loss=0.0125
+Epoch 9: Train Loss=0.0119, Accuracy=99.66%
+         Val Loss=0.3705, Accuracy=90.70%
+         MMD Loss=0.0000, Regular Loss=0.0119
+Epoch 10: Train Loss=0.0081, Accuracy=99.75%
+         Val Loss=0.2725, Accuracy=93.27%
+         MMD Loss=0.0000, Regular Loss=0.0081
+Epoch 11: Train Loss=0.0107, Accuracy=99.65%
+         Val Loss=0.3359, Accuracy=92.91%
+         MMD Loss=0.0000, Regular Loss=0.0108
+Epoch 12: Train Loss=0.0089, Accuracy=99.69%
+         Val Loss=0.2919, Accuracy=93.35%
+         MMD Loss=0.0000, Regular Loss=0.0154
+Epoch 13: Train Loss=0.0109, Accuracy=99.66%
+         Val Loss=0.3362, Accuracy=92.66%
+         MMD Loss=0.0000, Regular Loss=0.0109
+Epoch 14: Train Loss=0.0060, Accuracy=99.80%
+         Val Loss=0.4692, Accuracy=90.65%
+         MMD Loss=0.0000, Regular Loss=0.0060
+Epoch 15: Train Loss=0.0057, Accuracy=99.82%
+         Val Loss=0.4640, Accuracy=90.04%
+         MMD Loss=0.0000, Regular Loss=0.0057
+Epoch 16: Train Loss=0.0070, Accuracy=99.77%
+         Val Loss=0.3141, Accuracy=93.52%
+         MMD Loss=0.0000, Regular Loss=0.0070
+Epoch 17: Train Loss=0.0066, Accuracy=99.79%
+         Val Loss=0.4192, Accuracy=91.20%
+         MMD Loss=0.0000, Regular Loss=0.0066
+Epoch 18: Train Loss=0.0065, Accuracy=99.78%
+         Val Loss=0.5389, Accuracy=86.94%
+         MMD Loss=0.0000, Regular Loss=0.0065
+Epoch 19: Train Loss=0.0035, Accuracy=99.87%
+         Val Loss=0.3244, Accuracy=93.89%
+         MMD Loss=0.0000, Regular Loss=0.0035
+Epoch 20: Train Loss=0.0078, Accuracy=99.76%
+         Val Loss=0.4048, Accuracy=92.05%
+         MMD Loss=0.0000, Regular Loss=0.0078
+Training completed.
+Model for train domain HujiPC to test domain CabSpicy1 saved to exps/CNN_mmd2_0/HujiPC_to_CabSpicy1/weights/model_final_HujiPC_to_CabSpicy1.pth
+Running MMD experiment for train domain: HujiPC and test domain: HujiPC
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_HujiPC_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_HujiPC_256.pkl
+Epoch 1: Train Loss=0.2247, Accuracy=92.57%
+         Val Loss=0.0615, Accuracy=98.27%
+         MMD Loss=0.0000, Regular Loss=0.2246
+Epoch 2: Train Loss=0.0577, Accuracy=98.23%
+         Val Loss=0.0476, Accuracy=98.41%
+         MMD Loss=0.0000, Regular Loss=0.0576
+Epoch 3: Train Loss=0.0340, Accuracy=98.92%
+         Val Loss=0.0372, Accuracy=98.88%
+         MMD Loss=0.0000, Regular Loss=0.0340
+Epoch 4: Train Loss=0.0248, Accuracy=99.27%
+         Val Loss=0.0353, Accuracy=99.12%
+         MMD Loss=0.0000, Regular Loss=0.0255
+Epoch 5: Train Loss=0.0221, Accuracy=99.37%
+         Val Loss=0.0312, Accuracy=99.27%
+         MMD Loss=0.0000, Regular Loss=0.0221
+Epoch 6: Train Loss=0.0185, Accuracy=99.42%
+         Val Loss=0.0383, Accuracy=98.75%
+         MMD Loss=0.0000, Regular Loss=0.0201
+Epoch 7: Train Loss=0.0162, Accuracy=99.49%
+         Val Loss=0.0648, Accuracy=98.47%
+         MMD Loss=0.0000, Regular Loss=0.0162
+Epoch 8: Train Loss=0.0134, Accuracy=99.55%
+         Val Loss=0.0551, Accuracy=98.66%
+         MMD Loss=0.0000, Regular Loss=0.0134
+Epoch 9: Train Loss=0.0137, Accuracy=99.56%
+         Val Loss=0.0289, Accuracy=99.15%
+         MMD Loss=0.0000, Regular Loss=0.0137
+Epoch 10: Train Loss=0.0133, Accuracy=99.59%
+         Val Loss=0.0242, Accuracy=99.34%
+         MMD Loss=0.0000, Regular Loss=0.0133
+Epoch 11: Train Loss=0.0097, Accuracy=99.69%
+         Val Loss=0.0470, Accuracy=99.01%
+         MMD Loss=0.0000, Regular Loss=0.0097
+Epoch 12: Train Loss=0.0096, Accuracy=99.68%
+         Val Loss=0.0238, Accuracy=99.46%
+         MMD Loss=0.0000, Regular Loss=0.0096
+Epoch 13: Train Loss=0.0076, Accuracy=99.75%
+         Val Loss=0.0516, Accuracy=98.95%
+         MMD Loss=0.0000, Regular Loss=0.0076
+Epoch 14: Train Loss=0.0106, Accuracy=99.70%
+         Val Loss=0.0217, Accuracy=99.49%
+         MMD Loss=0.0000, Regular Loss=0.0106
+Epoch 15: Train Loss=0.0072, Accuracy=99.76%
+         Val Loss=0.0188, Accuracy=99.56%
+         MMD Loss=0.0000, Regular Loss=0.0072
+Epoch 16: Train Loss=0.0054, Accuracy=99.82%
+         Val Loss=0.0378, Accuracy=99.48%
+         MMD Loss=0.0000, Regular Loss=0.0054
+Epoch 17: Train Loss=0.0081, Accuracy=99.75%
+         Val Loss=0.0300, Accuracy=99.42%
+         MMD Loss=0.0000, Regular Loss=0.0081
+Epoch 18: Train Loss=0.0074, Accuracy=99.81%
+         Val Loss=0.0310, Accuracy=99.49%
+         MMD Loss=0.0000, Regular Loss=0.0073
+Epoch 19: Train Loss=0.0072, Accuracy=99.81%
+         Val Loss=0.0300, Accuracy=99.51%
+         MMD Loss=0.0000, Regular Loss=0.0084
+Epoch 20: Train Loss=0.0073, Accuracy=99.78%
+         Val Loss=0.0303, Accuracy=99.45%
+         MMD Loss=0.0000, Regular Loss=0.0073
+Training completed.
+Model for train domain HujiPC to test domain HujiPC saved to exps/CNN_mmd2_0/HujiPC_to_HujiPC/weights/model_final_HujiPC_to_HujiPC.pth
+Running MMD experiment for train domain: HujiPC and test domain: TLVunContainer1
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_HujiPC_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer1_256.pkl
+Epoch 1: Train Loss=0.2380, Accuracy=92.31%
+         Val Loss=0.5807, Accuracy=88.51%
+         MMD Loss=0.0000, Regular Loss=0.2378
+Epoch 2: Train Loss=0.0541, Accuracy=98.28%
+         Val Loss=0.5937, Accuracy=89.22%
+         MMD Loss=0.0000, Regular Loss=0.0540
+Epoch 3: Train Loss=0.0291, Accuracy=99.03%
+         Val Loss=0.6109, Accuracy=91.73%
+         MMD Loss=0.0000, Regular Loss=0.0290
+Epoch 4: Train Loss=0.0232, Accuracy=99.26%
+         Val Loss=0.5742, Accuracy=90.65%
+         MMD Loss=0.0000, Regular Loss=0.0232
+Epoch 5: Train Loss=0.0190, Accuracy=99.33%
+         Val Loss=0.7030, Accuracy=88.97%
+         MMD Loss=0.0000, Regular Loss=0.0190
+Epoch 6: Train Loss=0.0121, Accuracy=99.62%
+         Val Loss=0.8469, Accuracy=86.77%
+         MMD Loss=0.0000, Regular Loss=0.0121
+Epoch 7: Train Loss=0.0131, Accuracy=99.59%
+         Val Loss=0.8755, Accuracy=87.44%
+         MMD Loss=0.0000, Regular Loss=0.0131
+Epoch 8: Train Loss=0.0120, Accuracy=99.60%
+         Val Loss=0.6314, Accuracy=94.39%
+         MMD Loss=0.0000, Regular Loss=0.0120
+Epoch 9: Train Loss=0.0131, Accuracy=99.61%
+         Val Loss=0.9930, Accuracy=84.01%
+         MMD Loss=0.0000, Regular Loss=0.0131
+Epoch 10: Train Loss=0.0095, Accuracy=99.70%
+         Val Loss=0.8858, Accuracy=88.14%
+         MMD Loss=0.0000, Regular Loss=0.0104
+Epoch 11: Train Loss=0.0115, Accuracy=99.61%
+         Val Loss=0.7869, Accuracy=90.88%
+         MMD Loss=0.0000, Regular Loss=0.0115
+Epoch 12: Train Loss=0.0071, Accuracy=99.76%
+         Val Loss=1.3694, Accuracy=81.89%
+         MMD Loss=0.0000, Regular Loss=0.0071
+Epoch 13: Train Loss=0.0058, Accuracy=99.83%
+         Val Loss=1.3372, Accuracy=84.28%
+         MMD Loss=0.0000, Regular Loss=0.0058
+Epoch 14: Train Loss=0.0108, Accuracy=99.74%
+         Val Loss=0.9355, Accuracy=91.32%
+         MMD Loss=0.0000, Regular Loss=0.0108
+Epoch 15: Train Loss=0.0073, Accuracy=99.78%
+         Val Loss=1.1846, Accuracy=89.03%
+         MMD Loss=0.0000, Regular Loss=0.0073
+Epoch 16: Train Loss=0.0085, Accuracy=99.76%
+         Val Loss=0.8734, Accuracy=92.81%
+         MMD Loss=0.0000, Regular Loss=0.0085
+Epoch 17: Train Loss=0.0069, Accuracy=99.79%
+         Val Loss=1.4137, Accuracy=85.42%
+         MMD Loss=0.0000, Regular Loss=0.0069
+Epoch 18: Train Loss=0.0059, Accuracy=99.86%
+         Val Loss=0.9153, Accuracy=93.10%
+         MMD Loss=0.0000, Regular Loss=0.0059
+Epoch 19: Train Loss=0.0061, Accuracy=99.85%
+         Val Loss=0.8307, Accuracy=93.73%
+         MMD Loss=0.0000, Regular Loss=0.0061
+Epoch 20: Train Loss=0.0061, Accuracy=99.83%
+         Val Loss=1.0828, Accuracy=87.33%
+         MMD Loss=0.0000, Regular Loss=0.0061
+Training completed.
+Model for train domain HujiPC to test domain TLVunContainer1 saved to exps/CNN_mmd2_0/HujiPC_to_TLVunContainer1/weights/model_final_HujiPC_to_TLVunContainer1.pth
+Running MMD experiment for train domain: HujiPC and test domain: TLVunContainer2
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_HujiPC_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer2_256.pkl
+Epoch 1: Train Loss=0.2305, Accuracy=92.54%
+         Val Loss=0.4141, Accuracy=91.73%
+         MMD Loss=0.0000, Regular Loss=0.2325
+Epoch 2: Train Loss=0.0596, Accuracy=98.19%
+         Val Loss=0.3846, Accuracy=94.16%
+         MMD Loss=0.0000, Regular Loss=0.0596
+Epoch 3: Train Loss=0.0343, Accuracy=98.84%
+         Val Loss=0.4776, Accuracy=93.25%
+         MMD Loss=0.0000, Regular Loss=0.0343
+Epoch 4: Train Loss=0.0244, Accuracy=99.26%
+         Val Loss=0.5125, Accuracy=89.30%
+         MMD Loss=0.0000, Regular Loss=0.0244
+Epoch 5: Train Loss=0.0196, Accuracy=99.35%
+         Val Loss=0.5120, Accuracy=93.08%
+         MMD Loss=0.0000, Regular Loss=0.0196
+Epoch 6: Train Loss=0.0184, Accuracy=99.43%
+         Val Loss=0.3115, Accuracy=94.93%
+         MMD Loss=0.0000, Regular Loss=0.0184
+Epoch 7: Train Loss=0.0096, Accuracy=99.72%
+         Val Loss=0.7023, Accuracy=87.99%
+         MMD Loss=0.0000, Regular Loss=0.0096
+Epoch 8: Train Loss=0.0150, Accuracy=99.55%
+         Val Loss=0.4887, Accuracy=95.34%
+         MMD Loss=0.0000, Regular Loss=0.0150
+Epoch 9: Train Loss=0.0102, Accuracy=99.72%
+         Val Loss=0.5024, Accuracy=96.16%
+         MMD Loss=0.0000, Regular Loss=0.0104
+Epoch 10: Train Loss=0.0101, Accuracy=99.72%
+         Val Loss=0.5058, Accuracy=94.68%
+         MMD Loss=0.0000, Regular Loss=0.0101
+Epoch 11: Train Loss=0.0106, Accuracy=99.70%
+         Val Loss=0.3914, Accuracy=95.49%
+         MMD Loss=0.0000, Regular Loss=0.0106
+Epoch 12: Train Loss=0.0076, Accuracy=99.77%
+         Val Loss=0.7997, Accuracy=93.06%
+         MMD Loss=0.0000, Regular Loss=0.0155
+Epoch 13: Train Loss=0.0094, Accuracy=99.71%
+         Val Loss=0.6065, Accuracy=94.95%
+         MMD Loss=0.0000, Regular Loss=0.0093
+Epoch 14: Train Loss=0.0073, Accuracy=99.81%
+         Val Loss=0.6620, Accuracy=92.77%
+         MMD Loss=0.0000, Regular Loss=0.0074
+Epoch 15: Train Loss=0.0078, Accuracy=99.76%
+         Val Loss=0.7747, Accuracy=92.44%
+         MMD Loss=0.0000, Regular Loss=0.0078
+Epoch 16: Train Loss=0.0059, Accuracy=99.80%
+         Val Loss=0.6263, Accuracy=94.93%
+         MMD Loss=0.0000, Regular Loss=0.0059
+Epoch 17: Train Loss=0.0070, Accuracy=99.78%
+         Val Loss=0.6967, Accuracy=94.43%
+         MMD Loss=0.0000, Regular Loss=0.0070
+Epoch 18: Train Loss=0.0064, Accuracy=99.82%
+         Val Loss=0.7164, Accuracy=93.37%
+         MMD Loss=0.0000, Regular Loss=0.0064
+Epoch 19: Train Loss=0.0048, Accuracy=99.85%
+         Val Loss=0.7931, Accuracy=95.45%
+         MMD Loss=0.0000, Regular Loss=0.0048
+Epoch 20: Train Loss=0.0056, Accuracy=99.81%
+         Val Loss=0.5174, Accuracy=95.53%
+         MMD Loss=0.0000, Regular Loss=0.0057
+Training completed.
+Model for train domain HujiPC to test domain TLVunContainer2 saved to exps/CNN_mmd2_0/HujiPC_to_TLVunContainer2/weights/model_final_HujiPC_to_TLVunContainer2.pth
+Running MMD experiment for train domain: TLVunContainer1 and test domain: AwsCont
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer1_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Epoch 1: Train Loss=0.2698, Accuracy=91.84%
+         Val Loss=0.7520, Accuracy=83.73%
+         MMD Loss=0.0000, Regular Loss=0.2695
+Epoch 2: Train Loss=0.0726, Accuracy=97.85%
+         Val Loss=0.8082, Accuracy=85.62%
+         MMD Loss=0.0000, Regular Loss=0.0744
+Epoch 3: Train Loss=0.0462, Accuracy=98.57%
+         Val Loss=0.8363, Accuracy=86.00%
+         MMD Loss=0.0000, Regular Loss=0.0462
+Epoch 4: Train Loss=0.0300, Accuracy=99.07%
+         Val Loss=0.9610, Accuracy=86.91%
+         MMD Loss=0.0000, Regular Loss=0.0300
+Epoch 5: Train Loss=0.0179, Accuracy=99.41%
+         Val Loss=0.7363, Accuracy=91.04%
+         MMD Loss=0.0000, Regular Loss=0.0179
+Epoch 6: Train Loss=0.0191, Accuracy=99.46%
+         Val Loss=0.9917, Accuracy=87.96%
+         MMD Loss=0.0000, Regular Loss=0.0190
+Epoch 7: Train Loss=0.0145, Accuracy=99.49%
+         Val Loss=0.9286, Accuracy=89.91%
+         MMD Loss=0.0000, Regular Loss=0.0149
+Epoch 8: Train Loss=0.0155, Accuracy=99.58%
+         Val Loss=0.8268, Accuracy=91.31%
+         MMD Loss=0.0000, Regular Loss=0.0155
+Epoch 9: Train Loss=0.0145, Accuracy=99.62%
+         Val Loss=0.8675, Accuracy=91.92%
+         MMD Loss=0.0000, Regular Loss=0.0145
+Epoch 10: Train Loss=0.0088, Accuracy=99.74%
+         Val Loss=1.1071, Accuracy=87.63%
+         MMD Loss=0.0000, Regular Loss=0.0087
+Epoch 11: Train Loss=0.0108, Accuracy=99.70%
+         Val Loss=0.9104, Accuracy=91.63%
+         MMD Loss=0.0000, Regular Loss=0.0108
+Epoch 12: Train Loss=0.0089, Accuracy=99.74%
+         Val Loss=1.1207, Accuracy=86.93%
+         MMD Loss=0.0000, Regular Loss=0.0089
+Epoch 13: Train Loss=0.0086, Accuracy=99.74%
+         Val Loss=1.1644, Accuracy=90.93%
+         MMD Loss=0.0000, Regular Loss=0.0086
+Epoch 14: Train Loss=0.0045, Accuracy=99.88%
+         Val Loss=1.2450, Accuracy=91.62%
+         MMD Loss=0.0000, Regular Loss=0.0045
+Epoch 15: Train Loss=0.0101, Accuracy=99.76%
+         Val Loss=1.0210, Accuracy=90.52%
+         MMD Loss=0.0000, Regular Loss=0.0100
+Epoch 16: Train Loss=0.0066, Accuracy=99.77%
+         Val Loss=1.1939, Accuracy=92.34%
+         MMD Loss=0.0000, Regular Loss=0.0066
+Epoch 17: Train Loss=0.0062, Accuracy=99.85%
+         Val Loss=0.9152, Accuracy=92.58%
+         MMD Loss=0.0000, Regular Loss=0.0062
+Epoch 18: Train Loss=0.0064, Accuracy=99.79%
+         Val Loss=0.8612, Accuracy=93.20%
+         MMD Loss=0.0000, Regular Loss=0.0064
+Epoch 19: Train Loss=0.0055, Accuracy=99.79%
+         Val Loss=1.2593, Accuracy=91.92%
+         MMD Loss=0.0000, Regular Loss=0.0055
+Epoch 20: Train Loss=0.0051, Accuracy=99.82%
+         Val Loss=1.1981, Accuracy=91.07%
+         MMD Loss=0.0000, Regular Loss=0.0051
+Training completed.
+Model for train domain TLVunContainer1 to test domain AwsCont saved to exps/CNN_mmd2_0/TLVunContainer1_to_AwsCont/weights/model_final_TLVunContainer1_to_AwsCont.pth
+Running MMD experiment for train domain: TLVunContainer1 and test domain: BenContainer
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer1_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Epoch 1: Train Loss=0.2457, Accuracy=92.54%
+         Val Loss=0.4116, Accuracy=89.12%
+         MMD Loss=0.0000, Regular Loss=0.2456
+Epoch 2: Train Loss=0.0733, Accuracy=97.81%
+         Val Loss=0.3128, Accuracy=91.72%
+         MMD Loss=0.0000, Regular Loss=0.0733
+Epoch 3: Train Loss=0.0357, Accuracy=98.90%
+         Val Loss=0.3473, Accuracy=91.88%
+         MMD Loss=0.0000, Regular Loss=0.0357
+Epoch 4: Train Loss=0.0245, Accuracy=99.17%
+         Val Loss=0.2791, Accuracy=94.31%
+         MMD Loss=0.0000, Regular Loss=0.0245
+Epoch 5: Train Loss=0.0185, Accuracy=99.43%
+         Val Loss=0.3850, Accuracy=94.23%
+         MMD Loss=0.0000, Regular Loss=0.0185
+Epoch 6: Train Loss=0.0204, Accuracy=99.36%
+         Val Loss=0.2051, Accuracy=95.40%
+         MMD Loss=0.0000, Regular Loss=0.0204
+Epoch 7: Train Loss=0.0136, Accuracy=99.58%
+         Val Loss=0.2208, Accuracy=95.31%
+         MMD Loss=0.0000, Regular Loss=0.0136
+Epoch 8: Train Loss=0.0122, Accuracy=99.67%
+         Val Loss=0.4594, Accuracy=93.97%
+         MMD Loss=0.0000, Regular Loss=0.0123
+Epoch 9: Train Loss=0.0152, Accuracy=99.58%
+         Val Loss=0.2577, Accuracy=95.56%
+         MMD Loss=0.0000, Regular Loss=0.0151
+Epoch 10: Train Loss=0.0133, Accuracy=99.63%
+         Val Loss=0.3384, Accuracy=95.15%
+         MMD Loss=0.0000, Regular Loss=0.0133
+Epoch 11: Train Loss=0.0075, Accuracy=99.72%
+         Val Loss=0.4307, Accuracy=93.39%
+         MMD Loss=0.0000, Regular Loss=0.0075
+Epoch 12: Train Loss=0.0044, Accuracy=99.84%
+         Val Loss=0.3188, Accuracy=95.73%
+         MMD Loss=0.0000, Regular Loss=0.0047
+Epoch 13: Train Loss=0.0133, Accuracy=99.64%
+         Val Loss=0.3017, Accuracy=94.56%
+         MMD Loss=0.0000, Regular Loss=0.0133
+Epoch 14: Train Loss=0.0089, Accuracy=99.67%
+         Val Loss=0.4602, Accuracy=93.56%
+         MMD Loss=0.0000, Regular Loss=0.0089
+Epoch 15: Train Loss=0.0106, Accuracy=99.65%
+         Val Loss=0.5957, Accuracy=93.39%
+         MMD Loss=0.0000, Regular Loss=0.0106
+Epoch 16: Train Loss=0.0090, Accuracy=99.74%
+         Val Loss=0.5461, Accuracy=93.47%
+         MMD Loss=0.0000, Regular Loss=0.0090
+Epoch 17: Train Loss=0.0030, Accuracy=99.89%
+         Val Loss=0.2524, Accuracy=95.98%
+         MMD Loss=0.0000, Regular Loss=0.0030
+Epoch 18: Train Loss=0.0025, Accuracy=99.93%
+         Val Loss=0.6281, Accuracy=94.23%
+         MMD Loss=0.0000, Regular Loss=0.0025
+Epoch 19: Train Loss=0.0061, Accuracy=99.89%
+         Val Loss=0.3964, Accuracy=94.31%
+         MMD Loss=0.0000, Regular Loss=0.0061
+Epoch 20: Train Loss=0.0055, Accuracy=99.81%
+         Val Loss=0.3843, Accuracy=94.90%
+         MMD Loss=0.0000, Regular Loss=0.0055
+Training completed.
+Model for train domain TLVunContainer1 to test domain BenContainer saved to exps/CNN_mmd2_0/TLVunContainer1_to_BenContainer/weights/model_final_TLVunContainer1_to_BenContainer.pth
+Running MMD experiment for train domain: TLVunContainer1 and test domain: CabSpicy1
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer1_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_CabSpicy1_256.pkl
+Epoch 1: Train Loss=0.2610, Accuracy=92.13%
+         Val Loss=0.4839, Accuracy=87.17%
+         MMD Loss=0.0000, Regular Loss=0.2608
+Epoch 2: Train Loss=0.0769, Accuracy=97.69%
+         Val Loss=0.4872, Accuracy=88.83%
+         MMD Loss=0.0000, Regular Loss=0.0769
+Epoch 3: Train Loss=0.0438, Accuracy=98.72%
+         Val Loss=0.5312, Accuracy=88.26%
+         MMD Loss=0.0000, Regular Loss=0.0437
+Epoch 4: Train Loss=0.0290, Accuracy=99.11%
+         Val Loss=0.4989, Accuracy=88.42%
+         MMD Loss=0.0000, Regular Loss=0.0290
+Epoch 5: Train Loss=0.0173, Accuracy=99.49%
+         Val Loss=0.5435, Accuracy=89.52%
+         MMD Loss=0.0000, Regular Loss=0.0172
+Epoch 6: Train Loss=0.0151, Accuracy=99.63%
+         Val Loss=0.7675, Accuracy=88.47%
+         MMD Loss=0.0000, Regular Loss=0.0150
+Epoch 7: Train Loss=0.0146, Accuracy=99.47%
+         Val Loss=0.5467, Accuracy=90.38%
+         MMD Loss=0.0000, Regular Loss=0.0146
+Epoch 8: Train Loss=0.0134, Accuracy=99.57%
+         Val Loss=0.6454, Accuracy=90.82%
+         MMD Loss=0.0000, Regular Loss=0.0134
+Epoch 9: Train Loss=0.0121, Accuracy=99.60%
+         Val Loss=0.6193, Accuracy=91.16%
+         MMD Loss=0.0000, Regular Loss=0.0121
+Epoch 10: Train Loss=0.0097, Accuracy=99.77%
+         Val Loss=0.5519, Accuracy=91.13%
+         MMD Loss=0.0000, Regular Loss=0.0097
+Epoch 11: Train Loss=0.0098, Accuracy=99.67%
+         Val Loss=0.6997, Accuracy=89.85%
+         MMD Loss=0.0000, Regular Loss=0.0098
+Epoch 12: Train Loss=0.0106, Accuracy=99.69%
+         Val Loss=0.6433, Accuracy=90.95%
+         MMD Loss=0.0000, Regular Loss=0.0105
+Epoch 13: Train Loss=0.0092, Accuracy=99.74%
+         Val Loss=0.5400, Accuracy=92.13%
+         MMD Loss=0.0000, Regular Loss=0.0092
+Epoch 14: Train Loss=0.0036, Accuracy=99.89%
+         Val Loss=0.6369, Accuracy=91.84%
+         MMD Loss=0.0000, Regular Loss=0.0036
+Epoch 15: Train Loss=0.0055, Accuracy=99.83%
+         Val Loss=0.6214, Accuracy=90.58%
+         MMD Loss=0.0000, Regular Loss=0.0055
+Epoch 16: Train Loss=0.0042, Accuracy=99.92%
+         Val Loss=0.8837, Accuracy=89.68%
+         MMD Loss=0.0000, Regular Loss=0.0042
+Epoch 17: Train Loss=0.0047, Accuracy=99.82%
+         Val Loss=0.7382, Accuracy=90.24%
+         MMD Loss=0.0000, Regular Loss=0.0047
+Epoch 18: Train Loss=0.0103, Accuracy=99.70%
+         Val Loss=0.4961, Accuracy=91.97%
+         MMD Loss=0.0000, Regular Loss=0.0103
+Epoch 19: Train Loss=0.0047, Accuracy=99.86%
+         Val Loss=0.6619, Accuracy=90.58%
+         MMD Loss=0.0000, Regular Loss=0.0047
+Epoch 20: Train Loss=0.0063, Accuracy=99.81%
+         Val Loss=0.6864, Accuracy=90.90%
+         MMD Loss=0.0000, Regular Loss=0.0063
+Training completed.
+Model for train domain TLVunContainer1 to test domain CabSpicy1 saved to exps/CNN_mmd2_0/TLVunContainer1_to_CabSpicy1/weights/model_final_TLVunContainer1_to_CabSpicy1.pth
+Running MMD experiment for train domain: TLVunContainer1 and test domain: HujiPC
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer1_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_HujiPC_256.pkl
+Epoch 1: Train Loss=0.2495, Accuracy=92.55%
+         Val Loss=0.5887, Accuracy=84.53%
+         MMD Loss=0.0000, Regular Loss=0.2493
+Epoch 2: Train Loss=0.0822, Accuracy=97.62%
+         Val Loss=0.3796, Accuracy=89.87%
+         MMD Loss=0.0000, Regular Loss=0.0823
+Epoch 3: Train Loss=0.0486, Accuracy=98.60%
+         Val Loss=0.3332, Accuracy=91.78%
+         MMD Loss=0.0000, Regular Loss=0.0487
+Epoch 4: Train Loss=0.0315, Accuracy=99.01%
+         Val Loss=0.2497, Accuracy=93.38%
+         MMD Loss=0.0000, Regular Loss=0.0314
+Epoch 5: Train Loss=0.0252, Accuracy=99.18%
+         Val Loss=0.4093, Accuracy=90.74%
+         MMD Loss=0.0000, Regular Loss=0.0256
+Epoch 6: Train Loss=0.0216, Accuracy=99.31%
+         Val Loss=0.4573, Accuracy=90.32%
+         MMD Loss=0.0000, Regular Loss=0.0220
+Epoch 7: Train Loss=0.0151, Accuracy=99.54%
+         Val Loss=0.4211, Accuracy=91.27%
+         MMD Loss=0.0000, Regular Loss=0.0151
+Epoch 8: Train Loss=0.0135, Accuracy=99.58%
+         Val Loss=0.4497, Accuracy=91.88%
+         MMD Loss=0.0000, Regular Loss=0.0135
+Epoch 9: Train Loss=0.0166, Accuracy=99.47%
+         Val Loss=0.3189, Accuracy=92.35%
+         MMD Loss=0.0000, Regular Loss=0.0166
+Epoch 10: Train Loss=0.0098, Accuracy=99.77%
+         Val Loss=0.3272, Accuracy=93.05%
+         MMD Loss=0.0000, Regular Loss=0.0098
+Epoch 11: Train Loss=0.0114, Accuracy=99.75%
+         Val Loss=0.4818, Accuracy=91.91%
+         MMD Loss=0.0000, Regular Loss=0.0113
+Epoch 12: Train Loss=0.0116, Accuracy=99.73%
+         Val Loss=0.2876, Accuracy=94.20%
+         MMD Loss=0.0000, Regular Loss=0.0116
+Epoch 13: Train Loss=0.0074, Accuracy=99.77%
+         Val Loss=0.3984, Accuracy=92.53%
+         MMD Loss=0.0000, Regular Loss=0.0074
+Epoch 14: Train Loss=0.0081, Accuracy=99.67%
+         Val Loss=0.2934, Accuracy=94.09%
+         MMD Loss=0.0000, Regular Loss=0.0081
+Epoch 15: Train Loss=0.0098, Accuracy=99.70%
+         Val Loss=0.3973, Accuracy=93.31%
+         MMD Loss=0.0000, Regular Loss=0.0098
+Epoch 16: Train Loss=0.0063, Accuracy=99.77%
+         Val Loss=0.3967, Accuracy=93.07%
+         MMD Loss=0.0000, Regular Loss=0.0063
+Epoch 17: Train Loss=0.0061, Accuracy=99.82%
+         Val Loss=0.4772, Accuracy=92.53%
+         MMD Loss=0.0000, Regular Loss=0.0061
+Epoch 18: Train Loss=0.0110, Accuracy=99.72%
+         Val Loss=0.3235, Accuracy=93.57%
+         MMD Loss=0.0000, Regular Loss=0.0109
+Epoch 19: Train Loss=0.0037, Accuracy=99.88%
+         Val Loss=0.6060, Accuracy=92.39%
+         MMD Loss=0.0000, Regular Loss=0.0037
+Epoch 20: Train Loss=0.0067, Accuracy=99.80%
+         Val Loss=0.4133, Accuracy=93.80%
+         MMD Loss=0.0000, Regular Loss=0.0068
+Training completed.
+Model for train domain TLVunContainer1 to test domain HujiPC saved to exps/CNN_mmd2_0/TLVunContainer1_to_HujiPC/weights/model_final_TLVunContainer1_to_HujiPC.pth
+Running MMD experiment for train domain: TLVunContainer1 and test domain: TLVunContainer1
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer1_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer1_256.pkl
+Epoch 1: Train Loss=0.2610, Accuracy=92.05%
+         Val Loss=0.4291, Accuracy=92.57%
+         MMD Loss=0.0000, Regular Loss=0.2608
+Epoch 2: Train Loss=0.0755, Accuracy=97.67%
+         Val Loss=0.5194, Accuracy=94.58%
+         MMD Loss=0.0000, Regular Loss=0.0754
+Epoch 3: Train Loss=0.0434, Accuracy=98.68%
+         Val Loss=0.4805, Accuracy=95.16%
+         MMD Loss=0.0000, Regular Loss=0.0434
+Epoch 4: Train Loss=0.0286, Accuracy=99.13%
+         Val Loss=0.5075, Accuracy=95.81%
+         MMD Loss=0.0000, Regular Loss=0.0286
+Epoch 5: Train Loss=0.0208, Accuracy=99.34%
+         Val Loss=0.6121, Accuracy=95.64%
+         MMD Loss=0.0000, Regular Loss=0.0208
+Epoch 6: Train Loss=0.0188, Accuracy=99.39%
+         Val Loss=0.6805, Accuracy=95.80%
+         MMD Loss=0.0000, Regular Loss=0.0188
+Epoch 7: Train Loss=0.0142, Accuracy=99.61%
+         Val Loss=0.6504, Accuracy=95.85%
+         MMD Loss=0.0000, Regular Loss=0.0142
+Epoch 8: Train Loss=0.0176, Accuracy=99.46%
+         Val Loss=0.5666, Accuracy=96.22%
+         MMD Loss=0.0000, Regular Loss=0.0176
+Epoch 9: Train Loss=0.0089, Accuracy=99.74%
+         Val Loss=0.5176, Accuracy=96.34%
+         MMD Loss=0.0000, Regular Loss=0.0089
+Epoch 10: Train Loss=0.0095, Accuracy=99.70%
+         Val Loss=0.5385, Accuracy=95.99%
+         MMD Loss=0.0000, Regular Loss=0.0095
+Epoch 11: Train Loss=0.0125, Accuracy=99.60%
+         Val Loss=0.8309, Accuracy=96.35%
+         MMD Loss=0.0000, Regular Loss=0.0125
+Epoch 12: Train Loss=0.0080, Accuracy=99.76%
+         Val Loss=0.7764, Accuracy=96.47%
+         MMD Loss=0.0000, Regular Loss=0.0080
+Epoch 13: Train Loss=0.0071, Accuracy=99.78%
+         Val Loss=0.8311, Accuracy=96.43%
+         MMD Loss=0.0000, Regular Loss=0.0070
+Epoch 14: Train Loss=0.0079, Accuracy=99.79%
+         Val Loss=0.7716, Accuracy=96.70%
+         MMD Loss=0.0000, Regular Loss=0.0079
+Epoch 15: Train Loss=0.0107, Accuracy=99.70%
+         Val Loss=0.6776, Accuracy=95.41%
+         MMD Loss=0.0000, Regular Loss=0.0108
+Epoch 16: Train Loss=0.0099, Accuracy=99.67%
+         Val Loss=0.7726, Accuracy=96.12%
+         MMD Loss=0.0000, Regular Loss=0.0099
+Epoch 17: Train Loss=0.0044, Accuracy=99.83%
+         Val Loss=0.8486, Accuracy=96.35%
+         MMD Loss=0.0000, Regular Loss=0.0044
+Epoch 18: Train Loss=0.0050, Accuracy=99.82%
+         Val Loss=0.7281, Accuracy=96.41%
+         MMD Loss=0.0000, Regular Loss=0.0050
+Epoch 19: Train Loss=0.0079, Accuracy=99.74%
+         Val Loss=0.6056, Accuracy=96.14%
+         MMD Loss=0.0000, Regular Loss=0.0079
+Epoch 20: Train Loss=0.0036, Accuracy=99.89%
+         Val Loss=0.7821, Accuracy=96.37%
+         MMD Loss=0.0000, Regular Loss=0.0036
+Training completed.
+Model for train domain TLVunContainer1 to test domain TLVunContainer1 saved to exps/CNN_mmd2_0/TLVunContainer1_to_TLVunContainer1/weights/model_final_TLVunContainer1_to_TLVunContainer1.pth
+Running MMD experiment for train domain: TLVunContainer1 and test domain: TLVunContainer2
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer1_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer2_256.pkl
+Epoch 1: Train Loss=0.2599, Accuracy=92.14%
+         Val Loss=0.3376, Accuracy=92.56%
+         MMD Loss=0.0000, Regular Loss=0.2596
+Epoch 2: Train Loss=0.0809, Accuracy=97.40%
+         Val Loss=0.2956, Accuracy=95.32%
+         MMD Loss=0.0000, Regular Loss=0.0808
+Epoch 3: Train Loss=0.0463, Accuracy=98.71%
+         Val Loss=0.3190, Accuracy=95.59%
+         MMD Loss=0.0000, Regular Loss=0.0463
+Epoch 4: Train Loss=0.0290, Accuracy=99.14%
+         Val Loss=0.3711, Accuracy=96.59%
+         MMD Loss=0.0000, Regular Loss=0.0290
+Epoch 5: Train Loss=0.0252, Accuracy=99.24%
+         Val Loss=0.4487, Accuracy=96.34%
+         MMD Loss=0.0000, Regular Loss=0.0251
+Epoch 6: Train Loss=0.0168, Accuracy=99.53%
+         Val Loss=0.5358, Accuracy=96.67%
+         MMD Loss=0.0000, Regular Loss=0.0167
+Epoch 7: Train Loss=0.0166, Accuracy=99.59%
+         Val Loss=0.4342, Accuracy=96.74%
+         MMD Loss=0.0000, Regular Loss=0.0166
+Epoch 8: Train Loss=0.0127, Accuracy=99.61%
+         Val Loss=0.5560, Accuracy=96.36%
+         MMD Loss=0.0000, Regular Loss=0.0127
+Epoch 9: Train Loss=0.0151, Accuracy=99.49%
+         Val Loss=0.7568, Accuracy=96.51%
+         MMD Loss=0.0000, Regular Loss=0.0151
+Epoch 10: Train Loss=0.0095, Accuracy=99.69%
+         Val Loss=0.5284, Accuracy=96.72%
+         MMD Loss=0.0000, Regular Loss=0.0095
+Epoch 11: Train Loss=0.0115, Accuracy=99.62%
+         Val Loss=0.4271, Accuracy=96.76%
+         MMD Loss=0.0000, Regular Loss=0.0115
+Epoch 12: Train Loss=0.0101, Accuracy=99.69%
+         Val Loss=0.5078, Accuracy=96.57%
+         MMD Loss=0.0000, Regular Loss=0.0101
+Epoch 13: Train Loss=0.0084, Accuracy=99.77%
+         Val Loss=0.5157, Accuracy=96.34%
+         MMD Loss=0.0000, Regular Loss=0.0084
+Epoch 14: Train Loss=0.0067, Accuracy=99.80%
+         Val Loss=0.4847, Accuracy=97.01%
+         MMD Loss=0.0000, Regular Loss=0.0067
+Epoch 15: Train Loss=0.0111, Accuracy=99.72%
+         Val Loss=0.6369, Accuracy=97.30%
+         MMD Loss=0.0000, Regular Loss=0.0112
+Epoch 16: Train Loss=0.0089, Accuracy=99.71%
+         Val Loss=0.6852, Accuracy=96.16%
+         MMD Loss=0.0000, Regular Loss=0.0116
+Epoch 17: Train Loss=0.0058, Accuracy=99.86%
+         Val Loss=0.9062, Accuracy=97.05%
+         MMD Loss=0.0000, Regular Loss=0.0058
+Epoch 18: Train Loss=0.0064, Accuracy=99.82%
+         Val Loss=0.8692, Accuracy=96.67%
+         MMD Loss=0.0000, Regular Loss=0.0064
+Epoch 19: Train Loss=0.0041, Accuracy=99.87%
+         Val Loss=0.7480, Accuracy=96.67%
+         MMD Loss=0.0000, Regular Loss=0.0041
+Epoch 20: Train Loss=0.0067, Accuracy=99.84%
+         Val Loss=0.6932, Accuracy=96.74%
+         MMD Loss=0.0000, Regular Loss=0.0066
+Training completed.
+Model for train domain TLVunContainer1 to test domain TLVunContainer2 saved to exps/CNN_mmd2_0/TLVunContainer1_to_TLVunContainer2/weights/model_final_TLVunContainer1_to_TLVunContainer2.pth
+Running MMD experiment for train domain: TLVunContainer2 and test domain: AwsCont
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer2_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Epoch 1: Train Loss=0.3236, Accuracy=89.29%
+         Val Loss=1.0182, Accuracy=83.60%
+         MMD Loss=0.0000, Regular Loss=0.3235
+Epoch 2: Train Loss=0.0956, Accuracy=96.88%
+         Val Loss=0.9261, Accuracy=84.58%
+         MMD Loss=0.0000, Regular Loss=0.0956
+Epoch 3: Train Loss=0.0554, Accuracy=98.31%
+         Val Loss=1.2750, Accuracy=84.73%
+         MMD Loss=0.0000, Regular Loss=0.0554
+Epoch 4: Train Loss=0.0325, Accuracy=99.04%
+         Val Loss=1.1737, Accuracy=86.64%
+         MMD Loss=0.0000, Regular Loss=0.0325
+Epoch 5: Train Loss=0.0277, Accuracy=99.18%
+         Val Loss=1.1993, Accuracy=88.37%
+         MMD Loss=0.0000, Regular Loss=0.0277
+Epoch 6: Train Loss=0.0210, Accuracy=99.31%
+         Val Loss=1.5200, Accuracy=87.49%
+         MMD Loss=0.0000, Regular Loss=0.0210
+Epoch 7: Train Loss=0.0180, Accuracy=99.43%
+         Val Loss=1.6656, Accuracy=86.97%
+         MMD Loss=0.0000, Regular Loss=0.0180
+Epoch 8: Train Loss=0.0094, Accuracy=99.73%
+         Val Loss=0.8925, Accuracy=89.49%
+         MMD Loss=0.0000, Regular Loss=0.0094
+Epoch 9: Train Loss=0.0097, Accuracy=99.67%
+         Val Loss=1.0960, Accuracy=91.46%
+         MMD Loss=0.0000, Regular Loss=0.0097
+Epoch 10: Train Loss=0.0088, Accuracy=99.74%
+         Val Loss=1.0820, Accuracy=92.79%
+         MMD Loss=0.0000, Regular Loss=0.0088
+Epoch 11: Train Loss=0.0123, Accuracy=99.63%
+         Val Loss=1.4246, Accuracy=91.04%
+         MMD Loss=0.0000, Regular Loss=0.0123
+Epoch 12: Train Loss=0.0077, Accuracy=99.78%
+         Val Loss=1.4029, Accuracy=93.55%
+         MMD Loss=0.0000, Regular Loss=0.0077
+Epoch 13: Train Loss=0.0098, Accuracy=99.70%
+         Val Loss=1.6539, Accuracy=93.78%
+         MMD Loss=0.0000, Regular Loss=0.0098
+Epoch 14: Train Loss=0.0063, Accuracy=99.80%
+         Val Loss=0.9727, Accuracy=94.41%
+         MMD Loss=0.0000, Regular Loss=0.0063
+Epoch 15: Train Loss=0.0090, Accuracy=99.70%
+         Val Loss=1.7420, Accuracy=91.16%
+         MMD Loss=0.0000, Regular Loss=0.0090
+Epoch 16: Train Loss=0.0032, Accuracy=99.89%
+         Val Loss=1.6357, Accuracy=90.65%
+         MMD Loss=0.0000, Regular Loss=0.0032
+Epoch 17: Train Loss=0.0091, Accuracy=99.72%
+         Val Loss=1.4521, Accuracy=93.49%
+         MMD Loss=0.0000, Regular Loss=0.0091
+Epoch 18: Train Loss=0.0127, Accuracy=99.72%
+         Val Loss=1.1850, Accuracy=91.69%
+         MMD Loss=0.0000, Regular Loss=0.0127
+Epoch 19: Train Loss=0.0018, Accuracy=99.94%
+         Val Loss=1.0609, Accuracy=92.95%
+         MMD Loss=0.0000, Regular Loss=0.0018
+Epoch 20: Train Loss=0.0052, Accuracy=99.90%
+         Val Loss=1.1694, Accuracy=92.90%
+         MMD Loss=0.0000, Regular Loss=0.0052
+Training completed.
+Model for train domain TLVunContainer2 to test domain AwsCont saved to exps/CNN_mmd2_0/TLVunContainer2_to_AwsCont/weights/model_final_TLVunContainer2_to_AwsCont.pth
+Running MMD experiment for train domain: TLVunContainer2 and test domain: BenContainer
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer2_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Epoch 1: Train Loss=0.3302, Accuracy=89.17%
+         Val Loss=0.1657, Accuracy=94.56%
+         MMD Loss=0.0000, Regular Loss=0.3302
+Epoch 2: Train Loss=0.1049, Accuracy=96.69%
+         Val Loss=0.0967, Accuracy=97.15%
+         MMD Loss=0.0000, Regular Loss=0.1049
+Epoch 3: Train Loss=0.0587, Accuracy=98.30%
+         Val Loss=0.1420, Accuracy=95.98%
+         MMD Loss=0.0000, Regular Loss=0.0587
+Epoch 4: Train Loss=0.0373, Accuracy=98.85%
+         Val Loss=0.1174, Accuracy=96.99%
+         MMD Loss=0.0000, Regular Loss=0.0373
+Epoch 5: Train Loss=0.0245, Accuracy=99.24%
+         Val Loss=0.1040, Accuracy=97.41%
+         MMD Loss=0.0000, Regular Loss=0.0245
+Epoch 6: Train Loss=0.0188, Accuracy=99.36%
+         Val Loss=0.0929, Accuracy=98.08%
+         MMD Loss=0.0000, Regular Loss=0.0188
+Epoch 7: Train Loss=0.0157, Accuracy=99.51%
+         Val Loss=0.1116, Accuracy=97.32%
+         MMD Loss=0.0000, Regular Loss=0.0157
+Epoch 8: Train Loss=0.0137, Accuracy=99.63%
+         Val Loss=0.1185, Accuracy=96.57%
+         MMD Loss=0.0000, Regular Loss=0.0137
+Epoch 9: Train Loss=0.0181, Accuracy=99.49%
+         Val Loss=0.0828, Accuracy=97.82%
+         MMD Loss=0.0000, Regular Loss=0.0181
+Epoch 10: Train Loss=0.0100, Accuracy=99.66%
+         Val Loss=0.0694, Accuracy=98.24%
+         MMD Loss=0.0000, Regular Loss=0.0100
+Epoch 11: Train Loss=0.0067, Accuracy=99.82%
+         Val Loss=0.0910, Accuracy=98.16%
+         MMD Loss=0.0000, Regular Loss=0.0067
+Epoch 12: Train Loss=0.0111, Accuracy=99.65%
+         Val Loss=0.1192, Accuracy=97.82%
+         MMD Loss=0.0000, Regular Loss=0.0111
+Epoch 13: Train Loss=0.0089, Accuracy=99.73%
+         Val Loss=0.0851, Accuracy=98.66%
+         MMD Loss=0.0000, Regular Loss=0.0089
+Epoch 14: Train Loss=0.0073, Accuracy=99.78%
+         Val Loss=0.0749, Accuracy=98.24%
+         MMD Loss=0.0000, Regular Loss=0.0073
+Epoch 15: Train Loss=0.0065, Accuracy=99.86%
+         Val Loss=0.0822, Accuracy=98.41%
+         MMD Loss=0.0000, Regular Loss=0.0065
+Epoch 16: Train Loss=0.0106, Accuracy=99.63%
+         Val Loss=0.0733, Accuracy=98.83%
+         MMD Loss=0.0000, Regular Loss=0.0106
+Epoch 17: Train Loss=0.0043, Accuracy=99.84%
+         Val Loss=0.0889, Accuracy=97.99%
+         MMD Loss=0.0000, Regular Loss=0.0043
+Epoch 18: Train Loss=0.0062, Accuracy=99.75%
+         Val Loss=0.0800, Accuracy=98.74%
+         MMD Loss=0.0000, Regular Loss=0.0062
+Epoch 19: Train Loss=0.0027, Accuracy=99.90%
+         Val Loss=0.1019, Accuracy=98.16%
+         MMD Loss=0.0000, Regular Loss=0.0027
+Epoch 20: Train Loss=0.0068, Accuracy=99.83%
+         Val Loss=0.1158, Accuracy=98.58%
+         MMD Loss=0.0000, Regular Loss=0.0068
+Training completed.
+Model for train domain TLVunContainer2 to test domain BenContainer saved to exps/CNN_mmd2_0/TLVunContainer2_to_BenContainer/weights/model_final_TLVunContainer2_to_BenContainer.pth
+Running MMD experiment for train domain: TLVunContainer2 and test domain: CabSpicy1
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer2_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_CabSpicy1_256.pkl
+Epoch 1: Train Loss=0.3147, Accuracy=89.91%
+         Val Loss=0.4715, Accuracy=88.38%
+         MMD Loss=0.0000, Regular Loss=0.3146
+Epoch 2: Train Loss=0.0990, Accuracy=96.86%
+         Val Loss=0.4858, Accuracy=88.90%
+         MMD Loss=0.0000, Regular Loss=0.0990
+Epoch 3: Train Loss=0.0544, Accuracy=98.36%
+         Val Loss=0.3239, Accuracy=91.18%
+         MMD Loss=0.0000, Regular Loss=0.0544
+Epoch 4: Train Loss=0.0373, Accuracy=98.76%
+         Val Loss=0.5401, Accuracy=89.65%
+         MMD Loss=0.0000, Regular Loss=0.0373
+Epoch 5: Train Loss=0.0251, Accuracy=99.19%
+         Val Loss=0.4507, Accuracy=91.02%
+         MMD Loss=0.0000, Regular Loss=0.0251
+Epoch 6: Train Loss=0.0232, Accuracy=99.32%
+         Val Loss=0.3389, Accuracy=92.27%
+         MMD Loss=0.0000, Regular Loss=0.0231
+Epoch 7: Train Loss=0.0196, Accuracy=99.36%
+         Val Loss=0.6156, Accuracy=90.09%
+         MMD Loss=0.0000, Regular Loss=0.0196
+Epoch 8: Train Loss=0.0129, Accuracy=99.63%
+         Val Loss=0.8670, Accuracy=88.44%
+         MMD Loss=0.0000, Regular Loss=0.0128
+Epoch 9: Train Loss=0.0180, Accuracy=99.39%
+         Val Loss=0.5524, Accuracy=90.90%
+         MMD Loss=0.0000, Regular Loss=0.0180
+Epoch 10: Train Loss=0.0094, Accuracy=99.68%
+         Val Loss=0.8381, Accuracy=89.67%
+         MMD Loss=0.0000, Regular Loss=0.0094
+Epoch 11: Train Loss=0.0122, Accuracy=99.55%
+         Val Loss=0.6091, Accuracy=90.36%
+         MMD Loss=0.0000, Regular Loss=0.0122
+Epoch 12: Train Loss=0.0074, Accuracy=99.79%
+         Val Loss=0.7344, Accuracy=90.22%
+         MMD Loss=0.0000, Regular Loss=0.0074
+Epoch 13: Train Loss=0.0083, Accuracy=99.75%
+         Val Loss=0.6035, Accuracy=92.18%
+         MMD Loss=0.0000, Regular Loss=0.0083
+Epoch 14: Train Loss=0.0065, Accuracy=99.79%
+         Val Loss=0.7843, Accuracy=90.88%
+         MMD Loss=0.0000, Regular Loss=0.0065
+Epoch 15: Train Loss=0.0092, Accuracy=99.71%
+         Val Loss=0.8045, Accuracy=90.36%
+         MMD Loss=0.0000, Regular Loss=0.0093
+Epoch 16: Train Loss=0.0065, Accuracy=99.78%
+         Val Loss=0.7207, Accuracy=91.91%
+         MMD Loss=0.0000, Regular Loss=0.0065
+Epoch 17: Train Loss=0.0091, Accuracy=99.74%
+         Val Loss=0.4965, Accuracy=92.29%
+         MMD Loss=0.0000, Regular Loss=0.0091
+Epoch 18: Train Loss=0.0097, Accuracy=99.79%
+         Val Loss=0.6535, Accuracy=91.70%
+         MMD Loss=0.0000, Regular Loss=0.0096
+Epoch 19: Train Loss=0.0037, Accuracy=99.87%
+         Val Loss=0.7473, Accuracy=91.91%
+         MMD Loss=0.0000, Regular Loss=0.0036
+Epoch 20: Train Loss=0.0015, Accuracy=99.95%
+         Val Loss=0.8359, Accuracy=91.66%
+         MMD Loss=0.0000, Regular Loss=0.0015
+Training completed.
+Model for train domain TLVunContainer2 to test domain CabSpicy1 saved to exps/CNN_mmd2_0/TLVunContainer2_to_CabSpicy1/weights/model_final_TLVunContainer2_to_CabSpicy1.pth
+Running MMD experiment for train domain: TLVunContainer2 and test domain: HujiPC
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer2_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_HujiPC_256.pkl
+Epoch 1: Train Loss=0.3116, Accuracy=89.81%
+         Val Loss=0.2998, Accuracy=91.23%
+         MMD Loss=0.0000, Regular Loss=0.3115
+Epoch 2: Train Loss=0.0930, Accuracy=96.97%
+         Val Loss=0.1974, Accuracy=94.31%
+         MMD Loss=0.0000, Regular Loss=0.0930
+Epoch 3: Train Loss=0.0529, Accuracy=98.20%
+         Val Loss=0.1625, Accuracy=95.44%
+         MMD Loss=0.0000, Regular Loss=0.0529
+Epoch 4: Train Loss=0.0358, Accuracy=98.77%
+         Val Loss=0.2042, Accuracy=95.68%
+         MMD Loss=0.0000, Regular Loss=0.0358
+Epoch 5: Train Loss=0.0259, Accuracy=99.24%
+         Val Loss=0.1799, Accuracy=95.64%
+         MMD Loss=0.0000, Regular Loss=0.0259
+Epoch 6: Train Loss=0.0219, Accuracy=99.38%
+         Val Loss=0.1551, Accuracy=96.70%
+         MMD Loss=0.0000, Regular Loss=0.0219
+Epoch 7: Train Loss=0.0181, Accuracy=99.45%
+         Val Loss=0.1568, Accuracy=96.82%
+         MMD Loss=0.0000, Regular Loss=0.0181
+Epoch 8: Train Loss=0.0101, Accuracy=99.73%
+         Val Loss=0.2243, Accuracy=96.35%
+         MMD Loss=0.0000, Regular Loss=0.0101
+Epoch 9: Train Loss=0.0100, Accuracy=99.65%
+         Val Loss=0.1596, Accuracy=96.89%
+         MMD Loss=0.0000, Regular Loss=0.0100
+Epoch 10: Train Loss=0.0128, Accuracy=99.66%
+         Val Loss=0.1929, Accuracy=96.87%
+         MMD Loss=0.0000, Regular Loss=0.0128
+Epoch 11: Train Loss=0.0112, Accuracy=99.67%
+         Val Loss=0.1828, Accuracy=96.97%
+         MMD Loss=0.0000, Regular Loss=0.0112
+Epoch 12: Train Loss=0.0097, Accuracy=99.71%
+         Val Loss=0.1691, Accuracy=96.69%
+         MMD Loss=0.0000, Regular Loss=0.0098
+Epoch 13: Train Loss=0.0090, Accuracy=99.68%
+         Val Loss=0.1952, Accuracy=96.67%
+         MMD Loss=0.0000, Regular Loss=0.0090
+Epoch 14: Train Loss=0.0053, Accuracy=99.83%
+         Val Loss=0.2206, Accuracy=97.11%
+         MMD Loss=0.0000, Regular Loss=0.0053
+Epoch 15: Train Loss=0.0092, Accuracy=99.76%
+         Val Loss=0.2209, Accuracy=96.70%
+         MMD Loss=0.0000, Regular Loss=0.0092
+Epoch 16: Train Loss=0.0076, Accuracy=99.77%
+         Val Loss=0.1460, Accuracy=97.25%
+         MMD Loss=0.0000, Regular Loss=0.0076
+Epoch 17: Train Loss=0.0059, Accuracy=99.84%
+         Val Loss=0.1388, Accuracy=97.24%
+         MMD Loss=0.0000, Regular Loss=0.0059
+Epoch 18: Train Loss=0.0049, Accuracy=99.90%
+         Val Loss=0.1790, Accuracy=97.40%
+         MMD Loss=0.0000, Regular Loss=0.0049
+Epoch 19: Train Loss=0.0092, Accuracy=99.76%
+         Val Loss=0.1347, Accuracy=97.48%
+         MMD Loss=0.0000, Regular Loss=0.0092
+Epoch 20: Train Loss=0.0026, Accuracy=99.92%
+         Val Loss=0.1619, Accuracy=97.38%
+         MMD Loss=0.0000, Regular Loss=0.0026
+Training completed.
+Model for train domain TLVunContainer2 to test domain HujiPC saved to exps/CNN_mmd2_0/TLVunContainer2_to_HujiPC/weights/model_final_TLVunContainer2_to_HujiPC.pth
+Running MMD experiment for train domain: TLVunContainer2 and test domain: TLVunContainer1
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer2_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer1_256.pkl
+Epoch 1: Train Loss=0.3176, Accuracy=89.85%
+         Val Loss=0.4305, Accuracy=93.48%
+         MMD Loss=0.0000, Regular Loss=0.3175
+Epoch 2: Train Loss=0.0850, Accuracy=97.42%
+         Val Loss=0.5312, Accuracy=94.21%
+         MMD Loss=0.0000, Regular Loss=0.0852
+Epoch 3: Train Loss=0.0432, Accuracy=98.61%
+         Val Loss=0.5707, Accuracy=94.48%
+         MMD Loss=0.0000, Regular Loss=0.0432
+Epoch 4: Train Loss=0.0293, Accuracy=99.11%
+         Val Loss=0.5157, Accuracy=95.99%
+         MMD Loss=0.0000, Regular Loss=0.0293
+Epoch 5: Train Loss=0.0290, Accuracy=99.03%
+         Val Loss=0.6452, Accuracy=94.79%
+         MMD Loss=0.0000, Regular Loss=0.0290
+Epoch 6: Train Loss=0.0208, Accuracy=99.35%
+         Val Loss=0.6448, Accuracy=95.68%
+         MMD Loss=0.0000, Regular Loss=0.0208
+Epoch 7: Train Loss=0.0135, Accuracy=99.59%
+         Val Loss=0.6142, Accuracy=95.16%
+         MMD Loss=0.0000, Regular Loss=0.0135
+Epoch 8: Train Loss=0.0130, Accuracy=99.55%
+         Val Loss=0.7348, Accuracy=95.68%
+         MMD Loss=0.0000, Regular Loss=0.0130
+Epoch 9: Train Loss=0.0134, Accuracy=99.58%
+         Val Loss=0.6805, Accuracy=96.01%
+         MMD Loss=0.0000, Regular Loss=0.0134
+Epoch 10: Train Loss=0.0083, Accuracy=99.75%
+         Val Loss=0.8565, Accuracy=95.39%
+         MMD Loss=0.0000, Regular Loss=0.0083
+Epoch 11: Train Loss=0.0100, Accuracy=99.71%
+         Val Loss=0.8026, Accuracy=96.18%
+         MMD Loss=0.0000, Regular Loss=0.0100
+Epoch 12: Train Loss=0.0086, Accuracy=99.70%
+         Val Loss=0.7340, Accuracy=96.43%
+         MMD Loss=0.0000, Regular Loss=0.0086
+Epoch 13: Train Loss=0.0120, Accuracy=99.65%
+         Val Loss=0.9351, Accuracy=96.34%
+         MMD Loss=0.0000, Regular Loss=0.0120
+Epoch 14: Train Loss=0.0062, Accuracy=99.88%
+         Val Loss=1.0217, Accuracy=96.47%
+         MMD Loss=0.0000, Regular Loss=0.0062
+Epoch 15: Train Loss=0.0052, Accuracy=99.89%
+         Val Loss=0.9671, Accuracy=96.37%
+         MMD Loss=0.0000, Regular Loss=0.0052
+Epoch 16: Train Loss=0.0104, Accuracy=99.67%
+         Val Loss=0.9348, Accuracy=96.14%
+         MMD Loss=0.0000, Regular Loss=0.0104
+Epoch 17: Train Loss=0.0038, Accuracy=99.90%
+         Val Loss=0.9381, Accuracy=96.24%
+         MMD Loss=0.0000, Regular Loss=0.0038
+Epoch 18: Train Loss=0.0053, Accuracy=99.87%
+         Val Loss=1.0089, Accuracy=96.26%
+         MMD Loss=0.0000, Regular Loss=0.0053
+Epoch 19: Train Loss=0.0086, Accuracy=99.78%
+         Val Loss=0.7565, Accuracy=96.22%
+         MMD Loss=0.0000, Regular Loss=0.0086
+Epoch 20: Train Loss=0.0066, Accuracy=99.81%
+         Val Loss=0.8640, Accuracy=96.01%
+         MMD Loss=0.0000, Regular Loss=0.0066
+Training completed.
+Model for train domain TLVunContainer2 to test domain TLVunContainer1 saved to exps/CNN_mmd2_0/TLVunContainer2_to_TLVunContainer1/weights/model_final_TLVunContainer2_to_TLVunContainer1.pth
+Running MMD experiment for train domain: TLVunContainer2 and test domain: TLVunContainer2
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer2_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer2_256.pkl
+Epoch 1: Train Loss=0.3083, Accuracy=90.00%
+         Val Loss=0.2874, Accuracy=94.12%
+         MMD Loss=0.0000, Regular Loss=0.3082
+Epoch 2: Train Loss=0.0977, Accuracy=96.94%
+         Val Loss=0.3680, Accuracy=94.31%
+         MMD Loss=0.0000, Regular Loss=0.0976
+Epoch 3: Train Loss=0.0616, Accuracy=98.15%
+         Val Loss=0.3274, Accuracy=96.34%
+         MMD Loss=0.0000, Regular Loss=0.0617
+Epoch 4: Train Loss=0.0461, Accuracy=98.57%
+         Val Loss=0.2983, Accuracy=96.38%
+         MMD Loss=0.0000, Regular Loss=0.0461
+Epoch 5: Train Loss=0.0280, Accuracy=99.10%
+         Val Loss=0.3177, Accuracy=96.92%
+         MMD Loss=0.0000, Regular Loss=0.0280
+Epoch 6: Train Loss=0.0225, Accuracy=99.31%
+         Val Loss=0.3388, Accuracy=97.19%
+         MMD Loss=0.0000, Regular Loss=0.0225
+Epoch 7: Train Loss=0.0198, Accuracy=99.33%
+         Val Loss=0.3465, Accuracy=97.38%
+         MMD Loss=0.0000, Regular Loss=0.0198
+Epoch 8: Train Loss=0.0162, Accuracy=99.54%
+         Val Loss=0.5450, Accuracy=97.36%
+         MMD Loss=0.0000, Regular Loss=0.0162
+Epoch 9: Train Loss=0.0175, Accuracy=99.43%
+         Val Loss=0.6088, Accuracy=97.30%
+         MMD Loss=0.0000, Regular Loss=0.0175
+Epoch 10: Train Loss=0.0121, Accuracy=99.63%
+         Val Loss=0.4463, Accuracy=97.53%
+         MMD Loss=0.0000, Regular Loss=0.0121
+Epoch 11: Train Loss=0.0091, Accuracy=99.79%
+         Val Loss=0.7108, Accuracy=97.19%
+         MMD Loss=0.0000, Regular Loss=0.0091
+Epoch 12: Train Loss=0.0106, Accuracy=99.69%
+         Val Loss=0.2714, Accuracy=97.17%
+         MMD Loss=0.0000, Regular Loss=0.0106
+Epoch 13: Train Loss=0.0123, Accuracy=99.64%
+         Val Loss=0.3775, Accuracy=97.59%
+         MMD Loss=0.0000, Regular Loss=0.0123
+Epoch 14: Train Loss=0.0052, Accuracy=99.87%
+         Val Loss=0.4408, Accuracy=97.59%
+         MMD Loss=0.0000, Regular Loss=0.0052
+Epoch 15: Train Loss=0.0094, Accuracy=99.69%
+         Val Loss=0.4822, Accuracy=97.19%
+         MMD Loss=0.0000, Regular Loss=0.0094
+Epoch 16: Train Loss=0.0078, Accuracy=99.80%
+         Val Loss=0.5953, Accuracy=97.71%
+         MMD Loss=0.0000, Regular Loss=0.0078
+Epoch 17: Train Loss=0.0071, Accuracy=99.78%
+         Val Loss=0.4450, Accuracy=97.34%
+         MMD Loss=0.0000, Regular Loss=0.0071
+Epoch 18: Train Loss=0.0046, Accuracy=99.90%
+         Val Loss=0.3911, Accuracy=97.67%
+         MMD Loss=0.0000, Regular Loss=0.0046
+Epoch 19: Train Loss=0.0043, Accuracy=99.88%
+         Val Loss=0.5524, Accuracy=97.59%
+         MMD Loss=0.0000, Regular Loss=0.0043
+Epoch 20: Train Loss=0.0085, Accuracy=99.71%
+         Val Loss=0.6145, Accuracy=98.05%
+         MMD Loss=0.0000, Regular Loss=0.0085
+Training completed.
+Model for train domain TLVunContainer2 to test domain TLVunContainer2 saved to exps/CNN_mmd2_0/TLVunContainer2_to_TLVunContainer2/weights/model_final_TLVunContainer2_to_TLVunContainer2.pth
+Loading validation loaders for all locations...
+Loading validation dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Loading validation dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Loading validation dataset from: data/ben_bucket/cached_datasets/datasets_CabSpicy1_256.pkl
+Loading validation dataset from: data/ben_bucket/cached_datasets/datasets_HujiPC_256.pkl
+Loading validation dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer1_256.pkl
+Loading validation dataset from: data/ben_bucket/cached_datasets/datasets_TLVunContainer2_256.pkl
+Evaluating train domain: AwsCont, test domain: AwsCont
+  Loading model weights from: exps/CNN_mmd2_0/AwsCont_to_AwsCont/weights/model_weights_epoch_10.pth
+  Accuracy: 0.9858
+Evaluating train domain: AwsCont, test domain: BenContainer
+  Loading model weights from: exps/CNN_mmd2_0/AwsCont_to_BenContainer/weights/model_weights_epoch_8.pth
+  Accuracy: 0.8050
+Evaluating train domain: AwsCont, test domain: CabSpicy1
+  Loading model weights from: exps/CNN_mmd2_0/AwsCont_to_CabSpicy1/weights/model_weights_epoch_20.pth
+  Accuracy: 0.8577
+Evaluating train domain: AwsCont, test domain: HujiPC
+  Loading model weights from: exps/CNN_mmd2_0/AwsCont_to_HujiPC/weights/model_weights_epoch_20.pth
+  Accuracy: 0.8438
+Evaluating train domain: AwsCont, test domain: TLVunContainer1
+  Loading model weights from: exps/CNN_mmd2_0/AwsCont_to_TLVunContainer1/weights/model_weights_epoch_8.pth
+  Accuracy: 0.7755
+Evaluating train domain: AwsCont, test domain: TLVunContainer2
+  Loading model weights from: exps/CNN_mmd2_0/AwsCont_to_TLVunContainer2/weights/model_weights_epoch_13.pth
+  Accuracy: 0.7469
+Evaluating train domain: BenContainer, test domain: AwsCont
+  Loading model weights from: exps/CNN_mmd2_0/BenContainer_to_AwsCont/weights/model_weights_epoch_10.pth
+  Accuracy: 0.8334
+Evaluating train domain: BenContainer, test domain: BenContainer
+  Loading model weights from: exps/CNN_mmd2_0/BenContainer_to_BenContainer/weights/model_weights_epoch_18.pth
+  Accuracy: 0.9238
+Evaluating train domain: BenContainer, test domain: CabSpicy1
+  Loading model weights from: exps/CNN_mmd2_0/BenContainer_to_CabSpicy1/weights/model_weights_epoch_11.pth
+  Accuracy: 0.8655
+Evaluating train domain: BenContainer, test domain: HujiPC
+  Loading model weights from: exps/CNN_mmd2_0/BenContainer_to_HujiPC/weights/model_weights_epoch_19.pth
+  Accuracy: 0.8718
+Evaluating train domain: BenContainer, test domain: TLVunContainer1
+  Loading model weights from: exps/CNN_mmd2_0/BenContainer_to_TLVunContainer1/weights/model_weights_epoch_16.pth
+  Accuracy: 0.8800
+Evaluating train domain: BenContainer, test domain: TLVunContainer2
+  Loading model weights from: exps/CNN_mmd2_0/BenContainer_to_TLVunContainer2/weights/model_weights_epoch_20.pth
+  Accuracy: 0.9196
+Evaluating train domain: CabSpicy1, test domain: AwsCont
+  Loading model weights from: exps/CNN_mmd2_0/CabSpicy1_to_AwsCont/weights/model_weights_epoch_19.pth
+  Accuracy: 0.9477
+Evaluating train domain: CabSpicy1, test domain: BenContainer
+  Loading model weights from: exps/CNN_mmd2_0/CabSpicy1_to_BenContainer/weights/model_weights_epoch_16.pth
+  Accuracy: 0.9724
+Evaluating train domain: CabSpicy1, test domain: CabSpicy1
+  Loading model weights from: exps/CNN_mmd2_0/CabSpicy1_to_CabSpicy1/weights/model_weights_epoch_19.pth
+  Accuracy: 0.9961
+Evaluating train domain: CabSpicy1, test domain: HujiPC
+  Loading model weights from: exps/CNN_mmd2_0/CabSpicy1_to_HujiPC/weights/model_weights_epoch_18.pth
+  Accuracy: 0.9412
+Evaluating train domain: CabSpicy1, test domain: TLVunContainer1
+  Loading model weights from: exps/CNN_mmd2_0/CabSpicy1_to_TLVunContainer1/weights/model_weights_epoch_17.pth
+  Accuracy: 0.9364
+Evaluating train domain: CabSpicy1, test domain: TLVunContainer2
+  Loading model weights from: exps/CNN_mmd2_0/CabSpicy1_to_TLVunContainer2/weights/model_weights_epoch_20.pth
+  Accuracy: 0.9318
+Evaluating train domain: HujiPC, test domain: AwsCont
+  Loading model weights from: exps/CNN_mmd2_0/HujiPC_to_AwsCont/weights/model_weights_epoch_8.pth
+  Accuracy: 0.9473
+Evaluating train domain: HujiPC, test domain: BenContainer
+  Loading model weights from: exps/CNN_mmd2_0/HujiPC_to_BenContainer/weights/model_weights_epoch_8.pth
+  Accuracy: 0.9808
+Evaluating train domain: HujiPC, test domain: CabSpicy1
+  Loading model weights from: exps/CNN_mmd2_0/HujiPC_to_CabSpicy1/weights/model_weights_epoch_19.pth
+  Accuracy: 0.9389
+Evaluating train domain: HujiPC, test domain: HujiPC
+  Loading model weights from: exps/CNN_mmd2_0/HujiPC_to_HujiPC/weights/model_weights_epoch_15.pth
+  Accuracy: 0.9956
+Evaluating train domain: HujiPC, test domain: TLVunContainer1
+  Loading model weights from: exps/CNN_mmd2_0/HujiPC_to_TLVunContainer1/weights/model_weights_epoch_8.pth
+  Accuracy: 0.9439
+Evaluating train domain: HujiPC, test domain: TLVunContainer2
+  Loading model weights from: exps/CNN_mmd2_0/HujiPC_to_TLVunContainer2/weights/model_weights_epoch_9.pth
+  Accuracy: 0.9616
+Evaluating train domain: TLVunContainer1, test domain: AwsCont
+  Loading model weights from: exps/CNN_mmd2_0/TLVunContainer1_to_AwsCont/weights/model_weights_epoch_18.pth
+  Accuracy: 0.9320
+Evaluating train domain: TLVunContainer1, test domain: BenContainer
+  Loading model weights from: exps/CNN_mmd2_0/TLVunContainer1_to_BenContainer/weights/model_weights_epoch_17.pth
+  Accuracy: 0.9598
+Evaluating train domain: TLVunContainer1, test domain: CabSpicy1
+  Loading model weights from: exps/CNN_mmd2_0/TLVunContainer1_to_CabSpicy1/weights/model_weights_epoch_13.pth
+  Accuracy: 0.9213
+Evaluating train domain: TLVunContainer1, test domain: HujiPC
+  Loading model weights from: exps/CNN_mmd2_0/TLVunContainer1_to_HujiPC/weights/model_weights_epoch_12.pth
+  Accuracy: 0.9420
+Evaluating train domain: TLVunContainer1, test domain: TLVunContainer1
+  Loading model weights from: exps/CNN_mmd2_0/TLVunContainer1_to_TLVunContainer1/weights/model_weights_epoch_14.pth
+  Accuracy: 0.9670
+Evaluating train domain: TLVunContainer1, test domain: TLVunContainer2
+  Loading model weights from: exps/CNN_mmd2_0/TLVunContainer1_to_TLVunContainer2/weights/model_weights_epoch_15.pth
+  Accuracy: 0.9730
+Evaluating train domain: TLVunContainer2, test domain: AwsCont
+  Loading model weights from: exps/CNN_mmd2_0/TLVunContainer2_to_AwsCont/weights/model_weights_epoch_14.pth
+  Accuracy: 0.9441
+Evaluating train domain: TLVunContainer2, test domain: BenContainer
+  Loading model weights from: exps/CNN_mmd2_0/TLVunContainer2_to_BenContainer/weights/model_weights_epoch_16.pth
+  Accuracy: 0.9883
+Evaluating train domain: TLVunContainer2, test domain: CabSpicy1
+  Loading model weights from: exps/CNN_mmd2_0/TLVunContainer2_to_CabSpicy1/weights/model_weights_epoch_17.pth
+  Accuracy: 0.9229
+Evaluating train domain: TLVunContainer2, test domain: HujiPC
+  Loading model weights from: exps/CNN_mmd2_0/TLVunContainer2_to_HujiPC/weights/model_weights_epoch_19.pth
+  Accuracy: 0.9748
+Evaluating train domain: TLVunContainer2, test domain: TLVunContainer1
+  Loading model weights from: exps/CNN_mmd2_0/TLVunContainer2_to_TLVunContainer1/weights/model_weights_epoch_14.pth
+  Accuracy: 0.9647
+Evaluating train domain: TLVunContainer2, test domain: TLVunContainer2
+  Loading model weights from: exps/CNN_mmd2_0/TLVunContainer2_to_TLVunContainer2/weights/model_weights_epoch_20.pth
+  Accuracy: 0.9805
+
+Cross-Domain Accuracy Matrix:
+[[0.98581747 0.80502092 0.85765188 0.84377945 0.77550627 0.74688279]
+ [0.83335522 0.92384937 0.86549082 0.87181904 0.88003857 0.91957606]
+ [0.94773473 0.97238494 0.99608053 0.94121112 0.93635487 0.93183707]
+ [0.94734077 0.98075314 0.93889186 0.9956409  0.94387657 0.96155445]
+ [0.93197636 0.95983264 0.92125423 0.94203582 0.96702025 0.97298421]
+ [0.94405778 0.98828452 0.92285765 0.97478794 0.96470588 0.9804655 ]]

@@ -1,0 +1,75 @@
+Running MMD experiment for train domain: AwsCont and test domain: AwsCont
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Epoch 1: Train Loss=0.2356, Accuracy=92.63%
+         Val Loss=0.1527, Accuracy=96.53%
+         MMD Loss=0.0000, Regular Loss=0.2354
+Epoch 2: Train Loss=0.0572, Accuracy=98.28%
+         Val Loss=0.1178, Accuracy=96.84%
+         MMD Loss=0.0000, Regular Loss=0.0572
+Epoch 3: Train Loss=0.0331, Accuracy=98.95%
+         Val Loss=0.0891, Accuracy=97.56%
+         MMD Loss=0.0000, Regular Loss=0.0331
+Training completed.
+Model for train domain AwsCont to test domain AwsCont saved to exps/deleteme2/AwsCont_to_AwsCont/weights/model_final_AwsCont_to_AwsCont.pth
+Running MMD experiment for train domain: AwsCont and test domain: BenContainer
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Epoch 1: Train Loss=0.2354, Accuracy=92.74%
+         Val Loss=1.0678, Accuracy=71.21%
+         MMD Loss=0.0000, Regular Loss=0.2353
+Epoch 2: Train Loss=0.0609, Accuracy=98.16%
+         Val Loss=1.0439, Accuracy=75.90%
+         MMD Loss=0.0000, Regular Loss=0.0609
+Epoch 3: Train Loss=0.0354, Accuracy=98.86%
+         Val Loss=1.1214, Accuracy=76.49%
+         MMD Loss=0.0000, Regular Loss=0.0354
+Training completed.
+Model for train domain AwsCont to test domain BenContainer saved to exps/deleteme2/AwsCont_to_BenContainer/weights/model_final_AwsCont_to_BenContainer.pth
+Running MMD experiment for train domain: BenContainer and test domain: AwsCont
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Epoch 1: Train Loss=0.5564, Accuracy=81.81%
+         Val Loss=1.1820, Accuracy=56.85%
+         MMD Loss=0.0000, Regular Loss=0.5553
+Epoch 2: Train Loss=0.2958, Accuracy=91.14%
+         Val Loss=1.0448, Accuracy=64.66%
+         MMD Loss=0.0000, Regular Loss=0.2987
+Epoch 3: Train Loss=0.1974, Accuracy=94.19%
+         Val Loss=0.7112, Accuracy=75.75%
+         MMD Loss=0.0000, Regular Loss=0.1970
+Training completed.
+Model for train domain BenContainer to test domain AwsCont saved to exps/deleteme2/BenContainer_to_AwsCont/weights/model_final_BenContainer_to_AwsCont.pth
+Running MMD experiment for train domain: BenContainer and test domain: BenContainer
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Loading cached dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Epoch 1: Train Loss=0.5610, Accuracy=82.40%
+         Val Loss=0.6200, Accuracy=78.74%
+         MMD Loss=0.0000, Regular Loss=0.5602
+Epoch 2: Train Loss=0.2842, Accuracy=91.66%
+         Val Loss=0.4984, Accuracy=82.68%
+         MMD Loss=0.0000, Regular Loss=0.2834
+Epoch 3: Train Loss=0.2012, Accuracy=94.32%
+         Val Loss=0.5395, Accuracy=83.01%
+         MMD Loss=0.0000, Regular Loss=0.2006
+Training completed.
+Model for train domain BenContainer to test domain BenContainer saved to exps/deleteme2/BenContainer_to_BenContainer/weights/model_final_BenContainer_to_BenContainer.pth
+Loading validation loaders for all locations...
+Loading validation dataset from: data/ben_bucket/cached_datasets/datasets_AwsCont_256.pkl
+Loading validation dataset from: data/ben_bucket/cached_datasets/datasets_BenContainer_256.pkl
+Evaluating train domain: AwsCont, test domain: AwsCont
+  Loading model weights from: exps/deleteme2/AwsCont_to_AwsCont/weights/model_weights_epoch_3.pth
+  Accuracy: 0.9756
+Evaluating train domain: AwsCont, test domain: BenContainer
+  Loading model weights from: exps/deleteme2/AwsCont_to_BenContainer/weights/model_weights_epoch_3.pth
+  Accuracy: 0.7649
+Evaluating train domain: BenContainer, test domain: AwsCont
+  Loading model weights from: exps/deleteme2/BenContainer_to_AwsCont/weights/model_weights_epoch_3.pth
+  Accuracy: 0.7575
+Evaluating train domain: BenContainer, test domain: BenContainer
+  Loading model weights from: exps/deleteme2/BenContainer_to_BenContainer/weights/model_weights_epoch_3.pth
+  Accuracy: 0.8301
+
+Cross-Domain Accuracy Matrix:
+[[0.97557452 0.76485356]
+ [0.7574524  0.83012552]]
