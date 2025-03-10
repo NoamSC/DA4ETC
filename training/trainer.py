@@ -16,8 +16,8 @@ def compute_mmd_loss(source_features, target_features, kernel='rbf', bandwidths=
         raise ValueError("Unsupported kernel type")
 
     # normalize features for mmd
-    normalized_source_features = (source_features - source_features.mean(dim=0)) / (source_features.std(dim=0) + 1e-6)
-    normalized_target_features = (target_features - target_features.mean(dim=0)) / (target_features.std(dim=0) + 1e-6)
+    normalized_target_features = (target_features - target_features.mean(dim=0)) / (target_features.std(dim=0, unbiased=False) + 1e-6)
+    normalized_source_features = (source_features - source_features.mean(dim=0)) / (source_features.std(dim=0, unbiased=False) + 1e-6)
 
     loss = 0
     for bw in bandwidths:
@@ -38,7 +38,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
 
     for train_inputs, train_labels in tqdm(train_loader, desc="Training", leave=False):
         train_inputs, train_labels = train_inputs.to(device), train_labels.to(device).long()
-
+        
         if test_iter is not None:
             # be carefull not to use test labels
             test_inputs, _ = next(test_iter)
