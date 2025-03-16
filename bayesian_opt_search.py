@@ -22,7 +22,7 @@ ARCHITECTURE_CHOICES = [
         'pool_kernel_size': 2,
         'pool_stride': 2,
         'fc1_out_features': 64,
-        'dropout_prob': 0.25,
+        'dropout_prob': 0.3,
         'use_batch_norm': True
     },
     # Deeper architecture
@@ -72,7 +72,7 @@ ARCHITECTURE_CHOICES = [
         'pool_kernel_size': 2,
         'pool_stride': 2,
         'fc1_out_features': 64,
-        'dropout_prob': 0.2,
+        'dropout_prob': 0.3,
         'use_batch_norm': True
     }
 ]
@@ -93,9 +93,9 @@ def black_box_function(lambda_mmd, architecture_idx, mmd_bandwidth):
     
     config = Config(
         EXPERIMENT_NAME=experiment_name,
-        LAMBDA_MMD=lambda_mmd,
+        LAMBDA_MMD=10 ** lambda_mmd, # changing from logarithmic
         MODEL_PARAMS=get_architecture(architecture_idx),
-        MMD_BANDWIDTHS=[mmd_bandwidth],
+        MMD_BANDWIDTHS=[10 ** mmd_bandwidth],
         SEED=seed
     )
     
@@ -113,9 +113,9 @@ def black_box_function(lambda_mmd, architecture_idx, mmd_bandwidth):
 
 # Define hyperparameter search space
 pbounds = {
-    "lambda_mmd": (1e-2, 1e2),
+    "lambda_mmd": (-1, 1),
     "architecture_idx": (0, len(ARCHITECTURE_CHOICES) - 1),
-    "mmd_bandwidth": (1e-2, 1e2),
+    "mmd_bandwidth": (-1.5, 1.5),
 }
 
 # Run Bayesian Optimization

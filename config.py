@@ -47,6 +47,7 @@ class Config:
     # Training Parameters
     LEARNING_RATE: float = 3e-4
     NUM_EPOCHS: int = 20
+    WEIGHT_DECAY: float = 1e-4
 
     # Domain Adaptation Parameters
     LAMBDA_MMD: float = 1e1
