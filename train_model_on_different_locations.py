@@ -7,13 +7,13 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 import numpy as np
 
-import config as cfg
+# import config as cfg
 from torch.utils.data import DataLoader
 from models.configurable_cnn import ConfigurableCNN
 from training.trainer import train_model
 from training.utils import set_seed, save_config_to_json
 
-def load_cached_dataset(location, path_format="cached_datasets/datasets_{location}_256.pkl"):
+def load_cached_dataset(location, cfg, path_format="cached_datasets/datasets_{location}_256.pkl"):
     """
     Load a cached dataset for a specific location.
 
@@ -36,16 +36,17 @@ def load_cached_dataset(location, path_format="cached_datasets/datasets_{locatio
 
     return train_loader, val_loader
 
-def run_experiment_with_mmd(train_domain, test_domain):
+def run_experiment_with_mmd(train_domain, test_domain, cfg):
     """
     Train and validate a model for a specific train-test domain pair using MMD.
 
     Args:
     - train_domain (str): The domain to use for training.
     - test_domain (str): The domain to use for testing (MMD computation).
+    - cfg (dict): config.
     """
-    train_loader, _ = load_cached_dataset(train_domain)
-    _, test_loader = load_cached_dataset(test_domain)
+    train_loader, _ = load_cached_dataset(train_domain, cfg=cfg)
+    _, test_loader = load_cached_dataset(test_domain, cfg=cfg)
     label_mapping = cfg.LABEL_MAPPING
     num_classes = len(label_mapping)
     cfg.MODEL_PARAMS['num_classes'] = num_classes
@@ -77,6 +78,7 @@ def run_experiment_with_mmd(train_domain, test_domain):
         plots_save_dir=plots_save_dir,
         label_mapping=label_mapping,
         lambda_mmd=cfg.LAMBDA_MMD,
+        mmd_bandwidths=cfg.MMD_BANDWIDTHS
     )
 
     final_model_path = weights_save_dir / f"model_final_{train_domain}_to_{test_domain}.pth"
@@ -94,8 +96,7 @@ def adapt_batch_norm_statistics(model, loader, device):
             model(inputs)  # Forward pass updates BatchNorm stats
     model.eval()
 
-
-def load_cached_val_loader(location):
+def load_cached_val_loader(location, cfg):
     """
     Load a cached validation dataset for a specific location.
     """
@@ -109,8 +110,7 @@ def load_cached_val_loader(location):
 
     return DataLoader(val_dataset, batch_size=cfg.BATCH_SIZE, shuffle=False)
 
-
-def find_latest_model_path(train_loc, test_loc, epoch='*'):
+def find_best_model_path(train_loc, test_loc, cfg, epoch='*'):
     """
     Find the latest model for the given train-test pair.
     """
@@ -135,7 +135,6 @@ def find_latest_model_path(train_loc, test_loc, epoch='*'):
         assert len(model_files) > 0, "No such epoch"
         return model_files[-1] if model_files else None
 
-
 def evaluate_model_on_loader(model, val_loader, device):
     """
     Evaluate a model on a given DataLoader and return the accuracy.
@@ -153,37 +152,32 @@ def evaluate_model_on_loader(model, val_loader, device):
 
     return correct / total if total > 0 else 0
 
-if __name__ == "__main__":
+def run_full_exp(cfg):
     cfg.EXPERIMENT_PATH.mkdir(parents=True, exist_ok=False)
     set_seed(cfg.SEED)
-
-    locations = [
-        'AwsCont', 'BenContainer',  'CabSpicy1',
-        'HujiPC', 'TLVunContainer1', 'TLVunContainer2'
-    ]
     
     # Train models
-    for train_domain in locations:
-        for test_domain in locations:
+    for train_domain in cfg.LOCATIONS:
+        for test_domain in cfg.LOCATIONS:
             # if train_domain != test_domain:
             print(f"Running MMD experiment for train domain: {train_domain} and test domain: {test_domain}")
-            run_experiment_with_mmd(train_domain, test_domain)
+            run_experiment_with_mmd(train_domain, test_domain, cfg)
 
     # Evaluate performance
-    num_locations = len(locations)
+    num_locations = len(cfg.LOCATIONS)
     accuracy_matrix = np.zeros((num_locations, num_locations))
 
     # Load validation DataLoaders
     print("Loading validation loaders for all locations...")
-    val_loaders = {loc: load_cached_val_loader(loc) for loc in locations}
+    val_loaders = {loc: load_cached_val_loader(loc) for loc in cfg.LOCATIONS}
 
     # Iterate over train-test pairs
-    for i, train_loc in enumerate(locations):
-        for j, test_loc in enumerate(locations):
+    for i, train_loc in enumerate(cfg.LOCATIONS):
+        for j, test_loc in enumerate(cfg.LOCATIONS):
             print(f"Evaluating train domain: {train_loc}, test domain: {test_loc}")
             
             # Find latest model for train-test pair
-            model_path = find_latest_model_path(train_loc, test_loc, epoch='best')
+            model_path = find_best_model_path(train_loc, test_loc, epoch='best')
             if model_path is None:
                 print(f"  No model found for {train_loc} -> {test_loc}. Setting accuracy to 0.")
                 accuracy_matrix[i, j] = 0
@@ -215,10 +209,13 @@ if __name__ == "__main__":
     for i in range(num_locations):
         for j in range(num_locations):
             plt.text(j, i, f'{accuracy_matrix[i, j]:.2f}', ha='center', va='center', color='white', fontsize=8)
-    plt.xticks(ticks=np.arange(num_locations), labels=locations, rotation=45, ha='right')
-    plt.yticks(ticks=np.arange(num_locations), labels=locations)
+    plt.xticks(ticks=np.arange(num_locations), labels=cfg.LOCATIONS, rotation=45, ha='right')
+    plt.yticks(ticks=np.arange(num_locations), labels=cfg.LOCATIONS)
     plt.title('Cross-Domain Accuracy Matrix')
     plt.xlabel('Test Domain')
     plt.ylabel('Train Domain')
     plt.tight_layout()
     plt.savefig(cfg.EXPERIMENT_PATH / 'cross_domain_accuracy_matrix.png', dpi=300)
+    
+    # returning a proxy of how well the exp went
+    return(np.mean(accuracy_matrix))
