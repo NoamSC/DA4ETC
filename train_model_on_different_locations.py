@@ -169,7 +169,7 @@ def run_full_exp(cfg):
 
     # Load validation DataLoaders
     print("Loading validation loaders for all locations...")
-    val_loaders = {loc: load_cached_val_loader(loc) for loc in cfg.LOCATIONS}
+    val_loaders = {loc: load_cached_val_loader(loc, cfg) for loc in cfg.LOCATIONS}
 
     # Iterate over train-test pairs
     for i, train_loc in enumerate(cfg.LOCATIONS):
@@ -177,7 +177,7 @@ def run_full_exp(cfg):
             print(f"Evaluating train domain: {train_loc}, test domain: {test_loc}")
             
             # Find latest model for train-test pair
-            model_path = find_best_model_path(train_loc, test_loc, epoch='best')
+            model_path = find_best_model_path(train_loc, test_loc, cfg, epoch='best')
             if model_path is None:
                 print(f"  No model found for {train_loc} -> {test_loc}. Setting accuracy to 0.")
                 accuracy_matrix[i, j] = 0

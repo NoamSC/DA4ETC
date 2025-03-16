@@ -77,7 +77,7 @@ if __name__ == "__main__":
     model = ConfigurableCNN(cfg.MODEL_PARAMS).to(cfg.DEVICE)
 
     # Set up optimizer and loss function
-    optimizer = optim.Adam(model.parameters(), lr=cfg.LEARNING_RATE)
+    optimizer = optim.AdamW(model.parameters(), lr=cfg.LEARNING_RATE, weight_decay=cfg.WEIGHT_DECAY)
     criterion = nn.CrossEntropyLoss()
 
     # Start training

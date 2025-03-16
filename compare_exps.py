@@ -14,11 +14,11 @@ locations = [
 ]
 baseline_name = 'CNN_mmd2_0'
 exps_names = [
-    'CNN_mmd2_1e-1',
-    'CNN_mmd2_1e1',
+    # 'CNN_mmd2_1e-1',
+    'CNN_mmd2_1e1_v2',
 ]
 
-baseline_results = np.load(exps_path / baseline_name / result_matarix_filename)
+baseline_results = np.load(exps_path / baseline_name / result_matrix_filename)
 baseline_delta = 1 - baseline_results
 
 for exp_name in exps_names:

@@ -52,7 +52,7 @@ class ConfigurableCNN(nn.Module):
         x = x.transpose(1, 2)  # Ensure correct input format
         for layer in self.layers:
             x = layer(x)
-            x = self.dropout(x)
+            # x = self.dropout(x)   
             
         x = x.view(x.size(0), -1)  # Flatten
         x = F.gelu(self.fc1(x))
