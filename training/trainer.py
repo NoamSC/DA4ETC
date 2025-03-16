@@ -28,7 +28,7 @@ def compute_mmd_loss(source_features, target_features, kernel='rbf', bandwidths=
     return loss / len(bandwidths)
 
 
-def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mmd=0.0, test_loader=None):
+def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mmd=0.0, test_loader=None, mmd_bandwidths=[0.1, 1, 10]):
     """Train model for one epoch. Supports optional MMD loss."""
     model.train()
     train_loss, train_correct, train_total = 0, 0, 0
@@ -51,7 +51,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
         if test_loader is not None and lambda_mmd > 0:
             train_features = model.get_features(train_inputs)
             test_features = model.get_features(test_inputs)
-            mmd_loss = compute_mmd_loss(train_features, test_features, bandwidths=[0.1, 1, 10])
+            mmd_loss = compute_mmd_loss(train_features, test_features, bandwidths=mmd_bandwidths)
             total_loss = regular_loss + lambda_mmd * mmd_loss
             mmd_loss_total += mmd_loss.item()
         else:
@@ -71,7 +71,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
         train_loss / train_total, 
         100.0 * train_correct / train_total, 
         regular_loss_total / len(train_loader), 
-        mmd_loss_total / len(train_loader) if lambda_mmd > 0 else 0
+        mmd_loss_total / len(train_loader) * lambda_mmd if lambda_mmd > 0 else 0
     )
 
 
@@ -114,7 +114,7 @@ def batch_norm_adaptation(model, target_loader, device):
 
 def train_model(model, train_loader, criterion, optimizer, num_epochs, device, 
                 weights_save_dir, plots_save_dir, label_mapping, lambda_mmd=0.0, 
-                test_loader=None, adapt_batch_norm=False):
+                test_loader=None, adapt_batch_norm=False, mmd_bandwidths=[1]):
     """
     General training function with support for MMD and batch norm adaptation.
     """
@@ -126,7 +126,7 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
 
     for epoch in range(num_epochs):
         train_loss, train_acc, regular_loss, mmd_loss = train_one_epoch(
-            model, train_loader, criterion, optimizer, device, lambda_mmd, test_loader
+            model, train_loader, criterion, optimizer, device, lambda_mmd, test_loader, mmd_bandwidths
         )
         train_losses.append(train_loss)
         train_accuracies.append(train_acc)
