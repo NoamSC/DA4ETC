@@ -1,0 +1,74 @@
+{
+    "BATCH_SIZE": 16,
+    "DATA_PATH": "data/ben_bucket",
+    "DEVICE": "cuda:0",
+    "EXPERIMENT_NAME": "CNN_mmd2_1e-5",
+    "EXPERIMENT_PATH": "exps/CNN_mmd2_1e-5",
+    "EXPERIMENT_PLOTS_PATH": "exps/CNN_mmd2_1e-5/plots",
+    "EXPERIMENT_WEIGHTS_PATH": "exps/CNN_mmd2_1e-5/weights",
+    "LABEL_MAPPING": {
+        "Amazon": 0,
+        "Google Search": 1,
+        "Twitch": 2,
+        "Youtube": 3
+    },
+    "LAMBDA_MMD": 1e-05,
+    "LEARNING_RATE": 0.0003,
+    "LOCATION": "TLVunContainer1",
+    "MIN_FLOW_LENGTH": 100,
+    "MODEL_PARAMS": {
+        "num_classes": 4,
+        "conv_type": "1d",
+        "input_shape": 256,
+        "conv_layers": [
+            {
+                "out_channels": 16,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            },
+            {
+                "out_channels": 32,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            },
+            {
+                "out_channels": 64,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            },
+            {
+                "out_channels": 128,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            },
+            {
+                "out_channels": 256,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1,
+                "type": "1d"
+            }
+        ],
+        "pool_kernel_size": 2,
+        "pool_stride": 2,
+        "fc1_out_features": 64,
+        "dropout_prob": 0.25,
+        "use_batch_norm": true
+    },
+    "NUM_EPOCHS": 20,
+    "Path": "<class 'pathlib.Path'>",
+    "RESOLUTION": 256,
+    "SAMPLE_FRAC": 1.0,
+    "SAVE_MODEL_CHECKPOINT": "exps/CNN_mmd2_1e-5/weights/model_checkpoint_epoch_{epoch}.pth",
+    "SAVE_PLOTS": true,
+    "SEED": 42,
+    "TRAIN_SPLIT_RATIO": 0.7
+}
