@@ -5,7 +5,7 @@ import torch
 @dataclass
 class Config:
     # Experiment Details
-    EXPERIMENT_NAME: str = "default_name"
+    EXPERIMENT_NAME: str = "shallow_architecture_baseline"
     EXPERIMENT_PATH: Path = field(init=False)
 
     # Environment and Reproducibility
@@ -30,9 +30,8 @@ class Config:
     # Model Parameters
     MODEL_PARAMS: dict = field(default_factory=lambda: {
         'conv_type': '1d',
+        'input_shape': 256,
         'conv_layers': [
-            {'out_channels': 16, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1},
             {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
             {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1},
             {'out_channels': 256, 'kernel_size': 3, 'stride': 1, 'padding': 1}
@@ -40,8 +39,8 @@ class Config:
         'pool_kernel_size': 2,
         'pool_stride': 2,
         'fc1_out_features': 64,
-        'dropout_prob': 0.25,
-        'use_batch_norm': True,
+        'dropout_prob': 0.3,
+        'use_batch_norm': True
     })
 
     # Training Parameters
@@ -50,7 +49,7 @@ class Config:
     WEIGHT_DECAY: float = 1e-4
 
     # Domain Adaptation Parameters
-    LAMBDA_MMD: float = 1e1
+    LAMBDA_MMD: float = 0
     MMD_BANDWIDTHS: list = field(default_factory=lambda: [1e-1, 1e0, 1e1])
 
     # Logging and Checkpoints

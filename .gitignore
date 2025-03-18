@@ -5,4 +5,5 @@ data/
 __pycache__/
 *.pth
 *.pkl
-exps/*
+exps/*/*/plots/confusion_*.png
+exps/*/*/training_*.png

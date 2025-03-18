@@ -7,8 +7,92 @@ from train_model_on_different_locations import run_full_exp
 
 seed = 42
 # Define architectures as a list of possible configurations
+# ARCHITECTURE_CHOICES = [
+#     # # Base architecture
+#     # {
+#     #     'conv_type': '1d',
+#     #     'input_shape': 256,
+#     #     'conv_layers': [
+#     #         {'out_channels': 16, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+#     #         {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+#     #         {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+#     #         {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+#     #         {'out_channels': 256, 'kernel_size': 3, 'stride': 1, 'padding': 1}
+#     #     ],
+#     #     'pool_kernel_size': 2,
+#     #     'pool_stride': 2,
+#     #     'fc1_out_features': 64,
+#     #     'dropout_prob': 0.3,
+#     #     'use_batch_norm': True
+#     # },
+#     # # Deeper architecture
+#     # {
+#         # 'conv_type': '1d',
+#         # 'input_shape': 256,
+#         # 'conv_layers': [
+#         #     {'out_channels': 16, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+#         #     {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+#         #     {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+#         #     {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+#         #     {'out_channels': 256, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+#         #     {'out_channels': 512, 'kernel_size': 3, 'stride': 1, 'padding': 1}
+#         # ],
+#         # 'pool_kernel_size': 2,
+#         # 'pool_stride': 2,
+#         # 'fc1_out_features': 128,
+#         # 'dropout_prob': 0.4,
+#         # 'use_batch_norm': True
+#     # },
+#     # Wide architecture
+#     {
+#         'conv_type': '1d',
+#         'input_shape': 256,
+#         'conv_layers': [
+#             {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+#             {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+#             {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+#             {'out_channels': 256, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+#             {'out_channels': 512, 'kernel_size': 3, 'stride': 1, 'padding': 1}
+#         ],
+#         'pool_kernel_size': 2,
+#         'pool_stride': 2,
+#         'fc1_out_features': 128,
+#         'dropout_prob': 0.3,
+#         'use_batch_norm': True
+#     },
+#     # Shallow architecture
+#     {
+#         'conv_type': '1d',
+#         'input_shape': 256,
+#         'conv_layers': [
+#             {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+#             {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+#             {'out_channels': 256, 'kernel_size': 3, 'stride': 1, 'padding': 1}
+#         ],
+#         'pool_kernel_size': 2,
+#         'pool_stride': 2,
+#         'fc1_out_features': 64,
+#         'dropout_prob': 0.3,
+#         'use_batch_norm': True
+#     }
+# ]
 ARCHITECTURE_CHOICES = [
-    # Base architecture
+    # Narrow architecture
+    {
+        'conv_type': '1d',
+        'input_shape': 256,
+        'conv_layers': [
+            {'out_channels': 16, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+            {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+            {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1}
+        ],
+        'pool_kernel_size': 2,
+        'pool_stride': 2,
+        'fc1_out_features': 64,
+        'dropout_prob': 0.2,
+        'use_batch_norm': True
+    },
+    # Reduced depth architecture
     {
         'conv_type': '1d',
         'input_shape': 256,
@@ -16,66 +100,44 @@ ARCHITECTURE_CHOICES = [
             {'out_channels': 16, 'kernel_size': 3, 'stride': 1, 'padding': 1},
             {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1},
             {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 256, 'kernel_size': 3, 'stride': 1, 'padding': 1}
+            {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1}
         ],
         'pool_kernel_size': 2,
         'pool_stride': 2,
         'fc1_out_features': 64,
-        'dropout_prob': 0.3,
+        'dropout_prob': 0.25,
         'use_batch_norm': True
     },
-    # Deeper architecture
+    # Light architecture
+    {
+        'conv_type': '1d',
+        'input_shape': 256,
+        'conv_layers': [
+            {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+            {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1}
+        ],
+        'pool_kernel_size': 2,
+        'pool_stride': 2,
+        'fc1_out_features': 32,
+        'dropout_prob': 0.2,
+        'use_batch_norm': True
+    },
+    # Very shallow architecture
     {
         'conv_type': '1d',
         'input_shape': 256,
         'conv_layers': [
             {'out_channels': 16, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 256, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 512, 'kernel_size': 3, 'stride': 1, 'padding': 1}
+            {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1}
         ],
         'pool_kernel_size': 2,
         'pool_stride': 2,
-        'fc1_out_features': 128,
-        'dropout_prob': 0.4,
-        'use_batch_norm': True
-    },
-    # Wide architecture
-    {
-        'conv_type': '1d',
-        'input_shape': 256,
-        'conv_layers': [
-            {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 256, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 512, 'kernel_size': 3, 'stride': 1, 'padding': 1}
-        ],
-        'pool_kernel_size': 2,
-        'pool_stride': 2,
-        'fc1_out_features': 128,
-        'dropout_prob': 0.3,
-        'use_batch_norm': True
-    },
-    # Shallow architecture
-    {
-        'conv_type': '1d',
-        'input_shape': 256,
-        'conv_layers': [
-            {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 256, 'kernel_size': 3, 'stride': 1, 'padding': 1}
-        ],
-        'pool_kernel_size': 2,
-        'pool_stride': 2,
-        'fc1_out_features': 64,
-        'dropout_prob': 0.3,
+        'fc1_out_features': 32,
+        'dropout_prob': 0.15,
         'use_batch_norm': True
     }
 ]
+
 
 # Architecture mapping function
 def get_architecture(index):
@@ -85,7 +147,7 @@ def get_architecture(index):
 def generate_exp_name(lambda_mmd, architecture_idx, mmd_bandwidth):
     param_str = f"{round(lambda_mmd, 5)}_{architecture_idx}_{round(mmd_bandwidth, 5)}"
     param_hash = hashlib.md5(param_str.encode()).hexdigest()[:8]
-    return f"bayesian_search_mmd_v1_{param_hash}"
+    return f"bayesian_search_mmd_v3_{param_hash}"
 
 # Black-box function to optimize
 def black_box_function(lambda_mmd, architecture_idx, mmd_bandwidth):
@@ -106,16 +168,16 @@ def black_box_function(lambda_mmd, architecture_idx, mmd_bandwidth):
     print(f"Testing Config: {result_str}")
     
     # Log results to file
-    with open("bayesian_search_results.txt", "a") as f:
+    with open("bayesian_search_results_v3.txt", "a") as f:
         f.write(result_str)
     
     return accuracy
 
 # Define hyperparameter search space
 pbounds = {
-    "lambda_mmd": (-1, 1),
+    "lambda_mmd": (-5, 0),
     "architecture_idx": (0, len(ARCHITECTURE_CHOICES) - 1),
-    "mmd_bandwidth": (-1.5, 1.5),
+    "mmd_bandwidth": (-5, 1),
 }
 
 # Run Bayesian Optimization
@@ -133,5 +195,5 @@ optimizer.maximize(
 # Log best result
 best_result = f"Best found configuration: {optimizer.max}\n"
 print(best_result)
-with open("bayesian_search_results.txt", "a") as f:
+with open("bayesian_search_results_v3.txt", "a") as f:
     f.write(best_result)
