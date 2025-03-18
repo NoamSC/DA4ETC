@@ -1,5 +1,7 @@
 *.pcap
 *.zip
+*.err
+*.out
 data/
 .ipynb_checkpoints/
 __pycache__/
