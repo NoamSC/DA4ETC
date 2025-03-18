@@ -2,6 +2,30 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+class GradientReversalFunction(torch.autograd.Function):
+    @staticmethod
+    def forward(ctx, x, lambda_):
+        """Forward pass: acts as identity."""
+        ctx.lambda_ = lambda_
+        return x.clone()
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        """Backward pass: reverses gradient by multiplying with -lambda_."""
+        lambda_ = ctx.lambda_
+        grad_input = -lambda_ * grad_output
+        return grad_input, None  # None because lambda_ is not trainable
+
+
+class GradientReversalLayer(nn.Module):
+    def __init__(self, lambda_=1.0):
+        super().__init__()
+        self.lambda_ = lambda_
+
+    def forward(self, x):
+        return GradientReversalFunction.apply(x, self.lambda_)
+
+
 class ConfigurableCNN(nn.Module):
     def __init__(self, params):
         super(ConfigurableCNN, self).__init__()
@@ -40,6 +64,15 @@ class ConfigurableCNN(nn.Module):
         self.fc1 = nn.Linear(self._get_flattened_size(params['input_shape']), params['fc1_out_features'])
         self.fc2 = nn.Linear(params['fc1_out_features'], params['num_classes'])
         self.dropout = nn.Dropout(params['dropout_prob'])
+        
+        if params['lambda_rgl'] > 0:
+            assert "dann_fc_out_features" in params, "DANN requires dann_fc_out_features"
+            self.domain_classifier = nn.Sequential(
+                GradientReversalLayer(lambda_=params['lambda_rgl']),
+                nn.Linear(params['fc1_out_features'], params['dann_fc_out_features']),
+                nn.ReLU(),
+                nn.Linear(params['dann_fc_out_features'], 2)
+            )
 
     def _get_flattened_size(self, input_shape):
         x = torch.randn(1, self.params['input_shape'], input_shape).to(next(self.parameters()).device)
@@ -59,6 +92,17 @@ class ConfigurableCNN(nn.Module):
         return x  # Return feature representation before FC layers
 
     def forward(self, x):
-        x = self.get_features(x)
-        x = self.dropout(x)
-        return self.fc2(x)
+        return_dict = dict()
+        
+        features = self.get_features(x)
+        class_preds = self.fc2(features)
+        
+        if self.params['lambda_rgl'] > 0:
+            domain_preds = self.domain_classifier(features)
+            return_dict['domain_preds'] = domain_preds
+            
+        return_dict['class_preds'] = class_preds
+        return_dict['features'] = features
+        
+        # features = self.dropout(features)
+        return return_dict

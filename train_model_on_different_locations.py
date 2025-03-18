@@ -36,13 +36,13 @@ def load_cached_dataset(location, cfg, path_format="cached_datasets/datasets_{lo
 
     return train_loader, val_loader
 
-def run_experiment_with_mmd(train_domain, test_domain, cfg):
+def run_experiment(train_domain, test_domain, cfg):
     """
-    Train and validate a model for a specific train-test domain pair using MMD.
+    Train and validate a model for a specific train-test domain pair.
 
     Args:
     - train_domain (str): The domain to use for training.
-    - test_domain (str): The domain to use for testing (MMD computation).
+    - test_domain (str): The domain to use for testing (MMD or DANN computation).
     - cfg (dict): config.
     """
     train_loader, _ = load_cached_dataset(train_domain, cfg=cfg)
@@ -78,7 +78,8 @@ def run_experiment_with_mmd(train_domain, test_domain, cfg):
         plots_save_dir=plots_save_dir,
         label_mapping=label_mapping,
         lambda_mmd=cfg.LAMBDA_MMD,
-        mmd_bandwidths=cfg.MMD_BANDWIDTHS
+        mmd_bandwidths=cfg.MMD_BANDWIDTHS,
+        lambda_dann=cfg.LAMBDA_DANN,
     )
 
     final_model_path = weights_save_dir / f"model_final_{train_domain}_to_{test_domain}.pth"
@@ -161,7 +162,7 @@ def run_full_exp(cfg):
         for test_domain in cfg.LOCATIONS:
             # if train_domain != test_domain:
             print(f"Running MMD experiment for train domain: {train_domain} and test domain: {test_domain}")
-            run_experiment_with_mmd(train_domain, test_domain, cfg)
+            run_experiment(train_domain, test_domain, cfg)
 
     # Evaluate performance
     num_locations = len(cfg.LOCATIONS)
@@ -219,3 +220,6 @@ def run_full_exp(cfg):
     
     # returning a proxy of how well the exp went
     return(np.mean(accuracy_matrix))
+
+from config import Config
+run_full_exp(Config())

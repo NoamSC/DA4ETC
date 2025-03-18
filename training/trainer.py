@@ -28,11 +28,11 @@ def compute_mmd_loss(source_features, target_features, kernel='rbf', bandwidths=
     return loss / len(bandwidths)
 
 
-def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mmd=0.0, test_loader=None, mmd_bandwidths=[0.1, 1, 10]):
-    """Train model for one epoch. Supports optional MMD loss."""
+def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mmd=0.0, test_loader=None, mmd_bandwidths=[0.1, 1, 10], lambda_dann=0.0):
+    """Train model for one epoch. Supports optional MMD and DANN losses."""
     model.train()
     train_loss, train_correct, train_total = 0, 0, 0
-    regular_loss_total, mmd_loss_total = 0, 0
+    classification_loss_total, mmd_loss_total, dann_loss_total = 0, 0, 0
 
     test_iter = cycle(test_loader) if test_loader is not None else None
 
@@ -40,38 +40,56 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
         train_inputs, train_labels = train_inputs.to(device), train_labels.to(device).long()
         
         if test_iter is not None:
-            # be carefull not to use test labels
+            # be careful not to use test labels
             test_inputs, _ = next(test_iter)
             test_inputs = test_inputs.to(device)
+            model_test_outputs = model(test_inputs)
+            test_features = model_test_outputs['features']
+            test_class_preds = model_test_outputs['class_preds']
+            target_domain_preds = model_test_outputs.get('domain_preds', None)
         
         optimizer.zero_grad()
-        train_outputs = model(train_inputs)
-        regular_loss = criterion(train_outputs, train_labels)
+        
+        # forward pass
+        total_loss, mmd_loss, dann_loss = 0, 0, 0
+        model_train_outputs = model(train_inputs)
+        train_class_preds = model_train_outputs['class_preds']
+        train_features = model_train_outputs['features']
+        source_domain_preds = model_train_outputs.get('domain_preds', None)
+        
+        # compute normal classification score
+        classification_loss = criterion(train_class_preds, train_labels)
 
+        # compute MMD loss
         if test_loader is not None and lambda_mmd > 0:
-            train_features = model.get_features(train_inputs)
-            test_features = model.get_features(test_inputs)
             mmd_loss = compute_mmd_loss(train_features, test_features, bandwidths=mmd_bandwidths)
-            total_loss = regular_loss + lambda_mmd * mmd_loss
             mmd_loss_total += mmd_loss.item()
-        else:
-            total_loss = regular_loss
-            mmd_loss_total = 0
 
+        # compute DANN loss
+        if test_loader is not None and lambda_dann > 0:
+            source_domain_labels = torch.zeros(len(source_domain_preds)).to(device).long()
+            target_domain_labels = torch.ones(len(target_domain_preds)).to(device).long()
+            
+            dann_loss = criterion(source_domain_preds, source_domain_labels)
+            dann_loss += criterion(target_domain_preds, target_domain_labels)
+            dann_loss_total += dann_loss.item()
+
+        total_loss = classification_loss + mmd_loss * lambda_mmd + dann_loss * lambda_dann
         total_loss.backward()
         optimizer.step()
 
         train_loss += total_loss.item() * train_inputs.size(0)
-        _, predicted = train_outputs.max(1)
+        _, predicted = train_class_preds.max(1)
         train_correct += predicted.eq(train_labels).sum().item()
         train_total += train_labels.size(0)
-        regular_loss_total += regular_loss.item()
+        classification_loss_total += classification_loss.item()
 
     return (
         train_loss / train_total, 
-        100.0 * train_correct / train_total, 
-        regular_loss_total / len(train_loader), 
-        mmd_loss_total / len(train_loader) * lambda_mmd if lambda_mmd > 0 else 0
+        100.0 * train_correct / train_total,
+        classification_loss_total / len(train_loader), 
+        mmd_loss_total / len(train_loader) * lambda_mmd if lambda_mmd > 0 else 0,
+        dann_loss_total / len(train_loader) * lambda_dann if lambda_dann > 0 else 0
     )
 
 
@@ -84,11 +102,11 @@ def validate(model, val_loader, criterion, device):
     with torch.no_grad():
         for inputs, labels in tqdm(val_loader, desc="Validation", leave=False):
             inputs, labels = inputs.to(device), labels.to(device).long()
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
+            class_preds = model(inputs)['class_preds']
+            loss = criterion(class_preds, labels)
 
             val_loss += loss.item() * inputs.size(0)
-            _, predicted = outputs.max(1)
+            _, predicted = class_preds.max(1)
             val_correct += predicted.eq(labels).sum().item()
             val_total += labels.size(0)
 
@@ -114,24 +132,26 @@ def batch_norm_adaptation(model, target_loader, device):
 
 def train_model(model, train_loader, criterion, optimizer, num_epochs, device, 
                 weights_save_dir, plots_save_dir, label_mapping, lambda_mmd=0.0, 
-                test_loader=None, adapt_batch_norm=False, mmd_bandwidths=[1]):
+                test_loader=None, adapt_batch_norm=False, mmd_bandwidths=[1], lambda_dann=0.0):
     """
-    General training function with support for MMD and batch norm adaptation.
+    General training function with support for MMD, DANN, and batch norm adaptation.
     """
     # other losses
     mmd_loss_name = 'MMD Loss'
+    dann_loss_name = 'DANN Loss'
     train_losses, val_losses = [], []
     train_accuracies, val_accuracies = [], []
-    train_regular_losses, train_other_losses = [], {mmd_loss_name: []}
+    train_regular_losses, train_other_losses = [], {mmd_loss_name: [], dann_loss_name: []}
 
     for epoch in range(num_epochs):
-        train_loss, train_acc, regular_loss, mmd_loss = train_one_epoch(
-            model, train_loader, criterion, optimizer, device, lambda_mmd, test_loader, mmd_bandwidths
+        train_loss, train_acc, regular_loss, mmd_loss, dann_loss = train_one_epoch(
+            model, train_loader, criterion, optimizer, device, lambda_mmd, test_loader, mmd_bandwidths, lambda_dann
         )
         train_losses.append(train_loss)
         train_accuracies.append(train_acc)
         train_regular_losses.append(regular_loss)
         train_other_losses[mmd_loss_name].append(mmd_loss)
+        train_other_losses[dann_loss_name].append(dann_loss)
 
         val_loss, val_acc, all_labels, all_predictions = validate(model, test_loader, criterion, device)
         val_losses.append(val_loss)
@@ -139,7 +159,7 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
 
         print(f"Epoch {epoch+1}: Train Loss={train_loss:.4f}, Accuracy={train_acc:.2f}%")
         print(f"         Val Loss={val_loss:.4f}, Accuracy={val_acc:.2f}%")
-        for loss_name, loss_values in train_other_losses.items(): # TODO: change it
+        for loss_name, loss_values in train_other_losses.items():
             print(f"         {loss_name}={loss_values[-1]:.4f}, Regular Loss={regular_loss:.4f}")
 
         # save weights
@@ -165,6 +185,5 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
         history_save_path = plots_save_dir / "training_history.pth"
         torch.save(training_history, history_save_path)
 
-
-
     print("Training completed.")
+

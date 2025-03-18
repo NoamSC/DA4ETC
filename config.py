@@ -5,7 +5,7 @@ import torch
 @dataclass
 class Config:
     # Experiment Details
-    EXPERIMENT_NAME: str = "shallow_architecture_baseline"
+    EXPERIMENT_NAME: str = "deleteme"
     EXPERIMENT_PATH: Path = field(init=False)
 
     # Environment and Reproducibility
@@ -40,7 +40,12 @@ class Config:
         'pool_stride': 2,
         'fc1_out_features': 64,
         'dropout_prob': 0.3,
-        'use_batch_norm': True
+        'use_batch_norm': True,
+        
+        # Domain Adaptation Model Parameters
+        'lambda_rgl': 1e-1,
+        'dann_fc_out_features': 64,
+
     })
 
     # Training Parameters
@@ -51,6 +56,8 @@ class Config:
     # Domain Adaptation Parameters
     LAMBDA_MMD: float = 0
     MMD_BANDWIDTHS: list = field(default_factory=lambda: [1e-1, 1e0, 1e1])
+    
+    LAMBDA_DANN: float = 1e0
 
     # Logging and Checkpoints
     SAVE_PLOTS: bool = True
