@@ -30,6 +30,7 @@ class ConfigurableCNN(nn.Module):
     def __init__(self, params):
         super(ConfigurableCNN, self).__init__()
         self.params = params
+        self.epoch = 0
         self.conv_type = params['conv_type']
         self.use_batch_norm = params.get('use_batch_norm', False)
 
@@ -55,7 +56,7 @@ class ConfigurableCNN(nn.Module):
                                              padding=conv_layer['padding']))
                 if self.use_batch_norm:
                     self.layers.append(nn.BatchNorm2d(conv_layer['out_channels']))
-                self.layers.append(nn.ReLU())
+                self.layers.append(nn.GELU())
                 self.layers.append(nn.MaxPool2d(kernel_size=params['pool_kernel_size'], stride=params['pool_stride']))
                 in_channels = conv_layer['out_channels']
             else:
@@ -67,13 +68,23 @@ class ConfigurableCNN(nn.Module):
         
         if params['lambda_rgl'] > 0:
             assert "dann_fc_out_features" in params, "DANN requires dann_fc_out_features"
+            assert "lambda_grl_gamma" in params, "DANN requires lambda_grl_gamma"
+            
             self.domain_classifier = nn.Sequential(
                 GradientReversalLayer(lambda_=params['lambda_rgl']),
                 nn.Linear(params['fc1_out_features'], params['dann_fc_out_features']),
-                nn.ReLU(),
+                nn.GELU(),
                 nn.Linear(params['dann_fc_out_features'], 2)
             )
-
+            
+    def set_epoch(self, epoch):
+        self.epoch = epoch
+        if self.params['lambda_rgl'] > 0:
+            gamma = self.params['lambda_grl_gamma']
+            factor = (2 / (1 + torch.exp(torch.tensor(-gamma * epoch))) - 1)
+            self.domain_classifier[0].lambda_ = self.params['lambda_rgl'] * factor
+            print(f"Epoch {epoch}: GRL Lambda = {self.domain_classifier[0].lambda_}")
+                                                                                    
     def _get_flattened_size(self, input_shape):
         x = torch.randn(1, self.params['input_shape'], input_shape).to(next(self.parameters()).device)
         for layer in self.layers:
@@ -88,6 +99,7 @@ class ConfigurableCNN(nn.Module):
             # x = self.dropout(x)   
             
         x = x.view(x.size(0), -1)  # Flatten
+        x = self.dropout(x)
         x = F.gelu(self.fc1(x))
         return x  # Return feature representation before FC layers
 
@@ -103,6 +115,10 @@ class ConfigurableCNN(nn.Module):
             
         return_dict['class_preds'] = class_preds
         return_dict['features'] = features
+        
+        # for name, param in self.domain_classifier.named_parameters():
+        #     print(f"{name} gradient: {param.grad.mean().item() if param.grad is not None else 'None'}")
+
         
         # features = self.dropout(features)
         return return_dict

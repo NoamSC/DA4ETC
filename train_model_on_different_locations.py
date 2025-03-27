@@ -146,7 +146,7 @@ def evaluate_model_on_loader(model, val_loader, device):
     with torch.no_grad():
         for inputs, labels in val_loader:
             inputs, labels = inputs.to(device), labels.to(device).long()
-            outputs = model(inputs)
+            outputs = model(inputs)['class_preds']
             _, predicted = torch.max(outputs, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
@@ -160,7 +160,8 @@ def run_full_exp(cfg):
     # Train models
     for train_domain in cfg.LOCATIONS:
         for test_domain in cfg.LOCATIONS:
-            # if train_domain != test_domain:
+            if train_domain == test_domain:
+                continue
             print(f"Running MMD experiment for train domain: {train_domain} and test domain: {test_domain}")
             run_experiment(train_domain, test_domain, cfg)
 
@@ -175,6 +176,8 @@ def run_full_exp(cfg):
     # Iterate over train-test pairs
     for i, train_loc in enumerate(cfg.LOCATIONS):
         for j, test_loc in enumerate(cfg.LOCATIONS):
+            if train_loc == test_loc:
+                continue
             print(f"Evaluating train domain: {train_loc}, test domain: {test_loc}")
             
             # Find latest model for train-test pair
@@ -209,6 +212,8 @@ def run_full_exp(cfg):
     plt.colorbar(label='Accuracy')
     for i in range(num_locations):
         for j in range(num_locations):
+            if i == j:
+                continue
             plt.text(j, i, f'{accuracy_matrix[i, j]:.2f}', ha='center', va='center', color='white', fontsize=8)
     plt.xticks(ticks=np.arange(num_locations), labels=cfg.LOCATIONS, rotation=45, ha='right')
     plt.yticks(ticks=np.arange(num_locations), labels=cfg.LOCATIONS)
@@ -221,5 +226,5 @@ def run_full_exp(cfg):
     # returning a proxy of how well the exp went
     return(np.mean(accuracy_matrix))
 
-from config import Config
-run_full_exp(Config())
+# from config import Config
+# run_full_exp(Config(LAMBDA_DANN=3))

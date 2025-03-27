@@ -32,9 +32,9 @@ class Config:
         'conv_type': '1d',
         'input_shape': 256,
         'conv_layers': [
-            {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 256, 'kernel_size': 3, 'stride': 1, 'padding': 1}
+            {'out_channels': 4, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+            {'out_channels': 8, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+            # {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1}
         ],
         'pool_kernel_size': 2,
         'pool_stride': 2,
@@ -43,9 +43,9 @@ class Config:
         'use_batch_norm': True,
         
         # Domain Adaptation Model Parameters
-        'lambda_rgl': 1e-1,
+        'lambda_rgl': 1e-2,
         'dann_fc_out_features': 64,
-
+        'lambda_grl_gamma': 10,
     })
 
     # Training Parameters

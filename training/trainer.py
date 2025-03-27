@@ -63,7 +63,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
         # compute MMD loss
         if test_loader is not None and lambda_mmd > 0:
             mmd_loss = compute_mmd_loss(train_features, test_features, bandwidths=mmd_bandwidths)
-            mmd_loss_total += mmd_loss.item()
+            mmd_loss_total += mmd_loss.detach().item()
 
         # compute DANN loss
         if test_loader is not None and lambda_dann > 0:
@@ -72,7 +72,8 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
             
             dann_loss = criterion(source_domain_preds, source_domain_labels)
             dann_loss += criterion(target_domain_preds, target_domain_labels)
-            dann_loss_total += dann_loss.item()
+            
+            dann_loss_total += dann_loss.detach().item()
 
         total_loss = classification_loss + mmd_loss * lambda_mmd + dann_loss * lambda_dann
         total_loss.backward()
@@ -144,6 +145,7 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
     train_regular_losses, train_other_losses = [], {mmd_loss_name: [], dann_loss_name: []}
 
     for epoch in range(num_epochs):
+        model.set_epoch(epoch / num_epochs)
         train_loss, train_acc, regular_loss, mmd_loss, dann_loss = train_one_epoch(
             model, train_loader, criterion, optimizer, device, lambda_mmd, test_loader, mmd_bandwidths, lambda_dann
         )
