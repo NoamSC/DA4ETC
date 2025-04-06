@@ -1,0 +1,71 @@
+import csv
+import torch
+import numpy as np
+from torch.utils.data import Dataset
+from pathlib import Path
+
+
+def session_2d_histogram(ts, sizes, resolution=256, max_delta_time=None):
+    if max_delta_time is None:
+        max_delta_time = ts[-1] - ts[0] if len(ts) > 1 else 1e-3
+    if max_delta_time == 0:
+        max_delta_time = 1e-3  # prevent divide-by-zero
+
+    ts_norm = ((ts - ts[0]) / max_delta_time) * resolution
+    bin_edges = np.linspace(0, resolution, resolution + 1)
+    H, _, _ = np.histogram2d(sizes, ts_norm, bins=(bin_edges, bin_edges))
+    return H.astype(np.uint16)
+
+
+class FlowPicCSVDataset(Dataset):
+    def __init__(self, csv_path, resolution=256, label_mapping=None):
+        self.csv_path = Path(csv_path)
+        self.resolution = resolution
+        self.line_offsets = []
+        self.labels = []
+        self.label_mapping = label_mapping or {}
+        self.headers = []
+        label_counter = len(self.label_mapping)
+
+        with open(self.csv_path, 'r') as f:
+            self.headers = f.readline().strip().split(',')
+            offset = f.tell()
+            for line in f:
+                self.line_offsets.append(offset)
+                row = dict(zip(self.headers, line.strip().split(',')))
+                app_id = int(row['appId'])
+                if app_id not in self.label_mapping:
+                    self.label_mapping[app_id] = label_counter
+                    label_counter += 1
+                self.labels.append(self.label_mapping[app_id])
+                offset = f.tell()
+
+    def __len__(self):
+        return len(self.line_offsets)
+
+    def __getitem__(self, idx):
+        try:
+            with open(self.csv_path, 'r') as f:
+                f.seek(self.line_offsets[idx])
+                line = f.readline()
+
+            row = dict(zip(self.headers, line.strip().split(',')))
+
+            ts_str = row['ppi-pdt'].strip('[]')
+            sizes_str = row['ppi-ps'].strip('[]')
+
+            ts = np.fromstring(ts_str, sep=' ') if ts_str else np.array([])
+            sizes = np.fromstring(sizes_str, sep=' ') if sizes_str else np.array([])
+
+            if len(ts) < 2 or len(sizes) != len(ts):
+                raise ValueError("Invalid flow data")
+
+            flowpic = session_2d_histogram(ts, sizes, resolution=self.resolution)
+            label = self.labels[idx]
+
+            return torch.tensor(flowpic, dtype=torch.float32), torch.tensor(label, dtype=torch.long)
+
+        except Exception as e:
+            print(f"Error reading index {idx}: {e}")
+            dummy = np.zeros((self.resolution, self.resolution), dtype=np.float32)
+            return torch.tensor(dummy), torch.tensor(-1)

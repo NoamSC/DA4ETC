@@ -6,12 +6,12 @@ from pathlib import Path
 from data_utils.data_utils import extract_pcap_info, PcapDataset
 
 # Example configuration object (replace with your actual configuration)
-class Config:
+class DataConfig:
     TRAIN_SPLIT_RATIO = 0.7
     MIN_FLOW_LENGTH = 100
     RESOLUTION = 256
 
-cfg = Config()
+cfg = DataConfig()
 
 pcaps = pd.read_csv('pcap_paths.csv').values[:, 1]
 
