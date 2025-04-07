@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 from pathlib import Path
 
 
-def session_2d_histogram(ts, sizes, resolution=256, max_delta_time=None):
+def session_2d_histogram(ts, sizes, resolution=256, max_delta_time=None, min_packet_count=0):
     if max_delta_time is None:
         max_delta_time = ts[-1] - ts[0] if len(ts) > 1 else 1e-3
     if max_delta_time == 0:
@@ -18,7 +18,7 @@ def session_2d_histogram(ts, sizes, resolution=256, max_delta_time=None):
 
 
 class FlowPicCSVDataset(Dataset):
-    def __init__(self, csv_path, resolution=256, label_mapping=None):
+    def __init__(self, csv_path, resolution=256, label_mapping=None, max_rows=None):
         self.csv_path = Path(csv_path)
         self.resolution = resolution
         self.line_offsets = []
@@ -26,19 +26,37 @@ class FlowPicCSVDataset(Dataset):
         self.label_mapping = label_mapping or {}
         self.headers = []
         label_counter = len(self.label_mapping)
-
+        if max_rows is not None:
+            self.max_rows = max_rows
+        else:
+            self.max_rows = float('inf')
+            
         with open(self.csv_path, 'r') as f:
             self.headers = f.readline().strip().split(',')
             offset = f.tell()
-            for line in f:
-                self.line_offsets.append(offset)
-                row = dict(zip(self.headers, line.strip().split(',')))
-                app_id = int(row['appId'])
-                if app_id not in self.label_mapping:
-                    self.label_mapping[app_id] = label_counter
-                    label_counter += 1
-                self.labels.append(self.label_mapping[app_id])
-                offset = f.tell()
+            buffer = ""
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                buffer += line
+                try:
+                    reader = csv.reader([buffer])
+                    parsed = next(reader)
+                    row = dict(zip(self.headers, parsed))
+                    app_id = int(row['appId'])
+                    if app_id not in self.label_mapping:
+                        self.label_mapping[app_id] = label_counter
+                        label_counter += 1
+                    self.labels.append(self.label_mapping[app_id])
+                    self.line_offsets.append(offset)
+                    offset = f.tell()
+                    buffer = ""
+                    row_count = len(self.line_offsets)
+                    if row_count >= self.max_rows:
+                        break
+                except Exception:
+                    continue  # keep reading until we get a complete row
 
     def __len__(self):
         return len(self.line_offsets)
@@ -47,9 +65,20 @@ class FlowPicCSVDataset(Dataset):
         try:
             with open(self.csv_path, 'r') as f:
                 f.seek(self.line_offsets[idx])
-                line = f.readline()
+                buffer = ""
+                while True:
+                    line = f.readline()
+                    if not line:
+                        break
+                    buffer += line
+                    try:
+                        reader = csv.reader([buffer])
+                        parsed = next(reader)
+                        break
+                    except Exception:
+                        continue  # keep reading until complete
 
-            row = dict(zip(self.headers, line.strip().split(',')))
+            row = dict(zip(self.headers, parsed))
 
             ts_str = row['ppi-pdt'].strip('[]')
             sizes_str = row['ppi-ps'].strip('[]')
@@ -69,3 +98,4 @@ class FlowPicCSVDataset(Dataset):
             print(f"Error reading index {idx}: {e}")
             dummy = np.zeros((self.resolution, self.resolution), dtype=np.float32)
             return torch.tensor(dummy), torch.tensor(-1)
+        
