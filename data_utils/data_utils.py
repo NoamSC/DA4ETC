@@ -84,14 +84,14 @@ def parse_pcap(pcap_path, min_flow_length=2):
         # Initialize the session if it's new
         if session_key not in sessions:
             sessions[session_key] = {
-                'start_time': packet.time,  # Start timestamp of the session
-                'time_deltas': [],  # List to hold time deltas
-                'sizes': []  # List to hold packet sizes
+                'start_time': packet.time,
+                'time_deltas': [],
+                'sizes': []
             }
 
         # Update the session data with the current packet's info
         session = sessions[session_key]
-        size = len(packet)  # Get packet size
+        size = len(packet.payload)
         session['time_deltas'].append(packet.time - session['start_time'])  # Append time delta
         session['sizes'].append(size)  # Append packet size
 
