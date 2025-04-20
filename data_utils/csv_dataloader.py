@@ -1,101 +1,61 @@
-import csv
-import torch
+import re
+
 import numpy as np
-from torch.utils.data import Dataset
-from pathlib import Path
+import pandas as pd
+import torch
+from torch.utils.data import Dataset, DataLoader
 
+MTU = 1500  # Maximum Transmission Unit in bytes
 
-def session_2d_histogram(ts, sizes, resolution=256, max_delta_time=None, min_packet_count=0):
-    if max_delta_time is None:
-        max_delta_time = ts[-1] - ts[0] if len(ts) > 1 else 1e-3
-    if max_delta_time == 0:
-        max_delta_time = 1e-3  # prevent divide-by-zero
-
-    ts_norm = ((ts - ts[0]) / max_delta_time) * resolution
-    bin_edges = np.linspace(0, resolution, resolution + 1)
+def session_2d_histogram(ts, sizes, resolution=MTU, max_delta_time=10):
+    ts_norm = ((np.array(ts) - ts[0]) / max_delta_time) * MTU
+    bin_edges = np.linspace(0, MTU, resolution + 1)
     H, _, _ = np.histogram2d(sizes, ts_norm, bins=(bin_edges, bin_edges))
     return H.astype(np.uint16)
-
-
-class FlowPicCSVDataset(Dataset):
-    def __init__(self, csv_path, resolution=256, label_mapping=None, max_rows=None):
-        self.csv_path = Path(csv_path)
+    
+class CSVFlowPicDataset(Dataset):
+    def __init__(self, csv_paths, resolution=MTU, max_dt_ms=30000):
+        self.csv_paths = csv_paths
         self.resolution = resolution
-        self.line_offsets = []
+        self.max_delta_time = max_dt_ms
+        
+        # Index all sessions at initialization for efficiency
+        self.sessions = []
         self.labels = []
-        self.label_mapping = label_mapping or {}
-        self.headers = []
-        label_counter = len(self.label_mapping)
-        if max_rows is not None:
-            self.max_rows = max_rows
-        else:
-            self.max_rows = float('inf')
+        self.rows = []
+        self._prepare_index()
+        
+    def _prepare_index(self):
+        for csv_file in self.csv_paths:
+            df = pd.read_csv(csv_file)
+            df['ppi-pdt'] = df['ppi-pdt'].apply(lambda x: list(map(int, re.findall(r'\d+', x))))
+            df['ppi-pd'] = df['ppi-pd'].apply(lambda x: list(map(int, re.findall(r'\d+', x))))
+            df['ppi-ps'] = df['ppi-ps'].apply(lambda x: list(map(int, re.findall(r'\d+', x))))
+            df['ppi-paux'] = df['ppi-paux'].apply(lambda x: list(map(int, re.findall(r'\d+', x))))
             
-        with open(self.csv_path, 'r') as f:
-            self.headers = f.readline().strip().split(',')
-            offset = f.tell()
-            buffer = ""
-            while True:
-                line = f.readline()
-                if not line:
-                    break
-                buffer += line
-                try:
-                    reader = csv.reader([buffer])
-                    parsed = next(reader)
-                    row = dict(zip(self.headers, parsed))
-                    app_id = int(row['appId'])
-                    if app_id not in self.label_mapping:
-                        self.label_mapping[app_id] = label_counter
-                        label_counter += 1
-                    self.labels.append(self.label_mapping[app_id])
-                    self.line_offsets.append(offset)
-                    offset = f.tell()
-                    buffer = ""
-                    row_count = len(self.line_offsets)
-                    if row_count >= self.max_rows:
-                        break
-                except Exception:
-                    continue  # keep reading until we get a complete row
+            for _, row in df.iterrows():
+                ts = row['ppi-pdt']
+                if len(ts) >= 1:
+                    self.sessions.append((ts, row['ppi-ps']))
+                    self.labels.append(row['appId'])
+                    self.rows.append(row)
 
     def __len__(self):
-        return len(self.line_offsets)
+        return len(self.sessions)
 
     def __getitem__(self, idx):
-        try:
-            with open(self.csv_path, 'r') as f:
-                f.seek(self.line_offsets[idx])
-                buffer = ""
-                while True:
-                    line = f.readline()
-                    if not line:
-                        break
-                    buffer += line
-                    try:
-                        reader = csv.reader([buffer])
-                        parsed = next(reader)
-                        break
-                    except Exception:
-                        continue  # keep reading until complete
+        ts, sizes = self.sessions[idx]
+        flowpic = session_2d_histogram(ts, sizes, self.resolution, self.max_delta_time)
 
-            row = dict(zip(self.headers, parsed))
-
-            ts_str = row['ppi-pdt'].strip('[]')
-            sizes_str = row['ppi-ps'].strip('[]')
-
-            ts = np.fromstring(ts_str, sep=' ') if ts_str else np.array([])
-            sizes = np.fromstring(sizes_str, sep=' ') if sizes_str else np.array([])
-
-            if len(ts) < 2 or len(sizes) != len(ts):
-                raise ValueError("Invalid flow data")
-
-            flowpic = session_2d_histogram(ts, sizes, resolution=self.resolution)
-            label = self.labels[idx]
-
-            return torch.tensor(flowpic, dtype=torch.float32), torch.tensor(label, dtype=torch.long)
-
-        except Exception as e:
-            print(f"Error reading index {idx}: {e}")
-            dummy = np.zeros((self.resolution, self.resolution), dtype=np.float32)
-            return torch.tensor(dummy), torch.tensor(-1)
+        flowpic_tensor = torch.tensor(flowpic, dtype=torch.float32).unsqueeze(0)
+        label_tensor = torch.tensor(self.labels[idx], dtype=torch.long)
         
+        # can get other features from self.rows[idx] if needed
+
+        return flowpic_tensor, label_tensor
+
+
+def create_csv_flowpic_loader(csv_paths, batch_size=64, shuffle=True, num_workers=4, resolution=MTU, max_dt_ms=30000):
+    dataset = CSVFlowPicDataset(csv_paths, resolution=resolution, max_dt_ms=max_dt_ms)
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+    return loader
