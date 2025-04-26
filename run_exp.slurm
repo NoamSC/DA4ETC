@@ -15,4 +15,4 @@
 # Define job name variable
 
 # Run Python script
-python bayesian_opt_search.py
+python tmp.py
