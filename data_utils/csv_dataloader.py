@@ -7,6 +7,15 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset, DataLoader
 
+def extract_numbers(x):
+    if isinstance(x, str):
+        # If x is a string, extract numbers
+        return list(map(int, re.findall(r'\d+', x)))
+    elif isinstance(x, list):
+        return x
+    else:
+        return []    
+
 MTU = 1500  # Maximum Transmission Unit in bytes
 
 def session_2d_histogram(ts, sizes, resolution=MTU, max_delta_time=10, log_t_axis=False):
@@ -44,11 +53,16 @@ class CSVFlowPicDataset(Dataset):
         
     def _prepare_index(self):
         for csv_file in self.csv_paths:
-            df = pd.read_csv(csv_file)
-            df['ppi-pdt'] = df['ppi-pdt'].apply(lambda x: list(map(int, re.findall(r'\d+', x))))
-            df['ppi-pd'] = df['ppi-pd'].apply(lambda x: list(map(int, re.findall(r'\d+', x))))
-            df['ppi-ps'] = df['ppi-ps'].apply(lambda x: list(map(int, re.findall(r'\d+', x))))
-            df['ppi-paux'] = df['ppi-paux'].apply(lambda x: list(map(int, re.findall(r'\d+', x))))
+            if isinstance(csv_file, pd.DataFrame):
+                # If csv_file is already a DataFrame, use it directly
+                df = csv_file.copy()
+            else:
+                df = pd.read_csv(csv_file)
+                
+            df['ppi-pdt'] = df['ppi-pdt'].transform(extract_numbers)
+            df['ppi-pd'] = df['ppi-pd'].transform(extract_numbers)
+            df['ppi-ps'] = df['ppi-ps'].transform(extract_numbers)
+            df['ppi-paux'] = df['ppi-paux'].transform(extract_numbers)
             
             for _, row in df.iterrows():
                 ts = row['ppi-pdt']
