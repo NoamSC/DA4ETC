@@ -121,7 +121,7 @@ import torch
 @dataclass
 class Config:
     # Experiment Details
-    EXPERIMENT_NAME: str = "allot_simple_v3_log"
+    EXPERIMENT_NAME: str = "allot_simple_v9_more_data_split"
     EXPERIMENT_PATH: Path = field(init=False)
 
     # Environment and Reproducibility
@@ -167,7 +167,7 @@ class Config:
 
     # Training Parameters
     LEARNING_RATE: float = 3e-3
-    NUM_EPOCHS: int = 100
+    NUM_EPOCHS: int = 20
     WEIGHT_DECAY: float = 1e-4
 
     # Domain Adaptation Parameters
