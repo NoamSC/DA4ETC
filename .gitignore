@@ -8,4 +8,5 @@ __pycache__/
 *.pth
 *.pkl
 exps/*/*/plots/confusion_*.png
+exps/*/*/*/plots/confusion_*.png
 exps/*/*/training_*.png

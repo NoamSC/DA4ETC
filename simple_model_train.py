@@ -21,7 +21,7 @@ from config import Config
 set_seed(42)
 
 label_whitelist = [386,  497,  998,  171,  485, 2613,  340,  373,  561,  967,  436, 1088,
-        961,  682,  521,  964, 1450, 1448,  965, 42]
+        961,  682,  521,  964, 1450, 1448,  965, 42][:4]
 apps_id_df = pd.read_csv('data/app_id_mapping.csv', index_col=0)
 apps_id_df = apps_id_df[apps_id_df.index.isin(label_whitelist)]
 label_mapping = {row['names']: i for i, row in apps_id_df.reset_index().iterrows()}
@@ -31,70 +31,68 @@ label_indices_mapping = {label_index: new_label_index for
                          if label_index in label_whitelist}
 
 num_classes = len(label_mapping)
-cfg = Config(RESOLUTION=64)
+cfg = Config()
+
+def get_df_from_csvs(domain_idx, chunk_start, chunk_end, label_whitelist):
+    dfs = []
+    for i in range(chunk_start, chunk_end):
+        chunk_path = os.path.join('data', 'allot_small_csvs', f'chunks_domain_{domain_idx}', f'chunk_{i:03}.csv')
+        df = pd.read_csv(chunk_path)
+        df = df[df['appId'].isin(label_whitelist)]
+        dfs.append(df)
+    df = pd.concat(dfs, ignore_index=True)
+    df = df.sample(frac=1).reset_index(drop=True)
+    return df
+
+train_df_domain_1 = get_df_from_csvs(1, 0, 70, label_whitelist)
+train_df_domain_2 = get_df_from_csvs(2, 0, 70, label_whitelist)
+test_df_domain_1 = get_df_from_csvs(1, 70, 100, label_whitelist)
+test_df_domain_2 = get_df_from_csvs(2, 70, 100, label_whitelist)
+
+for sub_exp_name, train_df, test_df in [('gap_between_domains', train_df_domain_1, test_df_domain_2),
+                                                ('validation_error', train_df_domain_2, test_df_domain_2)]:
+    
+    train_loader = create_csv_flowpic_loader([train_df], batch_size=cfg.BATCH_SIZE, num_workers=0,
+                                            shuffle=True, resolution=cfg.RESOLUTION,
+                                            label_mapping=label_indices_mapping, log_t_axis=False) 
+
+    cfg.MODEL_PARAMS['num_classes'] = num_classes
+    model = ConfigurableCNN(cfg.MODEL_PARAMS).to(cfg.DEVICE)
+
+    optimizer = optim.Adam(model.parameters(), lr=cfg.LEARNING_RATE)
+    criterion = nn.CrossEntropyLoss()
 
 
+    experiment_path = cfg.EXPERIMENT_PATH  / sub_exp_name
+    experiment_path.mkdir(parents=True, exist_ok=True)
 
-dfs = []
-for i in range(0, 70):
-    chunk_path = os.path.join('data', 'allot_small_csvs', 'chunks', f'chunk_{i:03}.csv')
-    df = pd.read_csv(chunk_path)
-    df = df[df['appId'].isin(label_whitelist)]
-    dfs.append(df)
-df_train = pd.concat(dfs, ignore_index=True)
-df_train = df_train.sample(frac=1).reset_index(drop=True)
+    weights_save_dir = experiment_path / 'weights'
+    plots_save_dir = experiment_path / 'plots'
+    weights_save_dir.mkdir(parents=True, exist_ok=True)
+    plots_save_dir.mkdir(parents=True, exist_ok=True)
 
+    save_config_to_json(config_module=cfg, output_file_path=experiment_path / "config.json")
 
-dfs = []
-for i in range(70, 100):
-    chunk_path = os.path.join('data', 'allot_small_csvs', 'chunks', f'chunk_{i:03}.csv')
-    df = pd.read_csv(chunk_path)
-    df = df[df['appId'].isin(label_whitelist)]
-    dfs.append(df)
-df_test = pd.concat(dfs, ignore_index=True)
-df_test = df_test.sample(frac=1).reset_index(drop=True)
+    test_loader = create_csv_flowpic_loader([test_df], batch_size=cfg.BATCH_SIZE, num_workers=0,
+                                            shuffle=False, resolution=cfg.RESOLUTION,
+                                            label_mapping=label_indices_mapping, log_t_axis=False)
 
-train_loader = create_csv_flowpic_loader([df_train], batch_size=64, num_workers=0,
-                                        shuffle=True, resolution=64,
-                                        label_mapping=label_indices_mapping, log_t_axis=False) 
+    train_model(
+        model=model,
+        train_loader=train_loader,
+        test_loader=test_loader,
+        criterion=criterion,
+        optimizer=optimizer,
+        num_epochs=cfg.NUM_EPOCHS,
+        device=cfg.DEVICE,
+        weights_save_dir=weights_save_dir,
+        plots_save_dir=plots_save_dir,
+        label_mapping=label_mapping,
+        lambda_mmd=cfg.LAMBDA_MMD,
+        mmd_bandwidths=cfg.MMD_BANDWIDTHS,
+        lambda_dann=cfg.LAMBDA_DANN,
+    )
 
-cfg.MODEL_PARAMS['num_classes'] = num_classes
-model = ConfigurableCNN(cfg.MODEL_PARAMS).to(cfg.DEVICE)
-
-optimizer = optim.Adam(model.parameters(), lr=cfg.LEARNING_RATE)
-criterion = nn.CrossEntropyLoss()
-
-
-experiment_path = cfg.EXPERIMENT_PATH  #/ f"000_to_{i:003d}"
-experiment_path.mkdir(parents=True, exist_ok=True)
-
-weights_save_dir = experiment_path / 'weights'
-plots_save_dir = experiment_path / 'plots'
-weights_save_dir.mkdir(parents=True, exist_ok=True)
-plots_save_dir.mkdir(parents=True, exist_ok=True)
-
-save_config_to_json(config_module=cfg, output_file_path=experiment_path / "config.json")
-
-test_loader = create_csv_flowpic_loader([df_test], batch_size=64, num_workers=0,
-                                        shuffle=False, resolution=64,
-                                        label_mapping=label_indices_mapping, log_t_axis=False)
-
-train_model(
-    model=model,
-    train_loader=train_loader,
-    test_loader=test_loader,
-    criterion=criterion,
-    optimizer=optimizer,
-    num_epochs=cfg.NUM_EPOCHS,
-    device=cfg.DEVICE,
-    weights_save_dir=weights_save_dir,
-    plots_save_dir=plots_save_dir,
-    label_mapping=label_mapping,
-    lambda_mmd=cfg.LAMBDA_MMD,
-    mmd_bandwidths=cfg.MMD_BANDWIDTHS,
-    lambda_dann=cfg.LAMBDA_DANN,
-)
-
-final_model_path = weights_save_dir / f"model_final_000train_to_000test.pth"
-torch.save(model.state_dict(), final_model_path)
-# print(f"Model for train domain train_domain to test domain {i:03d} saved to {final_model_path}")
+    final_model_path = weights_save_dir / f"model_final_000train_to_000test.pth"
+    torch.save(model.state_dict(), final_model_path)
+    # print(f"Model for train domain train_domain to test domain {i:03d} saved to {final_model_path}")

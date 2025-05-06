@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset, DataLoader
+from tqdm import tqdm
 
 def extract_numbers(x):
     if isinstance(x, str):
@@ -52,7 +53,7 @@ class CSVFlowPicDataset(Dataset):
         self._prepare_index()
         
     def _prepare_index(self):
-        for csv_file in self.csv_paths:
+        for csv_file in tqdm(self.csv_paths):
             if isinstance(csv_file, pd.DataFrame):
                 # If csv_file is already a DataFrame, use it directly
                 df = csv_file.copy()

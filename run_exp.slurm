@@ -1,8 +1,8 @@
 #! /bin/sh
 
-#SBATCH --job-name=bsearch_v1
-#SBATCH --output=/home/anatbr/students/noamshakedc/da4etc/bsearch_v1.out  # Redirect stdout
-#SBATCH --error=/home/anatbr/students/noamshakedc/da4etc/bsearch_v1.err   # Redirect stderr
+#SBATCH --job-name=train_allot6
+#SBATCH --output=/home/anatbr/students/noamshakedc/da4etc/bsearch_v2.out  # Redirect stdout
+#SBATCH --error=/home/anatbr/students/noamshakedc/da4etc/bsearch_v2.err   # Redirect stderr
 #SBATCH --partition=gpu-h100-killable   # Ensure this is a valid partition
 #SBATCH --time=16:30:00  # Reduced time limit to match cluster constraints
 #SBATCH --signal=USR1@120  # Graceful exit signal
@@ -15,4 +15,4 @@
 # Define job name variable
 
 # Run Python script
-python tmp.py
+python simple_model_train.py
