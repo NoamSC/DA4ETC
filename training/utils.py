@@ -1,9 +1,24 @@
 import random
-import numpy as np
 import torch
 import json
 from pathlib import Path
 import inspect
+import os
+
+import pandas as pd
+import numpy as np
+
+def get_df_from_csvs(domain_idx, chunk_start, chunk_end, label_whitelist):
+    # Get a DataFrame from multiple CSV files for a specific domain and chunk range.
+    dfs = []
+    for i in range(chunk_start, chunk_end):
+        chunk_path = os.path.join('data', 'allot_small_csvs', f'chunks_domain_{domain_idx}', f'chunk_{i:03}.csv')
+        df = pd.read_csv(chunk_path)
+        df = df[df['appId'].isin(label_whitelist)]
+        dfs.append(df)
+    df = pd.concat(dfs, ignore_index=True)
+    df = df.sample(frac=1).reset_index(drop=True)
+    return df
 
 def set_seed(seed):
     """
