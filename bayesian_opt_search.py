@@ -1,173 +1,72 @@
 import random
+from pathlib import Path
+import os
+
 import numpy as np
 import hashlib
 from bayes_opt import BayesianOptimization
 from config import Config
-from train_model_on_different_locations import run_full_exp
+# from train_model_on_different_locations import run_full_exp
+from simple_model_train import run_full_exp
 
-seed = 42
-# Define architectures as a list of possible configurations
-# ARCHITECTURE_CHOICES = [
-#     # # Base architecture
-#     # {
-#     #     'conv_type': '1d',
-#     #     'input_shape': 256,
-#     #     'conv_layers': [
-#     #         {'out_channels': 16, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-#     #         {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-#     #         {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-#     #         {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-#     #         {'out_channels': 256, 'kernel_size': 3, 'stride': 1, 'padding': 1}
-#     #     ],
-#     #     'pool_kernel_size': 2,
-#     #     'pool_stride': 2,
-#     #     'fc1_out_features': 64,
-#     #     'dropout_prob': 0.3,
-#     #     'use_batch_norm': True
-#     # },
-#     # # Deeper architecture
-#     # {
-#         # 'conv_type': '1d',
-#         # 'input_shape': 256,
-#         # 'conv_layers': [
-#         #     {'out_channels': 16, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-#         #     {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-#         #     {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-#         #     {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-#         #     {'out_channels': 256, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-#         #     {'out_channels': 512, 'kernel_size': 3, 'stride': 1, 'padding': 1}
-#         # ],
-#         # 'pool_kernel_size': 2,
-#         # 'pool_stride': 2,
-#         # 'fc1_out_features': 128,
-#         # 'dropout_prob': 0.4,
-#         # 'use_batch_norm': True
-#     # },
-#     # Wide architecture
-#     {
-#         'conv_type': '1d',
-#         'input_shape': 256,
-#         'conv_layers': [
-#             {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-#             {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-#             {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-#             {'out_channels': 256, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-#             {'out_channels': 512, 'kernel_size': 3, 'stride': 1, 'padding': 1}
-#         ],
-#         'pool_kernel_size': 2,
-#         'pool_stride': 2,
-#         'fc1_out_features': 128,
-#         'dropout_prob': 0.3,
-#         'use_batch_norm': True
-#     },
-#     # Shallow architecture
-#     {
-#         'conv_type': '1d',
-#         'input_shape': 256,
-#         'conv_layers': [
-#             {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-#             {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-#             {'out_channels': 256, 'kernel_size': 3, 'stride': 1, 'padding': 1}
-#         ],
-#         'pool_kernel_size': 2,
-#         'pool_stride': 2,
-#         'fc1_out_features': 64,
-#         'dropout_prob': 0.3,
-#         'use_batch_norm': True
-#     }
-# ]
-ARCHITECTURE_CHOICES = [
-    # Reduced depth architecture
-    {
-        'conv_type': '1d',
-        'input_shape': 256,
-        'conv_layers': [
-            {'out_channels': 16, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 128, 'kernel_size': 3, 'stride': 1, 'padding': 1}
-        ],
-        'pool_kernel_size': 2,
-        'pool_stride': 2,
-        'fc1_out_features': 64,
-        'dropout_prob': 0.25,
-        'use_batch_norm': True
-    },
-    # # Light architecture
-    # {
-    #     'conv_type': '1d',
-    #     'input_shape': 256,
-    #     'conv_layers': [
-    #         {'out_channels': 2, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-    #         {'out_channels': 4, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-    #         {'out_channels': 8, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-    #         {'out_channels': 16, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-    #     ],
-    #     'pool_kernel_size': 2,
-    #     'pool_stride': 2,
-    #     'fc1_out_features': 32,
-    #     'dropout_prob': 0.2,
-    #     'use_batch_norm': True
-    # },
-    # # Very shallow architecture
-    # {
-    #     'conv_type': '1d',
-    #     'input_shape': 256,
-    #     'conv_layers': [
-    #         {'out_channels': 2, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-    #         {'out_channels': 2, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-    #     ],
-    #     'pool_kernel_size': 2,
-    #     'pool_stride': 2,
-    #     'fc1_out_features': 32,
-    #     'dropout_prob': 0.15,
-    #     'use_batch_norm': True
-    # }
-]
-
-
-# Architecture mapping function
-def get_architecture(index, lambda_rgl):
-    architecture = ARCHITECTURE_CHOICES[int(round(index))]
-    architecture['lambda_rgl'] = lambda_rgl
-    architecture['dann_fc_out_features'] = 128
-    architecture['lambda_grl_gamma'] = 10
+search_name = 'allot_dann_bsearch_v2'
+base_experiment_path = Path("exps") / search_name
+cfg = Config(BASE_EXPERIMENTS_PATH=base_experiment_path, SEED=42)
     
-    return architecture
-
 # Generate unique experiment name
-def generate_exp_name(lambda_mmd, architecture_idx, mmd_bandwidth):
-    param_str = f"{round(lambda_mmd, 5)}_{architecture_idx}_{round(mmd_bandwidth, 5)}"
+def generate_exp_name(lambda_mmd, mmd_bandwidth):
+    param_str = f"{round(lambda_mmd, 5)}_{round(mmd_bandwidth, 5)}"
     param_hash = hashlib.md5(param_str.encode()).hexdigest()[:8]
-    return f"bayesian_search_dann_v3_{param_hash}"
+    return f"{param_hash}"
 
 # Black-box function to optimize
-def black_box_function(lambda_rgl, architecture_idx, LAMBDA_DANN):
-    experiment_name = generate_exp_name(lambda_rgl, architecture_idx, LAMBDA_DANN)
-    
-    config = Config(
-        EXPERIMENT_NAME=experiment_name,
-        MODEL_PARAMS=get_architecture(architecture_idx, 10 ** lambda_rgl),
-        LAMBDA_DANN=10 ** LAMBDA_DANN,
-        SEED=seed
-    )
+def black_box_function(lambda_rgl, LAMBDA_DANN):
+    experiment_name = generate_exp_name(lambda_rgl, LAMBDA_DANN)
+    model_params = cfg.MODEL_PARAMS.copy()
+    model_params['lambda_rgl'] = 10 ** lambda_rgl
+    cfg.EXPERIMENT_NAME = experiment_name
+    cfg.LAMBDA_DANN = 10 ** LAMBDA_DANN
+    cfg.MODEL_PARAMS = model_params
+
+    assert cfg.MODEL_PARAMS['lambda_rgl'] == 10 ** lambda_rgl
+    assert cfg.LAMBDA_DANN == 10 ** LAMBDA_DANN
     
     # Run actual experiment
-    accuracy = run_full_exp(config)
+    accuracy = run_full_exp(cfg)
     
-    result_str = f"{experiment_name} | lambda_rgl={lambda_rgl}, Architecture={architecture_idx}, LAMBDA_DANN={LAMBDA_DANN} --> Accuracy: {accuracy}\n"
+    result_str = f"{experiment_name} | lambda_rgl={lambda_rgl}, LAMBDA_DANN={LAMBDA_DANN} --> Accuracy: {accuracy}\n"
     print(f"Testing Config: {result_str}")
     
     # Log results to file
-    with open("bayesian_search_dann_v3.txt", "a") as f:
+    with open(f"{search_name}.txt", "a") as f:
         f.write(result_str)
     
     return accuracy
 
+def get_already_tested():
+    already_tested = {}
+    if os.path.exists("{search_name}.txt"):
+        with open("{search_name}.txt", "r") as f:
+            for line in f:
+                if '--> Accuracy:' not in line:
+                    continue
+                try:
+                    hash_id, rest = line.split('|')
+                    params_str, acc_str = rest.split('-->')
+                    lambda_rgl = float(params_str.split('lambda_rgl=')[1].split(',')[0].strip())
+                    LAMBDA_DANN = float(params_str.split('LAMBDA_DANN=')[1].strip())
+                    acc = float(acc_str.split(':')[1].strip())
+                    already_tested[(lambda_rgl, LAMBDA_DANN)] = acc
+                except Exception as e:
+                    print(f"Skipping malformed line: {line.strip()}")
+                    
+    return already_tested
+
+
 # Define hyperparameter search space
 pbounds = {
     "lambda_rgl": (-6, 6),
-    "architecture_idx": (0, len(ARCHITECTURE_CHOICES) - 1),
+    # "architecture_idx": (0, len(ARCHITECTURE_CHOICES) - 1),
     "LAMBDA_DANN": (-6, 6),
 }
 
@@ -175,8 +74,15 @@ pbounds = {
 optimizer = BayesianOptimization(
     f=black_box_function,
     pbounds=pbounds,
-    random_state=seed,
+    random_state=cfg.SEED,
 )
+
+# Register previous points
+for (lambda_rgl, LAMBDA_DANN), acc in get_already_tested().items():
+    optimizer.register(
+        params={"lambda_rgl": lambda_rgl, "LAMBDA_DANN": LAMBDA_DANN},
+        target=acc,
+    )
 
 optimizer.maximize(
     init_points=10,  # Number of initial random evaluations
@@ -186,5 +92,5 @@ optimizer.maximize(
 # Log best result
 best_result = f"Best found configuration: {optimizer.max}\n"
 print(best_result)
-with open("bayesian_search_dann_v3.txt", "a") as f:
+with open(f"{search_name}.txt", "a") as f:
     f.write(best_result)
