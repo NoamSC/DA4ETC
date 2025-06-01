@@ -39,12 +39,14 @@ def session_2d_histogram(ts, sizes, resolution=MTU, max_delta_time=10, log_t_axi
     return H.astype(np.uint16)
     
 class CSVFlowPicDataset(Dataset):
-    def __init__(self, csv_paths, resolution=MTU, max_dt_ms=30000, label_mapping=None, log_t_axis=False): 
+    def __init__(self, csv_paths, resolution=MTU, max_dt_ms=30000, label_mapping=None,
+                 log_t_axis=False, verbose=False): 
         self.csv_paths = csv_paths
         self.resolution = resolution
         self.max_delta_time = max_dt_ms
         self.label_mapping = label_mapping
         self.log_t_axis = log_t_axis
+        self.verbose = verbose
         
         # Index all sessions at initialization for efficiency
         self.sessions = []
@@ -53,7 +55,10 @@ class CSVFlowPicDataset(Dataset):
         self._prepare_index()
         
     def _prepare_index(self):
-        for csv_file in tqdm(self.csv_paths):
+        csvs = self.csv_paths
+        if self.verbose:
+            csvs = tqdm(self.csv_paths)
+        for csv_file in csvs:
             if isinstance(csv_file, pd.DataFrame):
                 # If csv_file is already a DataFrame, use it directly
                 df = csv_file.copy()
