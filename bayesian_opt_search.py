@@ -1,7 +1,9 @@
 import random
 from pathlib import Path
 import os
+import json
 
+import torch
 import numpy as np
 import hashlib
 from bayes_opt import BayesianOptimization
@@ -9,7 +11,7 @@ from config import Config
 # from train_model_on_different_locations import run_full_exp
 from simple_model_train import run_full_exp
 
-search_name = 'allot_dann_bsearch_v2'
+search_name = 'allot_dann_bsearch_v6'
 base_experiment_path = Path("exps") / search_name
 cfg = Config(BASE_EXPERIMENTS_PATH=base_experiment_path, SEED=42)
     
@@ -44,30 +46,27 @@ def black_box_function(lambda_rgl, LAMBDA_DANN):
     return accuracy
 
 def get_already_tested():
-    already_tested = {}
-    if os.path.exists("{search_name}.txt"):
-        with open("{search_name}.txt", "r") as f:
-            for line in f:
-                if '--> Accuracy:' not in line:
-                    continue
-                try:
-                    hash_id, rest = line.split('|')
-                    params_str, acc_str = rest.split('-->')
-                    lambda_rgl = float(params_str.split('lambda_rgl=')[1].split(',')[0].strip())
-                    LAMBDA_DANN = float(params_str.split('LAMBDA_DANN=')[1].strip())
-                    acc = float(acc_str.split(':')[1].strip())
-                    already_tested[(lambda_rgl, LAMBDA_DANN)] = acc
-                except Exception as e:
-                    print(f"Skipping malformed line: {line.strip()}")
-                    
-    return already_tested
+    already_done = {}
+    exp_dir = Path('exps/allot_dann_bsearch_v5')
+    for train_log_file in exp_dir.glob('*/plots/training_history.pth'):
+        train_log = torch.load(train_log_file, weights_only=False)
+        max_accuracy = np.max(train_log['val_accuracies'])
+        
+        json_path = train_log_file.parent.parent / 'config.json'
+        with open(json_path, 'r') as f:
+            config_dict = json.load(f)
+        lambda_rgl = config_dict['MODEL_PARAMS']['lambda_rgl']
+        lambda_dann = config_dict['LAMBDA_DANN']
+        already_done[(lambda_rgl, lambda_dann)] = max_accuracy
+    
+    return already_done
 
 
 # Define hyperparameter search space
 pbounds = {
-    "lambda_rgl": (-6, 6),
+    "lambda_rgl": (-6, 1),
     # "architecture_idx": (0, len(ARCHITECTURE_CHOICES) - 1),
-    "LAMBDA_DANN": (-6, 6),
+    "LAMBDA_DANN": (-6, 1),
 }
 
 # Run Bayesian Optimization
