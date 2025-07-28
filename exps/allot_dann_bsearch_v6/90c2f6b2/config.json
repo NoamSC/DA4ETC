@@ -1,0 +1,64 @@
+{
+    "ADAPT_BATCH_NORM": true,
+    "BASE_EXPERIMENTS_PATH": "exps/allot_dann_bsearch_v6",
+    "BATCH_SIZE": 64,
+    "DEVICE": "cuda:0",
+    "EXPERIMENT_NAME": "90c2f6b2",
+    "EXPERIMENT_PATH": "exps/allot_dann_bsearch_v6/90c2f6b2",
+    "EXPERIMENT_PLOTS_PATH": "exps/allot_dann_bsearch_v6/90c2f6b2/plots",
+    "EXPERIMENT_WEIGHTS_PATH": "exps/allot_dann_bsearch_v6/90c2f6b2/weights",
+    "LAMBDA_DANN": 0.008204031517910248,
+    "LAMBDA_MMD": 0,
+    "LEARNING_RATE": 0.003,
+    "MIN_FLOW_LENGTH": 100,
+    "MMD_BANDWIDTHS": [
+        0.1,
+        1.0,
+        10.0
+    ],
+    "MODEL_PARAMS": {
+        "conv_type": "1d",
+        "conv_layers": [
+            {
+                "out_channels": 16,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1
+            },
+            {
+                "out_channels": 32,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1
+            },
+            {
+                "out_channels": 64,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1
+            },
+            {
+                "out_channels": 64,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1
+            }
+        ],
+        "pool_kernel_size": 2,
+        "pool_stride": 2,
+        "fc1_out_features": 64,
+        "dropout_prob": 0.3,
+        "use_batch_norm": true,
+        "lambda_rgl": 4.3214131712678325,
+        "dann_fc_out_features": 64,
+        "lambda_grl_gamma": 10,
+        "input_shape": 256,
+        "num_classes": 4
+    },
+    "NUM_EPOCHS": 4,
+    "RESOLUTION": 256,
+    "SAVE_MODEL_CHECKPOINT": "exps/allot_dann_bsearch_v6/90c2f6b2/weights/model_checkpoint_epoch_{epoch}.pth",
+    "SAVE_PLOTS": true,
+    "SEED": 42,
+    "WEIGHT_DECAY": 0.0001
+}
