@@ -4,21 +4,95 @@ import json
 from pathlib import Path
 import inspect
 import os
+from datetime import datetime, timedelta
+from collections import defaultdict
+import re
 
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 
-def get_df_from_csvs(domain_idx, chunk_start, chunk_end, label_whitelist):
-    # Get a DataFrame from multiple CSV files for a specific domain and chunk range.
-    dfs = []
-    for i in range(chunk_start, chunk_end):
-        chunk_path = os.path.join('data', 'allot_small_csvs', f'chunks_domain_{domain_idx}', f'chunk_{i:03}.csv')
-        df = pd.read_csv(chunk_path)
-        df = df[df['appId'].isin(label_whitelist)]
-        dfs.append(df)
-    df = pd.concat(dfs, ignore_index=True)
-    df = df.sample(frac=1).reset_index(drop=True)
-    return df
+def group_chunks_by_interval(parent_dir, interval, start_date=None):
+    """
+    Groups chunk_*.csv files by time intervals.
+
+    Args:
+        parent_dir: Path to the parent directory (contains domain_* subdirs)
+        interval: A datetime.timedelta object (e.g., timedelta(days=1))
+        start_date: Optional datetime to align grouping intervals. Defaults to datetime.min.
+
+    Returns:
+        A dict mapping interval start datetime -> list of Path objects
+    """
+    chunk_pattern = re.compile(r"chunk_(\d{4}-\d{2}-\d{2}_\d{2}-\d{2})\.csv")
+    result = defaultdict(list)
+
+    anchor = start_date if start_date else datetime.min
+    total_seconds = interval.total_seconds()
+
+    for subdir in parent_dir.glob("domain_*"):
+        if subdir.is_dir():
+            for file in subdir.glob("chunk_*.csv"):
+                match = chunk_pattern.match(file.name)
+                if match:
+                    dt = datetime.strptime(match.group(1), "%Y-%m-%d_%H-%M")
+                    delta = (dt - anchor).total_seconds()
+                    aligned_seconds = (delta // total_seconds) * total_seconds
+                    aligned_dt = anchor + timedelta(seconds=aligned_seconds)
+                    result[aligned_dt].append(file)
+
+    return dict(result)
+
+
+
+# def get_df_from_csvs(domain_idx, start_time_str, end_time_str, label_whitelist, sample_frac=None, verbose=False):
+#     """
+#     Load and concatenate CSV chunks from a specific domain and time range.
+
+#     Parameters:
+#         domain_idx (int): Index of the domain folder.
+#         start_time_str (str): Start time, e.g. '2024-09-05 10:00'.
+#         end_time_str (str): End time, e.g. '2024-09-06 10:00'.
+#         label_whitelist (list): List of allowed appId values.
+#         sample_frac (float, optional): If set (e.g., 0.1), sample that fraction from each individual CSV.
+#         verbose (bool): If True, shows progress bar.
+
+#     Returns:
+#         pd.DataFrame: Concatenated and optionally subsampled DataFrame.
+#     """
+#     start_time = datetime.strptime(start_time_str, "%Y-%m-%d %H:%M")
+#     end_time = datetime.strptime(end_time_str, "%Y-%m-%d %H:%M")
+#     domain_path = f"../../../dataset/Allot/allot_hourly_chunks/domain_{domain_idx}"
+    
+#     dfs = []
+#     filenames = [f for f in os.listdir(domain_path) if f.endswith('.csv')]
+
+#     iterator = tqdm(filenames, desc="Reading chunks") if verbose else filenames
+
+#     for filename in iterator:
+#         try:
+#             timestamp_str = filename.split("chunk_")[1].replace(".csv", "")
+#             file_time = datetime.strptime(timestamp_str, "%Y-%m-%d_%H-%M")
+#         except Exception:
+#             continue
+
+#         if start_time <= file_time < end_time:
+#             file_path = os.path.join(domain_path, filename)
+#             df = pd.read_csv(file_path)
+#             df = df[df['appId'].isin(label_whitelist)]
+#             if sample_frac is not None and 0 < sample_frac < 1:
+#                 df = df.sample(frac=sample_frac)
+#             dfs.append(df)
+    
+#     if dfs:
+#         df = pd.concat(dfs, ignore_index=True)
+#         df = df.sample(frac=1).reset_index(drop=True)
+#     else:
+#         df = pd.DataFrame()
+    
+#     return df
+
+
 
 def set_seed(seed):
     """

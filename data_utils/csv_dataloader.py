@@ -40,13 +40,14 @@ def session_2d_histogram(ts, sizes, resolution=MTU, max_delta_time=10, log_t_axi
     
 class CSVFlowPicDataset(Dataset):
     def __init__(self, csv_paths, resolution=MTU, max_dt_ms=30000, label_mapping=None,
-                 log_t_axis=False, verbose=False): 
+                 log_t_axis=False, verbose=False, sample_frac=None): 
         self.csv_paths = csv_paths
         self.resolution = resolution
         self.max_delta_time = max_dt_ms
         self.label_mapping = label_mapping
         self.log_t_axis = log_t_axis
         self.verbose = verbose
+        self.sample_frac = sample_frac
         
         # Index all sessions at initialization for efficiency
         self.sessions = []
@@ -65,6 +66,10 @@ class CSVFlowPicDataset(Dataset):
             else:
                 df = pd.read_csv(csv_file)
                 
+            if self.sample_frac is not None:
+                df = df.sample(frac=self.sample_frac)
+            
+                
             df['ppi-pdt'] = df['ppi-pdt'].transform(extract_numbers)
             df['ppi-pd'] = df['ppi-pd'].transform(extract_numbers)
             df['ppi-ps'] = df['ppi-ps'].transform(extract_numbers)
@@ -78,7 +83,7 @@ class CSVFlowPicDataset(Dataset):
                         if app_id in self.label_mapping:
                             self.labels.append(self.label_mapping[app_id])
                         else:
-                            warnings.warn(f"App ID {app_id} not found in label mapping.")
+                            # warnings.warn(f"App ID {app_id} not found in label mapping.")
                             continue
                     else:     
                         self.labels.append(row['appId'])
@@ -98,11 +103,18 @@ class CSVFlowPicDataset(Dataset):
         # can get other features from self.rows[idx] if needed
 
         return flowpic_tensor, label_tensor
+    
+    def get_class_counts(self):
+        """Return a dictionary with class_id as key and count as value."""
+        class_counts = {}
+        for label in self.labels:
+            class_counts[label] = class_counts.get(label, 0) + 1
+        return class_counts
 
 
-def create_csv_flowpic_loader(csv_paths, batch_size=64, shuffle=True, num_workers=4,
+def create_csv_flowpic_loader(csv_paths, batch_size=64, shuffle=True, num_workers=4, sample_frac=None,
                               resolution=MTU, max_dt_ms=30000, label_mapping=None, log_t_axis=False):
     dataset = CSVFlowPicDataset(csv_paths, resolution=resolution, max_dt_ms=max_dt_ms,
-                                label_mapping=label_mapping, log_t_axis=log_t_axis)
+                                label_mapping=label_mapping, log_t_axis=log_t_axis, sample_frac=sample_frac)
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return loader
