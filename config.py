@@ -6,7 +6,7 @@ import torch
 class Config:
     # Experiment Details
     # EXPERIMENT_NAME: str = "allot_dann_bsearch_v7"
-    EXPERIMENT_NAME: str = "allot_daily_degradation_v13_must_adamw/{}"
+    EXPERIMENT_NAME: str = "allot_daily_degradation_v14_tensorboard/{}"
     # EXPERIMENT_PATH: Path = field(init=False)
     BASE_EXPERIMENTS_PATH: Path = Path("exps/")
 
@@ -103,6 +103,10 @@ class Config:
     @property
     def EXPERIMENT_WEIGHTS_PATH(self) -> Path:
         return self.EXPERIMENT_PATH / "weights"
+
+    @property
+    def EXPERIMENT_TENSORBOARD_PATH(self) -> Path:
+        return self.EXPERIMENT_PATH / "tensorboard"
 
     @property
     def SAVE_MODEL_CHECKPOINT(self) -> Path:

@@ -14,6 +14,7 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 from pathlib import Path
+from torch.utils.tensorboard import SummaryWriter
 
 from training.trainer import validate
 from training.visualization import plot_confusion_matrix
@@ -163,7 +164,7 @@ class MetaModel:
 # Warm Start Training
 # ============================================================================
 
-def warm_start(teacher, source_loader, target_loader, num_epochs, device):
+def warm_start(teacher, source_loader, target_loader, num_epochs, device, writer=None):
     """
     Pre-train teacher model on source domain with BN adaptation.
 
@@ -173,6 +174,7 @@ def warm_start(teacher, source_loader, target_loader, num_epochs, device):
         target_loader: DataLoader for target domain (for BN adaptation)
         num_epochs: Number of warm start epochs
         device: torch device
+        writer: TensorBoard SummaryWriter (optional)
 
     Returns:
         tuple: (train_losses, train_accuracies, val_losses, val_accuracies)
@@ -242,6 +244,13 @@ def warm_start(teacher, source_loader, target_loader, num_epochs, device):
         )
         val_losses.append(val_loss)
         val_accuracies.append(val_acc)
+
+        # Log to TensorBoard
+        if writer is not None:
+            writer.add_scalar('WarmStart/train_loss', avg_train_loss, epoch)
+            writer.add_scalar('WarmStart/train_acc', avg_train_acc, epoch)
+            writer.add_scalar('WarmStart/val_loss', val_loss, epoch)
+            writer.add_scalar('WarmStart/val_acc', val_acc, epoch)
 
         # Print epoch summary
         print(f"Epoch {epoch+1}/{num_epochs}: "
@@ -374,14 +383,16 @@ def train_must_one_iteration(teacher, student, source_batch, target_iter,
 # MUST Visualization
 # ============================================================================
 
-def plot_must_metrics(metrics, save_dir, pseudo_threshold):
+def create_must_metrics_figure(metrics, pseudo_threshold):
     """
-    Create comprehensive 4-panel MUST visualization.
+    Create comprehensive 4-panel MUST visualization figure.
 
     Args:
         metrics: Dictionary containing training metrics
-        save_dir: Directory to save plots
         pseudo_threshold: Threshold value for reference line
+
+    Returns:
+        matplotlib.figure.Figure: The MUST metrics figure.
     """
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
 
@@ -430,9 +441,7 @@ def plot_must_metrics(metrics, save_dir, pseudo_threshold):
     axes[1, 1].legend(fontsize=11)
 
     plt.tight_layout()
-    save_path = save_dir / 'must_metrics.png'
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    plt.close()
+    return fig
 
 
 # ============================================================================
@@ -441,9 +450,11 @@ def plot_must_metrics(metrics, save_dir, pseudo_threshold):
 
 def train_must(teacher_model, student_model, source_loader, target_loader,
                criterion, teacher_optimizer, student_optimizer, must_params,
-               device, weights_save_dir, plots_save_dir, label_mapping):
+               device, weights_save_dir, plots_save_dir, label_mapping,
+               resume_checkpoint=None, resume_from_iteration=0):
     """
-    Main MUST training loop with logging and visualization.
+    Main MUST training loop with TensorBoard logging and best model tracking.
+    Supports resuming from checkpoint.
 
     Args:
         teacher_model: Teacher network (ConfigurableCNN)
@@ -458,10 +469,23 @@ def train_must(teacher_model, student_model, source_loader, target_loader,
         weights_save_dir: Directory to save model checkpoints
         plots_save_dir: Directory to save plots
         label_mapping: Dictionary mapping labels to indices
+        resume_checkpoint: Checkpoint dictionary to resume from (optional)
+        resume_from_iteration: Iteration number to resume from (optional)
 
     Returns:
         dict: Training metrics and final results
     """
+    # Initialize TensorBoard writer
+    tensorboard_dir = plots_save_dir.parent / 'tensorboard'
+    tensorboard_dir.mkdir(parents=True, exist_ok=True)
+    writer = SummaryWriter(log_dir=str(tensorboard_dir))
+
+    # Track best models
+    best_teacher_target_acc = 0.0
+    best_student_target_acc = 0.0
+    best_teacher_iter = 0
+    best_student_iter = 0
+
     # Extract MUST parameters
     iterations = must_params['iterations']
     alpha = must_params['alpha']
@@ -482,13 +506,6 @@ def train_must(teacher_model, student_model, source_loader, target_loader,
     teacher.init_bn_for_domains(['source', 'target'])
     student.init_bn_for_domains(['source', 'target'])
 
-    # Warm start: Pre-train teacher on source
-    warm_start(teacher, source_loader, target_loader, warm_start_epochs, device)
-
-    # Copy teacher weights to student
-    print("\nCopying teacher weights to student...")
-    student.copy_weights_from(teacher)
-
     # Initialize metrics tracking
     metrics = {
         'teacher_source_acc': [],
@@ -499,6 +516,52 @@ def train_must(teacher_model, student_model, source_loader, target_loader,
         'iterations': []
     }
 
+    # Resume from checkpoint if provided
+    start_iteration = 0
+    if resume_checkpoint is not None and resume_from_iteration > 0:
+        print(f"\n{'='*60}")
+        print(f"RESUMING FROM CHECKPOINT")
+        print(f"{'='*60}")
+
+        # Load teacher state
+        teacher.model.load_state_dict(resume_checkpoint['teacher_state_dict'])
+        teacher.domain2bn['source'] = resume_checkpoint['teacher_bn_source']
+        teacher.domain2bn['target'] = resume_checkpoint['teacher_bn_target']
+        print(f"Loaded teacher from iteration {resume_checkpoint['iteration']}")
+
+        # Load student state
+        student.model.load_state_dict(resume_checkpoint['student_state_dict'])
+        student.domain2bn['source'] = resume_checkpoint['student_bn_source']
+        student.domain2bn['target'] = resume_checkpoint['student_bn_target']
+        print(f"Loaded student from iteration {resume_checkpoint['iteration']}")
+
+        # Load metrics if available
+        if 'metrics' in resume_checkpoint:
+            metrics = resume_checkpoint['metrics']
+            print(f"Loaded training history up to iteration {metrics['iterations'][-1]}")
+
+            # Find best models so far
+            if metrics['teacher_target_acc']:
+                best_teacher_target_acc = max(metrics['teacher_target_acc'])
+                best_teacher_iter = metrics['iterations'][metrics['teacher_target_acc'].index(best_teacher_target_acc)]
+                print(f"Best teacher target accuracy so far: {best_teacher_target_acc:.2f}% at iteration {best_teacher_iter}")
+
+            if metrics['student_target_acc']:
+                best_student_target_acc = max(metrics['student_target_acc'])
+                best_student_iter = metrics['iterations'][metrics['student_target_acc'].index(best_student_target_acc)]
+                print(f"Best student target accuracy so far: {best_student_target_acc:.2f}% at iteration {best_student_iter}")
+
+        start_iteration = resume_from_iteration
+        print(f"Resuming training from iteration {start_iteration}")
+        print(f"{'='*60}\n")
+    else:
+        # Warm start: Pre-train teacher on source (only if not resuming)
+        warm_start(teacher, source_loader, target_loader, warm_start_epochs, device, writer=writer)
+
+        # Copy teacher weights to student
+        print("\nCopying teacher weights to student...")
+        student.copy_weights_from(teacher)
+
     print("\n" + "=" * 60)
     print("MUST TRAINING")
     print("=" * 60)
@@ -507,7 +570,7 @@ def train_must(teacher_model, student_model, source_loader, target_loader,
     source_iter = iter(source_loader)
     target_iter = iter(target_loader)
 
-    for iteration in tqdm(range(iterations), desc="MUST Training"):
+    for iteration in tqdm(range(start_iteration, iterations), desc="MUST Training", initial=start_iteration, total=iterations):
         # Get source batch
         try:
             source_batch = next(source_iter)
@@ -559,23 +622,79 @@ def train_must(teacher_model, student_model, source_loader, target_loader,
             metrics['pseudo_label_usage'].append(pseudo_usage)
             metrics['iterations'].append(iteration)
 
+            # Log to TensorBoard
+            writer.add_scalar('MUST/teacher_source_acc', t_src_acc, iteration)
+            writer.add_scalar('MUST/teacher_target_acc', t_tgt_acc, iteration)
+            writer.add_scalar('MUST/student_source_acc', s_src_acc, iteration)
+            writer.add_scalar('MUST/student_target_acc', s_tgt_acc, iteration)
+            writer.add_scalar('MUST/pseudo_label_usage', pseudo_usage, iteration)
+            writer.add_scalar('MUST/teacher_source_loss', t_src_loss, iteration)
+            writer.add_scalar('MUST/teacher_target_loss', t_tgt_loss, iteration)
+            writer.add_scalar('MUST/student_source_loss', s_src_loss, iteration)
+            writer.add_scalar('MUST/student_target_loss', s_tgt_loss, iteration)
+
             print(f"Teacher: Source={t_src_acc:.2f}% | Target={t_tgt_acc:.2f}%")
             print(f"Student: Source={s_src_acc:.2f}% | Target={s_tgt_acc:.2f}%")
             print(f"Pseudo-label usage: {pseudo_usage:.1f}%")
 
-            # Save confusion matrices
-            class_names = sorted(label_mapping, key=label_mapping.get)
-            plot_confusion_matrix(t_src_labels, t_src_preds, class_names,
-                                f"teacher_source_iter_{iteration}", plots_save_dir)
-            plot_confusion_matrix(t_tgt_labels, t_tgt_preds, class_names,
-                                f"teacher_target_iter_{iteration}", plots_save_dir)
-            plot_confusion_matrix(s_src_labels, s_src_preds, class_names,
-                                f"student_source_iter_{iteration}", plots_save_dir)
-            plot_confusion_matrix(s_tgt_labels, s_tgt_preds, class_names,
-                                f"student_target_iter_{iteration}", plots_save_dir)
+            # Save best teacher model
+            if t_tgt_acc > best_teacher_target_acc:
+                best_teacher_target_acc = t_tgt_acc
+                best_teacher_iter = iteration
+                best_teacher_path = weights_save_dir / "best_teacher.pth"
+                torch.save({
+                    'iteration': iteration,
+                    'model_state_dict': teacher.model.state_dict(),
+                    'bn_source': teacher.domain2bn['source'],
+                    'bn_target': teacher.domain2bn['target'],
+                    'target_acc': t_tgt_acc,
+                    'source_acc': t_src_acc,
+                }, best_teacher_path)
+                print(f"*** New best teacher model saved! Target Acc: {t_tgt_acc:.2f}% ***")
 
-            # Save MUST metrics plot
-            plot_must_metrics(metrics, plots_save_dir, pseudo_threshold)
+            # Save best student model
+            if s_tgt_acc > best_student_target_acc:
+                best_student_target_acc = s_tgt_acc
+                best_student_iter = iteration
+                best_student_path = weights_save_dir / "best_student.pth"
+                torch.save({
+                    'iteration': iteration,
+                    'model_state_dict': student.model.state_dict(),
+                    'bn_source': student.domain2bn['source'],
+                    'bn_target': student.domain2bn['target'],
+                    'target_acc': s_tgt_acc,
+                    'source_acc': s_src_acc,
+                }, best_student_path)
+                print(f"*** New best student model saved! Target Acc: {s_tgt_acc:.2f}% ***")
+
+            # Log confusion matrices to TensorBoard
+            class_names = sorted(label_mapping, key=label_mapping.get)
+
+            t_src_fig = plot_confusion_matrix(t_src_labels, t_src_preds, class_names)
+            if t_src_fig is not None:
+                writer.add_figure('Confusion_Matrix/teacher_source', t_src_fig, iteration)
+                plt.close(t_src_fig)
+
+            t_tgt_fig = plot_confusion_matrix(t_tgt_labels, t_tgt_preds, class_names)
+            if t_tgt_fig is not None:
+                writer.add_figure('Confusion_Matrix/teacher_target', t_tgt_fig, iteration)
+                plt.close(t_tgt_fig)
+
+            s_src_fig = plot_confusion_matrix(s_src_labels, s_src_preds, class_names)
+            if s_src_fig is not None:
+                writer.add_figure('Confusion_Matrix/student_source', s_src_fig, iteration)
+                plt.close(s_src_fig)
+
+            s_tgt_fig = plot_confusion_matrix(s_tgt_labels, s_tgt_preds, class_names)
+            if s_tgt_fig is not None:
+                writer.add_figure('Confusion_Matrix/student_target', s_tgt_fig, iteration)
+                plt.close(s_tgt_fig)
+
+            # Log MUST metrics plot to TensorBoard
+            must_fig = create_must_metrics_figure(metrics, pseudo_threshold)
+            if must_fig is not None:
+                writer.add_figure('MUST_Metrics/summary', must_fig, iteration)
+                plt.close(must_fig)
 
             # Save checkpoint
             checkpoint = {
@@ -597,6 +716,9 @@ def train_must(teacher_model, student_model, source_loader, target_loader,
             history_path = plots_save_dir / 'must_training_history.pth'
             torch.save(metrics, history_path)
 
+    # Close TensorBoard writer
+    writer.close()
+
     print("\n" + "=" * 60)
     print("MUST training completed!")
     print("=" * 60)
@@ -606,13 +728,19 @@ def train_must(teacher_model, student_model, source_loader, target_loader,
         'student_target_acc': metrics['student_target_acc'][-1],
         'teacher_target_acc': metrics['teacher_target_acc'][-1],
         'improvement': metrics['student_target_acc'][-1] - metrics['teacher_target_acc'][-1],
-        'best_student_target_acc': max(metrics['student_target_acc']),
-        'best_teacher_target_acc': max(metrics['teacher_target_acc']),
+        'best_student_target_acc': best_student_target_acc,
+        'best_teacher_target_acc': best_teacher_target_acc,
+        'best_student_iter': best_student_iter,
+        'best_teacher_iter': best_teacher_iter,
     }
 
     print(f"\nFinal Student Target Accuracy: {final_results['student_target_acc']:.2f}%")
     print(f"Final Teacher Target Accuracy: {final_results['teacher_target_acc']:.2f}%")
     print(f"Student vs Teacher Improvement: {final_results['improvement']:+.2f}%")
+    print(f"\nBest Student Target Accuracy: {best_student_target_acc:.2f}% (iteration {best_student_iter})")
+    print(f"Best Teacher Target Accuracy: {best_teacher_target_acc:.2f}% (iteration {best_teacher_iter})")
+    print(f"\nTensorBoard logs saved to: {tensorboard_dir}")
+    print(f"To view logs, run: tensorboard --logdir {tensorboard_dir}")
 
     return {
         'metrics': metrics,

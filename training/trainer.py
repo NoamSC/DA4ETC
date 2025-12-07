@@ -2,6 +2,8 @@ from itertools import cycle
 
 import torch
 from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
+import matplotlib.pyplot as plt
 
 from training.visualization import plot_confusion_matrix, plot_metrics
 
@@ -131,12 +133,24 @@ def batch_norm_adaptation(model, target_loader, device):
             _ = model(inputs)  # Forward pass to update batch norm statistics
 
 
-def train_model(model, train_loader, criterion, optimizer, num_epochs, device, 
-                weights_save_dir, plots_save_dir, label_mapping, lambda_mmd=0.0, 
-                test_loader=None, adapt_batch_norm=False, mmd_bandwidths=[1], lambda_dann=0.0):
+def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
+                weights_save_dir, plots_save_dir, label_mapping, lambda_mmd=0.0,
+                test_loader=None, adapt_batch_norm=False, mmd_bandwidths=[1], lambda_dann=0.0,
+                resume_checkpoint_path=None, resume_from_epoch=0):
     """
     General training function with support for MMD, DANN, and batch norm adaptation.
+    Logs to TensorBoard and saves the best model based on validation accuracy.
+    Supports resuming from checkpoint.
     """
+    # Initialize TensorBoard writer
+    tensorboard_dir = plots_save_dir.parent / 'tensorboard'
+    tensorboard_dir.mkdir(parents=True, exist_ok=True)
+    writer = SummaryWriter(log_dir=str(tensorboard_dir))
+
+    # Track best model
+    best_val_acc = 0.0
+    best_epoch = 0
+
     # other losses
     mmd_loss_name = 'MMD Loss'
     dann_loss_name = 'DANN Loss'
@@ -144,7 +158,41 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
     train_accuracies, val_accuracies = [], []
     train_regular_losses, train_other_losses = [], {mmd_loss_name: [], dann_loss_name: []}
 
-    for epoch in range(num_epochs):
+    # Resume from checkpoint if provided
+    start_epoch = 0
+    if resume_checkpoint_path is not None and resume_from_epoch > 0:
+        print(f"\n{'='*60}")
+        print(f"RESUMING FROM CHECKPOINT")
+        print(f"{'='*60}")
+
+        # Load model state
+        checkpoint = torch.load(resume_checkpoint_path, weights_only=True)
+        model.load_state_dict(checkpoint)
+        print(f"Loaded model from epoch {resume_from_epoch}")
+
+        # Load training history if available
+        history_path = plots_save_dir / "training_history.pth"
+        if history_path.exists():
+            history = torch.load(history_path, weights_only=False)
+            train_losses = history.get('train_losses', [])
+            val_losses = history.get('val_losses', [])
+            train_accuracies = history.get('train_accuracies', [])
+            val_accuracies = history.get('val_accuracies', [])
+            train_regular_losses = history.get('train_regular_losses', [])
+            train_other_losses = history.get('train_other_losses', {mmd_loss_name: [], dann_loss_name: []})
+            print(f"Loaded training history up to epoch {len(train_losses)}")
+
+            # Find best epoch so far
+            if val_accuracies:
+                best_val_acc = max(val_accuracies)
+                best_epoch = val_accuracies.index(best_val_acc) + 1
+                print(f"Best validation accuracy so far: {best_val_acc:.2f}% at epoch {best_epoch}")
+
+        start_epoch = resume_from_epoch
+        print(f"Resuming training from epoch {start_epoch + 1}")
+        print(f"{'='*60}\n")
+
+    for epoch in range(start_epoch, num_epochs):
         model.set_epoch(epoch / num_epochs)
         train_loss, train_acc, regular_loss, mmd_loss, dann_loss = train_one_epoch(
             model, train_loader, criterion, optimizer, device, lambda_mmd, test_loader, mmd_bandwidths, lambda_dann
@@ -159,21 +207,54 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
         val_losses.append(val_loss)
         val_accuracies.append(val_acc)
 
+        # Log metrics to TensorBoard
+        writer.add_scalar('Loss/train', train_loss, epoch)
+        writer.add_scalar('Loss/validation', val_loss, epoch)
+        writer.add_scalar('Accuracy/train', train_acc, epoch)
+        writer.add_scalar('Accuracy/validation', val_acc, epoch)
+        writer.add_scalar('Loss/train_regular', regular_loss, epoch)
+
+        if lambda_mmd > 0:
+            writer.add_scalar('Loss/mmd', mmd_loss, epoch)
+        if lambda_dann > 0:
+            writer.add_scalar('Loss/dann', dann_loss, epoch)
+
         print(f"Epoch {epoch+1}: Train Loss={train_loss:.4f}, Accuracy={train_acc:.2f}%")
         print(f"         Val Loss={val_loss:.4f}, Accuracy={val_acc:.2f}%")
         for loss_name, loss_values in train_other_losses.items():
             print(f"         {loss_name}={loss_values[-1]:.4f}, Regular Loss={regular_loss:.4f}")
 
-        # save weights
+        # Save epoch checkpoint
         model_save_path = weights_save_dir / f"model_weights_epoch_{epoch+1}.pth"
         torch.save(model.state_dict(), model_save_path)
 
-        # Save confusion matrix
-        class_names = sorted(label_mapping, key=label_mapping.get)
-        plot_confusion_matrix(all_labels, all_predictions, class_names=class_names, epoch=epoch+1, save_dir=plots_save_dir)
+        # Save best model
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            best_epoch = epoch + 1
+            best_model_path = weights_save_dir / "best_model.pth"
+            torch.save({
+                'epoch': best_epoch,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'val_acc': best_val_acc,
+                'val_loss': val_loss,
+            }, best_model_path)
+            print(f"         *** New best model saved! Val Acc: {best_val_acc:.2f}% ***")
 
-        # Save metrics plot
-        plot_metrics(train_losses, val_losses, train_accuracies, val_accuracies, epoch=None, save_dir=plots_save_dir, additional_train_metrics=train_other_losses)
+        # Log confusion matrix to TensorBoard
+        class_names = sorted(label_mapping, key=label_mapping.get)
+        cm_fig = plot_confusion_matrix(all_labels, all_predictions, class_names=class_names, epoch=epoch+1)
+        if cm_fig is not None:
+            writer.add_figure('Confusion_Matrix/validation', cm_fig, epoch)
+            plt.close(cm_fig)
+
+        # Log metrics plot to TensorBoard (only at the end to show full history)
+        if epoch == num_epochs - 1:
+            metrics_fig = plot_metrics(train_losses, val_losses, train_accuracies, val_accuracies, additional_train_metrics=train_other_losses)
+            if metrics_fig is not None:
+                writer.add_figure('Training_Metrics/summary', metrics_fig, epoch)
+                plt.close(metrics_fig)
 
         training_history = {
             "train_losses": train_losses,
@@ -187,5 +268,11 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
         history_save_path = plots_save_dir / "training_history.pth"
         torch.save(training_history, history_save_path)
 
+    # Close TensorBoard writer
+    writer.close()
+
     print("Training completed.")
+    print(f"\nBest model saved at epoch {best_epoch} with validation accuracy: {best_val_acc:.2f}%")
+    print(f"TensorBoard logs saved to: {tensorboard_dir}")
+    print(f"To view logs, run: tensorboard --logdir {tensorboard_dir}")
 

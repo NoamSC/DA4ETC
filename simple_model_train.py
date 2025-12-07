@@ -197,7 +197,7 @@ def print_distribution_comparison(source_loader, target_loader, resampled_loader
         print("=" * 90)
 
 
-def measure_data_drift_exp(cfg, train_dfs_path, test_dfs_paths, test_names=None, use_resampling=False, use_must=False):
+def measure_data_drift_exp(cfg, train_dfs_path, test_dfs_paths, test_names=None, use_resampling=False, use_must=False, override=False):
 
     if test_names is None:
         test_names = map(str, range(len(test_dfs_paths)))
@@ -232,8 +232,52 @@ def measure_data_drift_exp(cfg, train_dfs_path, test_dfs_paths, test_names=None,
         # Add suffix for MUST experiments to avoid conflicts with standard training
         experiment_suffix = "_must" if use_must else ""
         experiment_path = Path(str(cfg.EXPERIMENT_PATH).format(test_name + experiment_suffix))
-        experiment_path.mkdir(parents=True, exist_ok=True)
 
+        # Check for existing experiment
+        existing_checkpoint = None
+        resume_from_epoch = 0
+        resume_from_iteration = 0
+
+        if experiment_path.exists() and not override:
+            print(f"\n{'='*60}")
+            print(f"EXISTING EXPERIMENT FOUND: {experiment_path}")
+            print(f"{'='*60}")
+
+            weights_save_dir = experiment_path / 'weights'
+
+            if use_must:
+                # For MUST, look for the latest checkpoint
+                checkpoint_files = sorted(weights_save_dir.glob('must_checkpoint_iter_*.pth'))
+                if checkpoint_files:
+                    latest_checkpoint = checkpoint_files[-1]
+                    print(f"Found checkpoint: {latest_checkpoint.name}")
+                    existing_checkpoint = torch.load(latest_checkpoint, weights_only=False)
+                    resume_from_iteration = existing_checkpoint['iteration'] + 1
+                    print(f"Will resume from iteration {resume_from_iteration}")
+            else:
+                # For standard training, look for the latest epoch checkpoint
+                epoch_files = sorted(weights_save_dir.glob('model_weights_epoch_*.pth'))
+                if epoch_files:
+                    latest_checkpoint = epoch_files[-1]
+                    print(f"Found checkpoint: {latest_checkpoint.name}")
+                    # Extract epoch number from filename
+                    epoch_num = int(latest_checkpoint.stem.split('_')[-1])
+                    existing_checkpoint = latest_checkpoint
+                    resume_from_epoch = epoch_num
+                    print(f"Will resume from epoch {resume_from_epoch + 1}")
+
+            if existing_checkpoint is None:
+                print("No checkpoint found, starting from scratch")
+
+            print(f"{'='*60}\n")
+        elif experiment_path.exists() and override:
+            print(f"\n{'='*60}")
+            print(f"OVERRIDE MODE: Deleting existing experiment: {experiment_path}")
+            print(f"{'='*60}\n")
+            import shutil
+            shutil.rmtree(experiment_path)
+
+        experiment_path.mkdir(parents=True, exist_ok=True)
         weights_save_dir = experiment_path / 'weights'
         plots_save_dir = experiment_path / 'plots'
         weights_save_dir.mkdir(parents=True, exist_ok=True)
@@ -305,7 +349,9 @@ def measure_data_drift_exp(cfg, train_dfs_path, test_dfs_paths, test_names=None,
                 device=cfg.DEVICE,
                 weights_save_dir=weights_save_dir,
                 plots_save_dir=plots_save_dir,
-                label_mapping=label_mapping
+                label_mapping=label_mapping,
+                resume_checkpoint=existing_checkpoint,
+                resume_from_iteration=resume_from_iteration
             )
 
             # Save final results
@@ -375,6 +421,8 @@ def measure_data_drift_exp(cfg, train_dfs_path, test_dfs_paths, test_names=None,
                 lambda_mmd=cfg.LAMBDA_MMD,
                 mmd_bandwidths=cfg.MMD_BANDWIDTHS,
                 lambda_dann=cfg.LAMBDA_DANN,
+                resume_checkpoint_path=existing_checkpoint,
+                resume_from_epoch=resume_from_epoch
                 # adapt_batch_norm=cfg.ADAPT_BATCH_NORM,
             )
     
@@ -407,6 +455,8 @@ if __name__ == "__main__":
                         help='Resample training data to match target test distribution (for analysis purposes).')
     parser.add_argument('--use_must', action='store_true',
                         help='Use MUST (Multi-Source Unsupervised-Supervised Transfer) domain adaptation.')
+    parser.add_argument('--override', action='store_true',
+                        help='Override existing experiment and start from scratch. If not set, will resume from last checkpoint if available.')
     args = parser.parse_args()
 
     cfg = Config()
@@ -435,5 +485,6 @@ if __name__ == "__main__":
         test_dfs_paths=[test_dfs_path],
         test_names=[test_name.strftime('%Y_%m_%d_%H_%M')],
         use_resampling=args.use_cheat_to_match_target_label_distribution,
-        use_must=args.use_must
+        use_must=args.use_must,
+        override=args.override
     )
