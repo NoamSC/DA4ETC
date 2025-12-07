@@ -18,6 +18,7 @@ import torch.optim as optim
 from data_utils.csv_dataloader import create_csv_flowpic_loader
 from models.configurable_cnn import ConfigurableCNN
 from training.trainer import train_model
+from training.must_trainer import train_must
 from training.utils import set_seed, save_config_to_json, group_chunks_by_interval
 from config import Config
 
@@ -196,8 +197,8 @@ def print_distribution_comparison(source_loader, target_loader, resampled_loader
         print("=" * 90)
 
 
-def measure_data_drift_exp(cfg, train_dfs_path, test_dfs_paths, test_names=None, use_resampling=False):
-    
+def measure_data_drift_exp(cfg, train_dfs_path, test_dfs_paths, test_names=None, use_resampling=False, use_must=False):
+
     if test_names is None:
         test_names = map(str, range(len(test_dfs_paths)))
 
@@ -218,23 +219,19 @@ def measure_data_drift_exp(cfg, train_dfs_path, test_dfs_paths, test_names=None,
     # Create the original train loader    
     original_train_loader = create_csv_flowpic_loader(train_dfs_path, batch_size=cfg.BATCH_SIZE, num_workers=0,
                                             shuffle=True, resolution=cfg.RESOLUTION, sample_frac=cfg.SAMPLE_FRAC_FROM_CSVS,
-                                            label_mapping=label_indices_mapping, log_t_axis=False) 
+                                            label_mapping=label_indices_mapping, log_t_axis=False, max_dt_ms=4000) 
 
     
     for test_name, test_dfs_path in zip(test_names, test_dfs_paths):
         print(f"Running experiment for test set: {test_name}")
         print(f"Using resampling: {'YES' if use_resampling else 'NO'}")
-        
+        print(f"Using MUST: {'YES' if use_must else 'NO'}")
+
         cfg.MODEL_PARAMS['num_classes'] = num_classes
-        model = ConfigurableCNN(cfg.MODEL_PARAMS).to(cfg.DEVICE)
 
-        optimizer = optim.Adam(model.parameters(), lr=cfg.LEARNING_RATE)
-        criterion = nn.CrossEntropyLoss()
-
-        experiment_path = Path(str(cfg.EXPERIMENT_PATH).format(test_name))
-        # if use_resampling:
-        #     experiment_path = experiment_path.parent / f"{experiment_path.name}_resampled"
-        
+        # Add suffix for MUST experiments to avoid conflicts with standard training
+        experiment_suffix = "_must" if use_must else ""
+        experiment_path = Path(str(cfg.EXPERIMENT_PATH).format(test_name + experiment_suffix))
         experiment_path.mkdir(parents=True, exist_ok=True)
 
         weights_save_dir = experiment_path / 'weights'
@@ -245,55 +242,141 @@ def measure_data_drift_exp(cfg, train_dfs_path, test_dfs_paths, test_names=None,
         save_config_to_json(config_module=cfg, output_file_path=experiment_path / "config.json")
 
         test_loader = create_csv_flowpic_loader(test_dfs_path, batch_size=cfg.BATCH_SIZE, num_workers=0,
-                                                shuffle=False, resolution=cfg.RESOLUTION, sample_frac=cfg.SAMPLE_FRAC_FROM_CSVS,
-                                                label_mapping=label_indices_mapping, log_t_axis=False)
+                                                shuffle=True, resolution=cfg.RESOLUTION, sample_frac=cfg.SAMPLE_FRAC_FROM_CSVS,
+                                                label_mapping=label_indices_mapping, log_t_axis=False, max_dt_ms=4000)
 
-        # Choose which train loader to use
-        if use_resampling:
-            print("\n" + "="*50)
-            print("APPLYING RESAMPLING TO MATCH TARGET DISTRIBUTION")
-            print("="*50)
-            
-            train_loader = create_resampled_dataloader(original_train_loader, test_loader)
-            
-            # Print distribution comparison (quick validation for performance)
-            print_distribution_comparison(
-                source_loader=original_train_loader,
-                target_loader=test_loader, 
-                resampled_loader=train_loader,
-                apps_id_df=apps_id_df,
-                label_indices_mapping=label_indices_mapping,
-                max_batches_for_validation=None
+        # MUST Domain Adaptation Training
+        if use_must:
+            # For MUST, train_loader is source and test_loader is target
+            source_loader = original_train_loader
+            target_loader = test_loader
+
+            print(f"\nSource dataset: {len(source_loader.dataset):,} samples ({len(source_loader)} batches)")
+            print(f"Target dataset: {len(target_loader.dataset):,} samples ({len(target_loader)} batches)")
+
+            # Create teacher and student models
+            teacher_model = ConfigurableCNN(cfg.MODEL_PARAMS).to(cfg.DEVICE)
+            student_model = ConfigurableCNN(cfg.MODEL_PARAMS).to(cfg.DEVICE)
+
+            # Create optimizers based on config
+            optimizer_type = cfg.MUST_PARAMS.get('optimizer', 'sgd').lower()
+
+            if optimizer_type == 'adamw':
+                teacher_optimizer = optim.AdamW(
+                    teacher_model.parameters(),
+                    lr=cfg.LEARNING_RATE,
+                    betas=cfg.MUST_PARAMS['betas'],
+                    eps=cfg.MUST_PARAMS['eps'],
+                    weight_decay=cfg.WEIGHT_DECAY
+                )
+                student_optimizer = optim.AdamW(
+                    student_model.parameters(),
+                    lr=cfg.LEARNING_RATE,
+                    betas=cfg.MUST_PARAMS['betas'],
+                    eps=cfg.MUST_PARAMS['eps'],
+                    weight_decay=cfg.WEIGHT_DECAY
+                )
+            else:  # Default to SGD
+                teacher_optimizer = optim.SGD(
+                    teacher_model.parameters(),
+                    lr=cfg.LEARNING_RATE,
+                    momentum=cfg.MUST_PARAMS['momentum'],
+                    weight_decay=cfg.WEIGHT_DECAY
+                )
+                student_optimizer = optim.SGD(
+                    student_model.parameters(),
+                    lr=cfg.LEARNING_RATE,
+                    momentum=cfg.MUST_PARAMS['momentum'],
+                    weight_decay=cfg.WEIGHT_DECAY
+                )
+
+            criterion = nn.CrossEntropyLoss()
+
+            # Train with MUST
+            results = train_must(
+                teacher_model=teacher_model,
+                student_model=student_model,
+                source_loader=source_loader,
+                target_loader=target_loader,
+                criterion=criterion,
+                teacher_optimizer=teacher_optimizer,
+                student_optimizer=student_optimizer,
+                must_params=cfg.MUST_PARAMS,
+                device=cfg.DEVICE,
+                weights_save_dir=weights_save_dir,
+                plots_save_dir=plots_save_dir,
+                label_mapping=label_mapping
             )
-            
-            print(f"\nUsing resampled training loader:")
-            print(f"  Original train dataset: {len(original_train_loader.dataset):,} samples")
-            print(f"  Target test dataset: {len(test_loader.dataset):,} samples")
-            print(f"  Resampled train: Will generate {len(test_loader.dataset):,} samples per epoch")
-            
-        else:
-            print("\nUsing original training loader (no resampling)")
-            train_loader = original_train_loader
-            
-            print(f"  Train dataset: {len(train_loader.dataset):,} samples")
-            print(f"  Test dataset: {len(test_loader.dataset):,} samples")
 
-        train_model(
-            model=model,
-            train_loader=train_loader,
-            test_loader=test_loader,
-            criterion=criterion,
-            optimizer=optimizer,
-            num_epochs=cfg.NUM_EPOCHS,
-            device=cfg.DEVICE,
-            weights_save_dir=weights_save_dir,
-            plots_save_dir=plots_save_dir,
-            label_mapping=label_mapping,
-            lambda_mmd=cfg.LAMBDA_MMD,
-            mmd_bandwidths=cfg.MMD_BANDWIDTHS,
-            lambda_dann=cfg.LAMBDA_DANN,
-            # adapt_batch_norm=cfg.ADAPT_BATCH_NORM,
-        )
+            # Save final results
+            final_checkpoint = {
+                'teacher_state_dict': results['teacher'].model.state_dict(),
+                'teacher_bn_source': results['teacher'].domain2bn['source'],
+                'teacher_bn_target': results['teacher'].domain2bn['target'],
+                'student_state_dict': results['student'].model.state_dict(),
+                'student_bn_source': results['student'].domain2bn['source'],
+                'student_bn_target': results['student'].domain2bn['target'],
+                'metrics': results['metrics'],
+                'final_results': results['final_results'],
+                'must_params': cfg.MUST_PARAMS,
+            }
+
+            final_checkpoint_path = weights_save_dir / 'must_final_checkpoint.pth'
+            torch.save(final_checkpoint, final_checkpoint_path)
+            print(f"\nFinal checkpoint saved to: {final_checkpoint_path}")
+
+        # Standard Training (with optional resampling)
+        else:
+            model = ConfigurableCNN(cfg.MODEL_PARAMS).to(cfg.DEVICE)
+            optimizer = optim.Adam(model.parameters(), lr=cfg.LEARNING_RATE)
+            criterion = nn.CrossEntropyLoss()
+
+            # Choose which train loader to use
+            if use_resampling:
+                print("\n" + "="*50)
+                print("APPLYING RESAMPLING TO MATCH TARGET DISTRIBUTION")
+                print("="*50)
+
+                train_loader = create_resampled_dataloader(original_train_loader, test_loader)
+
+                # Print distribution comparison (quick validation for performance)
+                print_distribution_comparison(
+                    source_loader=original_train_loader,
+                    target_loader=test_loader,
+                    resampled_loader=train_loader,
+                    apps_id_df=apps_id_df,
+                    label_indices_mapping=label_indices_mapping,
+                    max_batches_for_validation=None
+                )
+
+                print(f"\nUsing resampled training loader:")
+                print(f"  Original train dataset: {len(original_train_loader.dataset):,} samples")
+                print(f"  Target test dataset: {len(test_loader.dataset):,} samples")
+                print(f"  Resampled train: Will generate {len(test_loader.dataset):,} samples per epoch")
+
+            else:
+                print("\nUsing original training loader (no resampling)")
+                train_loader = original_train_loader
+
+                print(f"  Train dataset: {len(train_loader.dataset):,} samples")
+                print(f"  Test dataset: {len(test_loader.dataset):,} samples")
+
+            train_model(
+                model=model,
+                train_loader=train_loader,
+                test_loader=test_loader,
+                criterion=criterion,
+                optimizer=optimizer,
+                num_epochs=cfg.NUM_EPOCHS,
+                device=cfg.DEVICE,
+                weights_save_dir=weights_save_dir,
+                plots_save_dir=plots_save_dir,
+                label_mapping=label_mapping,
+                lambda_mmd=cfg.LAMBDA_MMD,
+                mmd_bandwidths=cfg.MMD_BANDWIDTHS,
+                lambda_dann=cfg.LAMBDA_DANN,
+                # adapt_batch_norm=cfg.ADAPT_BATCH_NORM,
+            )
     
         # training_history_dict = torch.load(experiment_path / 'plots' / 'training_history.pth', weights_only=False)
         # max_val_accuracy = np.max(training_history_dict['val_accuracies'])
@@ -320,8 +403,10 @@ def measure_data_drift_exp(cfg, train_dfs_path, test_dfs_paths, test_names=None,
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run one test split from the data drift experiment.")
     parser.add_argument('--test_index', type=int, required=True, help='Index of the test group to evaluate.')
-    parser.add_argument('--use_cheat_to_match_target_label_distribution', action='store_true', 
+    parser.add_argument('--use_cheat_to_match_target_label_distribution', action='store_true',
                         help='Resample training data to match target test distribution (for analysis purposes).')
+    parser.add_argument('--use_must', action='store_true',
+                        help='Use MUST (Multi-Source Unsupervised-Supervised Transfer) domain adaptation.')
     args = parser.parse_args()
 
     cfg = Config()
@@ -349,5 +434,6 @@ if __name__ == "__main__":
         train_dfs_path=train_dfs_path,
         test_dfs_paths=[test_dfs_path],
         test_names=[test_name.strftime('%Y_%m_%d_%H_%M')],
-        use_resampling=args.use_cheat_to_match_target_label_distribution
+        use_resampling=args.use_cheat_to_match_target_label_distribution,
+        use_must=args.use_must
     )
