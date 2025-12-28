@@ -1,0 +1,11 @@
+Feature,Variance,Stability_Rank
+up_down_pkts_ratio,0.09317475464972637,1
+up_down_bytes_ratio,0.5138659721383326,2
+iat_mean,1.8874323377261437,3
+iat_std,14.634976451958924,4
+pkt_size_mean,1015.3243246579309,5
+pkt_size_std,2186.6953096282105,6
+BF_duration,5343.915343652017,7
+packets_per_second,255703.54931979172,8
+BF_num_packets,4007242.5678559337,9
+bytes_per_second,783575939.6933323,10
