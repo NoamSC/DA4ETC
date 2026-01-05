@@ -1,11 +1,14 @@
 from itertools import cycle
 
+import numpy as np
 import torch
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
 
-from training.visualization import plot_confusion_matrix, plot_metrics
+from training.visualization import (plot_confusion_matrix, plot_metrics,
+                                     compute_topk_accuracy, compute_per_class_precision,
+                                     create_tsne_visualization)
 
 def compute_mmd_loss(source_features, target_features, kernel='rbf', bandwidths=[0.1, 1, 10]):
     def rbf_kernel(x, y, bandwidth):
@@ -38,9 +41,11 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
 
     test_iter = cycle(test_loader) if test_loader is not None else None
 
-    for train_inputs, train_labels in tqdm(train_loader, desc="Training", leave=False):
+    for train_inputs, train_labels in tqdm(train_loader, desc="Training", leave=False, ncols=100, mininterval=10.0):
         train_inputs, train_labels = train_inputs.to(device), train_labels.to(device).long()
-        
+
+        optimizer.zero_grad()
+
         if test_iter is not None:
             # be careful not to use test labels
             test_inputs, _ = next(test_iter)
@@ -49,8 +54,6 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
             test_features = model_test_outputs['features']
             test_class_preds = model_test_outputs['class_preds']
             target_domain_preds = model_test_outputs.get('domain_preds', None)
-        
-        optimizer.zero_grad()
         
         # forward pass
         total_loss, mmd_loss, dann_loss = 0, 0, 0
@@ -96,16 +99,29 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
     )
 
 
-def validate(model, val_loader, criterion, device):
-    """Evaluate the model on the validation set."""
+def validate(model, val_loader, criterion, device, return_features=False):
+    """Evaluate the model on the validation set.
+
+    Args:
+        model: The model to evaluate
+        val_loader: Validation data loader
+        criterion: Loss function
+        device: Device to run on
+        return_features: If True, also return logits and features for advanced metrics
+
+    Returns:
+        tuple: (val_loss, val_acc, all_labels, all_predictions, [all_logits, all_features])
+    """
     model.eval()
     val_loss, val_correct, val_total = 0, 0, 0
     all_labels, all_predictions = [], []
+    all_logits, all_features = [], []
 
     with torch.no_grad():
-        for inputs, labels in tqdm(val_loader, desc="Validation", leave=False):
+        for inputs, labels in tqdm(val_loader, desc="Validation", leave=False, ncols=100, mininterval=5.0):
             inputs, labels = inputs.to(device), labels.to(device).long()
-            class_preds = model(inputs)['class_preds']
+            outputs = model(inputs)
+            class_preds = outputs['class_preds']
             loss = criterion(class_preds, labels)
 
             val_loss += loss.item() * inputs.size(0)
@@ -116,19 +132,35 @@ def validate(model, val_loader, criterion, device):
             all_labels.extend(labels.cpu().numpy())
             all_predictions.extend(predicted.cpu().numpy())
 
-    return (
-        val_loss / val_total, 
-        100.0 * val_correct / val_total, 
-        all_labels, 
-        all_predictions
-    )
+            if return_features:
+                all_logits.append(class_preds.cpu())
+                all_features.append(outputs['features'].cpu())
+
+    if return_features:
+        all_logits = torch.cat(all_logits, dim=0)
+        all_features = torch.cat(all_features, dim=0)
+        return (
+            val_loss / val_total,
+            100.0 * val_correct / val_total,
+            all_labels,
+            all_predictions,
+            all_logits,
+            all_features.numpy()
+        )
+    else:
+        return (
+            val_loss / val_total,
+            100.0 * val_correct / val_total,
+            all_labels,
+            all_predictions
+        )
 
 
 def batch_norm_adaptation(model, target_loader, device):
     """Adapt batch norm layers to the target distribution."""
     model.train()  # Ensure running stats get updated
     with torch.no_grad():
-        for inputs, _ in tqdm(target_loader, desc="Batch Norm Adaptation", leave=False):
+        for inputs, _ in tqdm(target_loader, desc="Batch Norm Adaptation", leave=False, ncols=100, mininterval=5.0):
             inputs = inputs.to(device)
             _ = model(inputs)  # Forward pass to update batch norm statistics
 
@@ -136,7 +168,8 @@ def batch_norm_adaptation(model, target_loader, device):
 def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
                 weights_save_dir, plots_save_dir, label_mapping, lambda_mmd=0.0,
                 test_loader=None, adapt_batch_norm=False, mmd_bandwidths=[1], lambda_dann=0.0,
-                resume_checkpoint_path=None, resume_from_epoch=0):
+                resume_checkpoint_path=None, resume_from_epoch=0,
+                train_per_epoch_data_frac=1.0, seed=42):
     """
     General training function with support for MMD, DANN, and batch norm adaptation.
     Logs to TensorBoard and saves the best model based on validation accuracy.
@@ -192,7 +225,32 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
         print(f"Resuming training from epoch {start_epoch + 1}")
         print(f"{'='*60}\n")
 
+    # Keep reference to original train_loader
+    original_train_loader = train_loader
+
     for epoch in range(start_epoch, num_epochs):
+        # Create per-epoch sampler if needed
+        if train_per_epoch_data_frac < 1.0:
+            import random
+            from torch.utils.data import SubsetRandomSampler, DataLoader
+
+            # Generate epoch-dependent subset indices
+            n_total = len(original_train_loader.dataset)
+            n_samples = int(n_total * train_per_epoch_data_frac)
+            g = random.Random(seed + epoch)
+            indices = list(range(n_total))
+            g.shuffle(indices)
+            subset_indices = indices[:n_samples]
+
+            # Create new sampler and DataLoader for this epoch
+            sampler = SubsetRandomSampler(subset_indices)
+            train_loader = DataLoader(
+                original_train_loader.dataset,
+                batch_size=original_train_loader.batch_size,
+                sampler=sampler,
+                num_workers=original_train_loader.num_workers
+            )
+
         model.set_epoch(epoch / num_epochs)
         train_loss, train_acc, regular_loss, mmd_loss, dann_loss = train_one_epoch(
             model, train_loader, criterion, optimizer, device, lambda_mmd, test_loader, mmd_bandwidths, lambda_dann
@@ -203,9 +261,15 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
         train_other_losses[mmd_loss_name].append(mmd_loss)
         train_other_losses[dann_loss_name].append(dann_loss)
 
-        val_loss, val_acc, all_labels, all_predictions = validate(model, test_loader, criterion, device)
+        # Validation with enhanced metrics
+        val_result = validate(model, test_loader, criterion, device, return_features=True)
+        val_loss, val_acc, all_labels, all_predictions, all_logits, all_features = val_result
         val_losses.append(val_loss)
         val_accuracies.append(val_acc)
+
+        # Compute advanced metrics
+        topk_metrics = compute_topk_accuracy(all_logits, torch.tensor(all_labels), k_values=[3, 5, 10])
+        per_class_metrics = compute_per_class_precision(np.array(all_labels), np.array(all_predictions), num_classes=len(label_mapping))
 
         # Log metrics to TensorBoard
         writer.add_scalar('Loss/train', train_loss, epoch)
@@ -214,6 +278,12 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
         writer.add_scalar('Accuracy/validation', val_acc, epoch)
         writer.add_scalar('Loss/train_regular', regular_loss, epoch)
 
+        # Log advanced metrics
+        writer.add_scalar('Accuracy/top_3', topk_metrics['top_3'], epoch)
+        writer.add_scalar('Accuracy/top_5', topk_metrics['top_5'], epoch)
+        writer.add_scalar('Accuracy/top_10', topk_metrics['top_10'], epoch)
+        writer.add_scalar('Accuracy/mean_per_class_precision', per_class_metrics['mean_per_class_precision'], epoch)
+
         if lambda_mmd > 0:
             writer.add_scalar('Loss/mmd', mmd_loss, epoch)
         if lambda_dann > 0:
@@ -221,6 +291,8 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
 
         print(f"Epoch {epoch+1}: Train Loss={train_loss:.4f}, Accuracy={train_acc:.2f}%")
         print(f"         Val Loss={val_loss:.4f}, Accuracy={val_acc:.2f}%")
+        print(f"         Top-3: {topk_metrics['top_3']:.2f}%, Top-5: {topk_metrics['top_5']:.2f}%, Top-10: {topk_metrics['top_10']:.2f}%")
+        print(f"         Mean Per-Class Precision: {per_class_metrics['mean_per_class_precision']:.2f}%")
         for loss_name, loss_values in train_other_losses.items():
             print(f"         {loss_name}={loss_values[-1]:.4f}, Regular Loss={regular_loss:.4f}")
 
@@ -242,12 +314,24 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
             }, best_model_path)
             print(f"         *** New best model saved! Val Acc: {best_val_acc:.2f}% ***")
 
-        # Log confusion matrix to TensorBoard
+        # Log confusion matrix to TensorBoard (normalized for better visualization)
         class_names = sorted(label_mapping, key=label_mapping.get)
-        cm_fig = plot_confusion_matrix(all_labels, all_predictions, class_names=class_names, epoch=epoch+1)
+        cm_fig = plot_confusion_matrix(all_labels, all_predictions, class_names=class_names,
+                                       epoch=epoch+1, normalize='true')
         if cm_fig is not None:
             writer.add_figure('Confusion_Matrix/validation', cm_fig, epoch)
             plt.close(cm_fig)
+
+        # Create and log t-SNE visualization each validation
+        try:
+            tsne_fig = create_tsne_visualization(
+                all_features, np.array(all_labels), class_names,
+                epoch=epoch+1, save_dir=plots_save_dir,
+                n_samples=min(5000, len(all_features))
+            )
+            print(f"         t-SNE visualization saved to plots/tsne_epoch_{epoch+1}.html")
+        except Exception as e:
+            print(f"         Warning: Failed to create t-SNE visualization: {e}")
 
         # Log metrics plot to TensorBoard (only at the end to show full history)
         if epoch == num_epochs - 1:

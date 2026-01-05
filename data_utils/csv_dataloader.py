@@ -1,5 +1,6 @@
 import re
 import warnings
+import ast
 
 
 import numpy as np
@@ -15,7 +16,28 @@ def extract_numbers(x):
     elif isinstance(x, list):
         return x
     else:
-        return []    
+        return []
+
+def safe_parse_list(x):
+    """Safely parse a string representation of a list."""
+    if isinstance(x, list):
+        return x
+    if not isinstance(x, str):
+        return []
+
+    # Check if it looks like a list structure
+    x = x.strip()
+    if not (x.startswith('[') and x.endswith(']')):
+        return []
+
+    try:
+        result = ast.literal_eval(x)
+        if isinstance(result, list):
+            return result
+    except (ValueError, SyntaxError):
+        pass
+
+    return []
 
 MTU = 1500  # Maximum Transmission Unit in bytes
 
@@ -40,55 +62,151 @@ def session_2d_histogram(ts, sizes, resolution=MTU, max_delta_time=10, log_t_axi
     
 class CSVFlowPicDataset(Dataset):
     def __init__(self, csv_paths, resolution=MTU, max_dt_ms=30000, label_mapping=None,
-                 log_t_axis=False, verbose=False, sample_frac=None): 
+                 log_t_axis=False, verbose=False, data_sample_frac=None, seed=42,
+                 dataset_format='auto'):
         self.csv_paths = csv_paths
         self.resolution = resolution
         self.max_delta_time = max_dt_ms
         self.label_mapping = label_mapping
         self.log_t_axis = log_t_axis
         self.verbose = verbose
-        self.sample_frac = sample_frac
-        
+        self.data_sample_frac = data_sample_frac
+        self.seed = seed
+        self.dataset_format = dataset_format  # 'auto', 'mirage', or 'cesnet'
+
         # Index all sessions at initialization for efficiency
         self.sessions = []
         self.labels = []
         self.rows = []
         self._prepare_index()
-        
+
     def _prepare_index(self):
-        csvs = self.csv_paths
+        files = self.csv_paths
         if self.verbose:
-            csvs = tqdm(self.csv_paths)
-        for csv_file in csvs:
-            if isinstance(csv_file, pd.DataFrame):
-                # If csv_file is already a DataFrame, use it directly
-                df = csv_file.copy()
+            files = tqdm(self.csv_paths, desc="Loading files")
+        for file_path in files:
+            if isinstance(file_path, pd.DataFrame):
+                # If file_path is already a DataFrame, use it directly
+                df = file_path.copy()
             else:
-                df = pd.read_csv(csv_file)
-                
-            if self.sample_frac is not None:
-                df = df.sample(frac=self.sample_frac)
-            
-                
-            df['ppi-pdt'] = df['ppi-pdt'].transform(extract_numbers)
-            df['ppi-pd'] = df['ppi-pd'].transform(extract_numbers)
-            df['ppi-ps'] = df['ppi-ps'].transform(extract_numbers)
-            df['ppi-paux'] = df['ppi-paux'].transform(extract_numbers)
-            
-            for _, row in df.iterrows():
-                ts = row['ppi-pdt']
-                if len(ts) >= 1:
-                    if self.label_mapping is not None:
-                        app_id = row['appId']
-                        if app_id in self.label_mapping:
-                            self.labels.append(self.label_mapping[app_id])
-                        else:
-                            # warnings.warn(f"App ID {app_id} not found in label mapping.")
-                            continue
-                    else:     
-                        self.labels.append(row['appId'])
-                    self.sessions.append((ts, row['ppi-ps']))
-                    self.rows.append(row)
+                # Read file based on extension
+                file_str = str(file_path)
+                if file_str.endswith('.parquet'):
+                    df = pd.read_parquet(file_path)
+                elif file_str.endswith('.csv.xz'):
+                    df = pd.read_csv(file_path, compression='xz')
+                elif file_str.endswith('.csv'):
+                    df = pd.read_csv(file_path)
+                else:
+                    # Infer compression
+                    df = pd.read_csv(file_path, compression='infer')
+
+            if self.data_sample_frac is not None:
+                df = df.sample(frac=self.data_sample_frac, random_state=self.seed)
+
+            # Auto-detect format based on columns
+            format_type = self.dataset_format
+            if format_type == 'auto':
+                if 'PPI_IPT' in df.columns and 'APP' in df.columns:
+                    format_type = 'cesnet_parquet'
+                elif 'PPI' in df.columns and 'APP' in df.columns:
+                    format_type = 'cesnet'
+                elif 'ppi-pdt' in df.columns and 'appId' in df.columns:
+                    format_type = 'mirage'
+                else:
+                    raise ValueError(f"Cannot auto-detect dataset format. Columns: {df.columns.tolist()}")
+
+            if format_type == 'cesnet':
+                self._process_cesnet_format(df)
+            elif format_type == 'cesnet_parquet':
+                self._process_cesnet_parquet_format(df)
+            elif format_type == 'mirage':
+                self._process_mirage_format(df)
+            else:
+                raise ValueError(f"Unknown dataset format: {format_type}")
+
+            # Update progress bar with total samples loaded
+            if self.verbose and isinstance(files, tqdm):
+                files.set_postfix({'total_samples': len(self.sessions)})
+
+    def _process_mirage_format(self, df):
+        """Process Mirage dataset format (original format)."""
+        df['ppi-pdt'] = df['ppi-pdt'].transform(extract_numbers)
+        df['ppi-pd'] = df['ppi-pd'].transform(extract_numbers)
+        df['ppi-ps'] = df['ppi-ps'].transform(extract_numbers)
+        df['ppi-paux'] = df['ppi-paux'].transform(extract_numbers)
+
+        for _, row in df.iterrows():
+            ts = row['ppi-pdt']
+            if len(ts) >= 1:
+                if self.label_mapping is not None:
+                    app_id = row['appId']
+                    if app_id in self.label_mapping:
+                        self.labels.append(self.label_mapping[app_id])
+                    else:
+                        continue
+                else:
+                    self.labels.append(row['appId'])
+                self.sessions.append((ts, row['ppi-ps']))
+                self.rows.append(row)
+
+    def _process_cesnet_format(self, df):
+        """Process CESNET dataset format (CSV with unparsed PPI)."""
+        assert self.label_mapping is not None, "label_mapping must be provided for CESNET dataset"
+
+        # Parse PPI column which contains [ipt, directions, sizes, aux]
+        df['PPI'] = df['PPI'].transform(safe_parse_list)
+
+        for _, row in df.iterrows():
+            ppi = row['PPI']
+
+            # PPI format: [ipt_list, direction_list, size_list, aux_list]
+            if not isinstance(ppi, list) or len(ppi) < 3:
+                continue
+
+            ts = ppi[0]  # inter-packet times
+            sizes = ppi[2]  # packet sizes
+
+            # Skip if empty
+            if not isinstance(ts, list) or not isinstance(sizes, list) or len(ts) < 1:
+                continue
+
+            # Get label
+            app_id = row['APP']
+            if app_id in self.label_mapping:
+                self.labels.append(self.label_mapping[app_id])
+            else:
+                continue
+
+            self.sessions.append((ts, sizes))
+            self.rows.append(row)
+
+    def _process_cesnet_parquet_format(self, df):
+        """Process CESNET dataset format (Parquet with pre-parsed PPI)."""
+        assert self.label_mapping is not None, "label_mapping must be provided for CESNET dataset"
+
+        for _, row in df.iterrows():
+            ts = row['PPI_IPT']
+            sizes = row['PPI_SIZES']
+
+            # Accept both lists and numpy arrays
+            # Skip if empty or invalid (check for None, empty, or wrong type)
+            if ts is None or sizes is None:
+                continue
+            if not hasattr(ts, '__len__') or not hasattr(sizes, '__len__'):
+                continue
+            if len(ts) < 1:
+                continue
+
+            # Get label
+            app_id = row['APP']
+            if app_id in self.label_mapping:
+                self.labels.append(self.label_mapping[app_id])
+            else:
+                continue
+
+            self.sessions.append((ts, sizes))
+            self.rows.append(row)
 
     def __len__(self):
         return len(self.sessions)
@@ -112,9 +230,14 @@ class CSVFlowPicDataset(Dataset):
         return class_counts
 
 
-def create_csv_flowpic_loader(csv_paths, batch_size=64, shuffle=True, num_workers=4, sample_frac=None,
-                              resolution=MTU, max_dt_ms=30000, label_mapping=None, log_t_axis=False):
+def create_csv_flowpic_loader(csv_paths, batch_size=64, shuffle=True, num_workers=4,
+                              data_sample_frac=None, seed=42,
+                              resolution=MTU, max_dt_ms=30000, label_mapping=None, log_t_axis=False,
+                              dataset_format='auto', verbose=False):
     dataset = CSVFlowPicDataset(csv_paths, resolution=resolution, max_dt_ms=max_dt_ms,
-                                label_mapping=label_mapping, log_t_axis=log_t_axis, sample_frac=sample_frac)
+                                label_mapping=label_mapping, log_t_axis=log_t_axis,
+                                data_sample_frac=data_sample_frac, seed=seed,
+                                dataset_format=dataset_format,
+                                verbose=verbose)
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return loader

@@ -5,8 +5,10 @@ import torch
 @dataclass
 class Config:
     # Experiment Details
-    # EXPERIMENT_NAME: str = "allot_dann_bsearch_v7"
-    EXPERIMENT_NAME: str = "allot_daily_degradation_v14_tensorboard/{}"
+    # EXPERIMENT_NAME: str = "allot_daily_degradation_v14_tensorboard/{}"
+    # EXPERIMENT_NAME: str = "debug/{}"
+    EXPERIMENT_NAME: str = "cesnet_v4_dann/{}"
+    DESCRIPTION: str = "same as v3 with dann"
     # EXPERIMENT_PATH: Path = field(init=False)
     BASE_EXPERIMENTS_PATH: Path = Path("exps/")
 
@@ -19,13 +21,16 @@ class Config:
         386, 497, 998, 171, 485, 2613, 340, 373, 561, 967, 436, 1088,
         961, 682, 521, 964, 1450, 1448, 965, 42
     ])
-    SAMPLE_FRAC_FROM_CSVS: float = 1e-2
+    TRAIN_DATA_FRAC: float = 1.0             # Load 100% from train.parquet
+    VAL_DATA_FRAC: float = 0.001              # Load 1% from test.parquet
+    TRAIN_PER_EPOCH_DATA_FRAC: float = 0.001 # Use 0.1% of loaded training data per epoch
 
     # Dataset Parameters
     # DATA_PATH: Path = Path("data/ben_bucket")
     # SAMPLE_FRAC: float = 1.0
     # TRAIN_SPLIT_RATIO: float = 0.7
-    BATCH_SIZE: int = 64
+    BATCH_SIZE: int = 32
+    NUM_WORKERS: int = 8  # Number of workers for data loading
     # LABEL_MAPPING: dict = field(default_factory=lambda: {'Amazon': 0, 'Google Search': 1, 'Twitch': 2, 'Youtube': 3})
     # LOCATIONS: list = field(default_factory=lambda: [
     #     'AwsCont', 'BenContainer', # 'CabSpicy1',
@@ -53,7 +58,7 @@ class Config:
         'use_batch_norm': True,
         
         # Domain Adaptation Model Parameters
-        'lambda_rgl': 0,
+        'lambda_rgl': 0.002168,
         'dann_fc_out_features': 64,
         'lambda_grl_gamma': 10,
         
@@ -68,7 +73,7 @@ class Config:
     LAMBDA_MMD: float = 0
     MMD_BANDWIDTHS: list = field(default_factory=lambda: [1e-1, 1e0, 1e1])
     
-    LAMBDA_DANN: float = 0 # 1e0 # 1e0
+    LAMBDA_DANN: float = 0.020626 # 1e0 # 1e0
 
     ADAPT_BATCH_NORM = False
 
