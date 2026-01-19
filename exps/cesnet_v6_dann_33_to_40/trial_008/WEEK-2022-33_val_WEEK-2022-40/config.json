@@ -1,0 +1,106 @@
+{
+    "ADAPT_BATCH_NORM": false,
+    "BASE_EXPERIMENTS_PATH": "exps",
+    "BATCH_SIZE": 32,
+    "DESCRIPTION": "same as v3 with dann",
+    "DEVICE": "cuda:0",
+    "EXPERIMENT_NAME": "cesnet_v6_dann_33_to_40/trial_008/{}",
+    "EXPERIMENT_PATH": "exps/cesnet_v6_dann_33_to_40/trial_008/{}",
+    "EXPERIMENT_PLOTS_PATH": "exps/cesnet_v6_dann_33_to_40/trial_008/{}/plots",
+    "EXPERIMENT_TENSORBOARD_PATH": "exps/cesnet_v6_dann_33_to_40/trial_008/{}/tensorboard",
+    "EXPERIMENT_WEIGHTS_PATH": "exps/cesnet_v6_dann_33_to_40/trial_008/{}/weights",
+    "LABEL_WHITELIST": [
+        386,
+        497,
+        998,
+        171,
+        485,
+        2613,
+        340,
+        373,
+        561,
+        967,
+        436,
+        1088,
+        961,
+        682,
+        521,
+        964,
+        1450,
+        1448,
+        965,
+        42
+    ],
+    "LAMBDA_DANN": 0.16123754596075318,
+    "LAMBDA_MMD": 0,
+    "LEARNING_RATE": 0.003,
+    "MIN_FLOW_LENGTH": 100,
+    "MMD_BANDWIDTHS": [
+        0.1,
+        1.0,
+        10.0
+    ],
+    "MODEL_PARAMS": {
+        "conv_type": "1d",
+        "conv_layers": [
+            {
+                "out_channels": 16,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1
+            },
+            {
+                "out_channels": 32,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1
+            },
+            {
+                "out_channels": 64,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1
+            },
+            {
+                "out_channels": 64,
+                "kernel_size": 3,
+                "stride": 1,
+                "padding": 1
+            }
+        ],
+        "pool_kernel_size": 2,
+        "pool_stride": 2,
+        "fc1_out_features": 64,
+        "dropout_prob": 0.3,
+        "use_batch_norm": true,
+        "lambda_rgl": 2.146499961269056,
+        "dann_fc_out_features": 64,
+        "lambda_grl_gamma": 10,
+        "input_shape": 256
+    },
+    "MUST_PARAMS": {
+        "iterations": 10000,
+        "alpha": 0.5,
+        "pseudo_threshold": 0.75,
+        "warm_start_epochs": 5,
+        "eval_every": 500,
+        "target_batches_per_iter": 2,
+        "optimizer": "adamw",
+        "momentum": 0.9,
+        "betas": [
+            0.9,
+            0.999
+        ],
+        "eps": 1e-08
+    },
+    "NUM_EPOCHS": 10,
+    "NUM_WORKERS": 8,
+    "RESOLUTION": 256,
+    "SAVE_MODEL_CHECKPOINT": "exps/cesnet_v6_dann_33_to_40/trial_008/{}/weights/model_checkpoint_epoch_{epoch}.pth",
+    "SAVE_PLOTS": true,
+    "SEED": 42,
+    "TRAIN_DATA_FRAC": 1.0,
+    "TRAIN_PER_EPOCH_DATA_FRAC": 0.1,
+    "VAL_DATA_FRAC": 0.1,
+    "WEIGHT_DECAY": 0.0001
+}
