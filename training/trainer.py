@@ -1,10 +1,12 @@
 from itertools import cycle
+import time
 
 import numpy as np
 import torch
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
+from torch.profiler import profile, record_function, ProfilerActivity
 
 from training.visualization import (plot_confusion_matrix, plot_metrics,
                                      compute_topk_accuracy, compute_per_class_precision,
@@ -36,67 +38,75 @@ def compute_mmd_loss(source_features, target_features, kernel='rbf', bandwidths=
 def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mmd=0.0, test_loader=None, mmd_bandwidths=[0.1, 1, 10], lambda_dann=0.0):
     """Train model for one epoch. Supports optional MMD and DANN losses."""
     model.train()
-    train_loss, train_correct, train_total = 0, 0, 0
-    classification_loss_total, mmd_loss_total, dann_loss_total = 0, 0, 0
+    metrics = {
+        'train_loss': 0, 'train_correct': 0, 'train_total': 0,
+        'classification_loss': 0, 'mmd_loss': 0, 'dann_loss': 0,
+        'domain_correct': 0, 'domain_total': 0
+    }
 
     test_iter = cycle(test_loader) if test_loader is not None else None
 
     for train_inputs, train_labels in tqdm(train_loader, desc="Training", leave=False, ncols=100, mininterval=10.0):
         train_inputs, train_labels = train_inputs.to(device), train_labels.to(device).long()
-
         optimizer.zero_grad()
 
+        # Source domain forward pass
+        source_outputs = model(train_inputs)
+
+        # Target domain forward pass
+        target_outputs = None
         if test_iter is not None:
-            # be careful not to use test labels
             test_inputs, _ = next(test_iter)
-            test_inputs = test_inputs.to(device)
-            model_test_outputs = model(test_inputs)
-            test_features = model_test_outputs['features']
-            test_class_preds = model_test_outputs['class_preds']
-            target_domain_preds = model_test_outputs.get('domain_preds', None)
-        
-        # forward pass
-        total_loss, mmd_loss, dann_loss = 0, 0, 0
-        model_train_outputs = model(train_inputs)
-        train_class_preds = model_train_outputs['class_preds']
-        train_features = model_train_outputs['features']
-        source_domain_preds = model_train_outputs.get('domain_preds', None)
-        
-        # compute normal classification score
-        classification_loss = criterion(train_class_preds, train_labels)
+            target_outputs = model(test_inputs.to(device))
 
-        # compute MMD loss
-        if test_loader is not None and lambda_mmd > 0:
-            mmd_loss = compute_mmd_loss(train_features, test_features, bandwidths=mmd_bandwidths)
-            mmd_loss_total += mmd_loss.detach().item()
+        # Loss computation
+        classification_loss = criterion(source_outputs['class_preds'], train_labels)
 
-        # compute DANN loss
-        if test_loader is not None and lambda_dann > 0:
-            source_domain_labels = torch.zeros(len(source_domain_preds)).to(device).long()
-            target_domain_labels = torch.ones(len(target_domain_preds)).to(device).long()
-            
-            dann_loss = criterion(source_domain_preds, source_domain_labels)
-            dann_loss += criterion(target_domain_preds, target_domain_labels)
-            
-            dann_loss_total += dann_loss.detach().item()
+        mmd_loss = 0
+        if target_outputs is not None and lambda_mmd > 0:
+            mmd_loss = compute_mmd_loss(source_outputs['features'], target_outputs['features'], bandwidths=mmd_bandwidths)
 
-        total_loss = classification_loss + mmd_loss * lambda_mmd + dann_loss * lambda_dann
+        dann_loss = 0
+        if target_outputs is not None and lambda_dann > 0:
+            source_domain_labels = torch.zeros(len(source_outputs['domain_preds'])).long().to(device)
+            target_domain_labels = torch.ones(len(target_outputs['domain_preds'])).long().to(device)
+
+            dann_loss = criterion(source_outputs['domain_preds'], source_domain_labels)
+            dann_loss += criterion(target_outputs['domain_preds'], target_domain_labels)
+
+            # Track domain classifier accuracy
+            with torch.no_grad():
+                _, source_pred = source_outputs['domain_preds'].max(1)
+                _, target_pred = target_outputs['domain_preds'].max(1)
+                metrics['domain_correct'] += source_pred.eq(source_domain_labels).sum().item()
+                metrics['domain_correct'] += target_pred.eq(target_domain_labels).sum().item()
+                metrics['domain_total'] += len(source_domain_labels) + len(target_domain_labels)
+
+        total_loss = classification_loss + lambda_mmd * mmd_loss + lambda_dann * dann_loss
         total_loss.backward()
         optimizer.step()
 
-        train_loss += total_loss.item() * train_inputs.size(0)
-        _, predicted = train_class_preds.max(1)
-        train_correct += predicted.eq(train_labels).sum().item()
-        train_total += train_labels.size(0)
-        classification_loss_total += classification_loss.item()
+        # Track metrics
+        metrics['train_loss'] += total_loss.item() * train_inputs.size(0)
+        metrics['classification_loss'] += classification_loss.item()
+        metrics['mmd_loss'] += mmd_loss.item() if isinstance(mmd_loss, torch.Tensor) else 0
+        metrics['dann_loss'] += dann_loss.item() if isinstance(dann_loss, torch.Tensor) else 0
 
-    return (
-        train_loss / train_total, 
-        100.0 * train_correct / train_total,
-        classification_loss_total / len(train_loader), 
-        mmd_loss_total / len(train_loader) * lambda_mmd if lambda_mmd > 0 else 0,
-        dann_loss_total / len(train_loader) * lambda_dann if lambda_dann > 0 else 0
-    )
+        _, predicted = source_outputs['class_preds'].max(1)
+        metrics['train_correct'] += predicted.eq(train_labels).sum().item()
+        metrics['train_total'] += train_labels.size(0)
+
+    # Return dict
+    return_dict = {
+        'train_loss': metrics['train_loss'] / metrics['train_total'],
+        'train_acc': 100.0 * metrics['train_correct'] / metrics['train_total'],
+        'classification_loss': metrics['classification_loss'] / len(train_loader),
+        'mmd_loss': metrics['mmd_loss'] / len(train_loader) * lambda_mmd if lambda_mmd > 0 else 0,
+        'dann_loss': metrics['dann_loss'] / len(train_loader) * lambda_dann if lambda_dann > 0 else 0,
+        'domain_acc': 100.0 * metrics['domain_correct'] / metrics['domain_total'] if metrics['domain_total'] > 0 else 0
+    }
+
+    return return_dict
 
 
 def validate(model, val_loader, criterion, device, return_features=False):
@@ -169,11 +179,14 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
                 weights_save_dir, plots_save_dir, label_mapping, lambda_mmd=0.0,
                 test_loader=None, adapt_batch_norm=False, mmd_bandwidths=[1], lambda_dann=0.0,
                 resume_checkpoint_path=None, resume_from_epoch=0,
-                train_per_epoch_data_frac=1.0, seed=42):
+                train_per_epoch_data_frac=1.0, seed=42, enable_profiler=False):
     """
     General training function with support for MMD, DANN, and batch norm adaptation.
     Logs to TensorBoard and saves the best model based on validation accuracy.
     Supports resuming from checkpoint.
+
+    Args:
+        enable_profiler: If True, enable PyTorch profiler for the first 2 epochs
     """
     # Initialize TensorBoard writer
     tensorboard_dir = plots_save_dir.parent / 'tensorboard'
@@ -228,7 +241,22 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
     # Keep reference to original train_loader
     original_train_loader = train_loader
 
+    # Setup profiler if enabled
+    profiler_context = None
+    if enable_profiler and start_epoch < 2:
+        print("\n" + "="*60)
+        print("PROFILER ENABLED - Will profile first 2 epochs")
+        print("="*60 + "\n")
+        profiler_context = profile(
+            activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+            record_shapes=True,
+            profile_memory=True,
+            with_stack=True
+        )
+        profiler_context.__enter__()
+
     for epoch in range(start_epoch, num_epochs):
+        epoch_start_time = time.time()
         # Create per-epoch sampler if needed
         if train_per_epoch_data_frac < 1.0:
             import random
@@ -252,31 +280,43 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
             )
 
         model.set_epoch(epoch / num_epochs)
-        train_loss, train_acc, regular_loss, mmd_loss, dann_loss = train_one_epoch(
-            model, train_loader, criterion, optimizer, device, lambda_mmd, test_loader, mmd_bandwidths, lambda_dann
-        )
-        train_losses.append(train_loss)
-        train_accuracies.append(train_acc)
-        train_regular_losses.append(regular_loss)
-        train_other_losses[mmd_loss_name].append(mmd_loss)
-        train_other_losses[dann_loss_name].append(dann_loss)
+
+        # Training phase with timing
+        train_start_time = time.time()
+        with record_function("train_epoch"):
+            train_metrics = train_one_epoch(
+                model, train_loader, criterion, optimizer, device, lambda_mmd, test_loader, mmd_bandwidths, lambda_dann
+            )
+        train_time = time.time() - train_start_time
+
+        train_losses.append(train_metrics['train_loss'])
+        train_accuracies.append(train_metrics['train_acc'])
+        train_regular_losses.append(train_metrics['classification_loss'])
+        train_other_losses[mmd_loss_name].append(train_metrics['mmd_loss'])
+        train_other_losses[dann_loss_name].append(train_metrics['dann_loss'])
 
         # Validation with enhanced metrics
-        val_result = validate(model, test_loader, criterion, device, return_features=True)
+        val_start_time = time.time()
+        with record_function("validation"):
+            val_result = validate(model, test_loader, criterion, device, return_features=True)
+        val_time = time.time() - val_start_time
         val_loss, val_acc, all_labels, all_predictions, all_logits, all_features = val_result
         val_losses.append(val_loss)
         val_accuracies.append(val_acc)
 
         # Compute advanced metrics
-        topk_metrics = compute_topk_accuracy(all_logits, torch.tensor(all_labels), k_values=[3, 5, 10])
-        per_class_metrics = compute_per_class_precision(np.array(all_labels), np.array(all_predictions), num_classes=len(label_mapping))
+        metrics_start_time = time.time()
+        with record_function("compute_metrics"):
+            topk_metrics = compute_topk_accuracy(all_logits, torch.tensor(all_labels), k_values=[3, 5, 10])
+            per_class_metrics = compute_per_class_precision(np.array(all_labels), np.array(all_predictions), num_classes=len(label_mapping))
+        metrics_time = time.time() - metrics_start_time
 
         # Log metrics to TensorBoard
-        writer.add_scalar('Loss/train', train_loss, epoch)
+        writer.add_scalar('Loss/train', train_metrics['train_loss'], epoch)
         writer.add_scalar('Loss/validation', val_loss, epoch)
-        writer.add_scalar('Accuracy/train', train_acc, epoch)
+        writer.add_scalar('Accuracy/train', train_metrics['train_acc'], epoch)
         writer.add_scalar('Accuracy/validation', val_acc, epoch)
-        writer.add_scalar('Loss/train_regular', regular_loss, epoch)
+        writer.add_scalar('Loss/train_regular', train_metrics['classification_loss'], epoch)
 
         # Log advanced metrics
         writer.add_scalar('Accuracy/top_3', topk_metrics['top_3'], epoch)
@@ -285,20 +325,26 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
         writer.add_scalar('Accuracy/mean_per_class_precision', per_class_metrics['mean_per_class_precision'], epoch)
 
         if lambda_mmd > 0:
-            writer.add_scalar('Loss/mmd', mmd_loss, epoch)
+            writer.add_scalar('Loss/mmd', train_metrics['mmd_loss'], epoch)
         if lambda_dann > 0:
-            writer.add_scalar('Loss/dann', dann_loss, epoch)
+            writer.add_scalar('Loss/dann', train_metrics['dann_loss'], epoch)
+            writer.add_scalar('Accuracy/domain_classifier', train_metrics['domain_acc'], epoch)
 
-        print(f"Epoch {epoch+1}: Train Loss={train_loss:.4f}, Accuracy={train_acc:.2f}%")
+        print(f"Epoch {epoch+1}: Train Loss={train_metrics['train_loss']:.4f}, Accuracy={train_metrics['train_acc']:.2f}%")
         print(f"         Val Loss={val_loss:.4f}, Accuracy={val_acc:.2f}%")
         print(f"         Top-3: {topk_metrics['top_3']:.2f}%, Top-5: {topk_metrics['top_5']:.2f}%, Top-10: {topk_metrics['top_10']:.2f}%")
         print(f"         Mean Per-Class Precision: {per_class_metrics['mean_per_class_precision']:.2f}%")
         for loss_name, loss_values in train_other_losses.items():
-            print(f"         {loss_name}={loss_values[-1]:.4f}, Regular Loss={regular_loss:.4f}")
+            print(f"         {loss_name}={loss_values[-1]:.4f}, Regular Loss={train_metrics['classification_loss']:.4f}")
+        if lambda_dann > 0:
+            print(f"         Domain Classifier Accuracy={train_metrics['domain_acc']:.2f}%")
 
         # Save epoch checkpoint
-        model_save_path = weights_save_dir / f"model_weights_epoch_{epoch+1}.pth"
-        torch.save(model.state_dict(), model_save_path)
+        save_start_time = time.time()
+        with record_function("save_checkpoint"):
+            model_save_path = weights_save_dir / f"model_weights_epoch_{epoch+1}.pth"
+            torch.save(model.state_dict(), model_save_path)
+        save_time = time.time() - save_start_time
 
         # Save best model
         if val_acc > best_val_acc:
@@ -315,23 +361,26 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
             print(f"         *** New best model saved! Val Acc: {best_val_acc:.2f}% ***")
 
         # Log confusion matrix to TensorBoard (normalized for better visualization)
-        class_names = sorted(label_mapping, key=label_mapping.get)
-        cm_fig = plot_confusion_matrix(all_labels, all_predictions, class_names=class_names,
-                                       epoch=epoch+1, normalize='true')
-        if cm_fig is not None:
-            writer.add_figure('Confusion_Matrix/validation', cm_fig, epoch)
-            plt.close(cm_fig)
+        viz_start_time = time.time()
+        with record_function("visualizations"):
+            class_names = sorted(label_mapping, key=label_mapping.get)
+            cm_fig = plot_confusion_matrix(all_labels, all_predictions, class_names=class_names,
+                                           epoch=epoch+1, normalize='true')
+            if cm_fig is not None:
+                writer.add_figure('Confusion_Matrix/validation', cm_fig, epoch)
+                plt.close(cm_fig)
 
-        # Create and log t-SNE visualization each validation
-        try:
-            tsne_fig = create_tsne_visualization(
-                all_features, np.array(all_labels), class_names,
-                epoch=epoch+1, save_dir=plots_save_dir,
-                n_samples=min(5000, len(all_features))
-            )
-            print(f"         t-SNE visualization saved to plots/tsne_epoch_{epoch+1}.html")
-        except Exception as e:
-            print(f"         Warning: Failed to create t-SNE visualization: {e}")
+            # Create and log t-SNE visualization each validation
+            try:
+                tsne_fig = create_tsne_visualization(
+                    all_features, np.array(all_labels), class_names,
+                    epoch=epoch+1, save_dir=plots_save_dir,
+                    n_samples=min(5000, len(all_features))
+                )
+                print(f"         t-SNE visualization saved to plots/tsne_epoch_{epoch+1}.html")
+            except Exception as e:
+                print(f"         Warning: Failed to create t-SNE visualization: {e}")
+        viz_time = time.time() - viz_start_time
 
         # Log metrics plot to TensorBoard (only at the end to show full history)
         if epoch == num_epochs - 1:
@@ -351,6 +400,42 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
 
         history_save_path = plots_save_dir / "training_history.pth"
         torch.save(training_history, history_save_path)
+
+        # Print timing breakdown
+        epoch_total_time = time.time() - epoch_start_time
+        print(f"\n         Timing breakdown:")
+        print(f"           Training:       {train_time:6.2f}s ({100*train_time/epoch_total_time:5.1f}%)")
+        print(f"           Validation:     {val_time:6.2f}s ({100*val_time/epoch_total_time:5.1f}%)")
+        print(f"           Metrics:        {metrics_time:6.2f}s ({100*metrics_time/epoch_total_time:5.1f}%)")
+        print(f"           Visualizations: {viz_time:6.2f}s ({100*viz_time/epoch_total_time:5.1f}%)")
+        print(f"           Checkpointing:  {save_time:6.2f}s ({100*save_time/epoch_total_time:5.1f}%)")
+        print(f"           Total:          {epoch_total_time:6.2f}s")
+
+        # Stop profiler after first 2 epochs
+        if enable_profiler and epoch == 1:
+            print("\n" + "="*60)
+            print("STOPPING PROFILER AND GENERATING REPORT")
+            print("="*60 + "\n")
+            profiler_context.__exit__(None, None, None)
+
+            # Save profiler results
+            profiler_dir = plots_save_dir.parent / 'profiler'
+            profiler_dir.mkdir(parents=True, exist_ok=True)
+
+            # Print profiler summary
+            print("\n" + "="*60)
+            print("PROFILER SUMMARY - Top operations by time")
+            print("="*60)
+            print(profiler_context.key_averages().table(sort_by="cuda_time_total", row_limit=20))
+
+            # Export trace for visualization
+            trace_path = profiler_dir / "trace.json"
+            profiler_context.export_chrome_trace(str(trace_path))
+            print(f"\nProfiler trace saved to: {trace_path}")
+            print(f"View in Chrome at: chrome://tracing")
+            print("="*60 + "\n")
+
+            profiler_context = None
 
     # Close TensorBoard writer
     writer.close()
