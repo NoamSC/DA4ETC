@@ -41,7 +41,9 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
     metrics = {
         'train_loss': 0, 'train_correct': 0, 'train_total': 0,
         'classification_loss': 0, 'mmd_loss': 0, 'dann_loss': 0,
-        'domain_correct': 0, 'domain_total': 0
+        'domain_correct': 0, 'domain_total': 0,
+        'grad_norm_feature_extractor': 0, 'grad_norm_class_predictor': 0,
+        'grad_norm_domain_classifier': 0, 'grad_norm_count': 0
     }
 
     test_iter = cycle(test_loader) if test_loader is not None else None
@@ -84,6 +86,15 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
 
         total_loss = classification_loss + lambda_mmd * mmd_loss + lambda_dann * dann_loss
         total_loss.backward()
+
+        # Compute gradient norms before optimizer step
+        grad_norms = model.get_grad_norms()
+        metrics['grad_norm_feature_extractor'] += grad_norms['feature_extractor']
+        metrics['grad_norm_class_predictor'] += grad_norms['class_predictor']
+        if 'domain_classifier' in grad_norms:
+            metrics['grad_norm_domain_classifier'] += grad_norms['domain_classifier']
+        metrics['grad_norm_count'] += 1
+
         optimizer.step()
 
         # Track metrics
@@ -97,13 +108,17 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
         metrics['train_total'] += train_labels.size(0)
 
     # Return dict
+    num_batches = metrics['grad_norm_count']
     return_dict = {
         'train_loss': metrics['train_loss'] / metrics['train_total'],
         'train_acc': 100.0 * metrics['train_correct'] / metrics['train_total'],
         'classification_loss': metrics['classification_loss'] / len(train_loader),
         'mmd_loss': metrics['mmd_loss'] / len(train_loader) * lambda_mmd if lambda_mmd > 0 else 0,
         'dann_loss': metrics['dann_loss'] / len(train_loader) * lambda_dann if lambda_dann > 0 else 0,
-        'domain_acc': 100.0 * metrics['domain_correct'] / metrics['domain_total'] if metrics['domain_total'] > 0 else 0
+        'domain_acc': 100.0 * metrics['domain_correct'] / metrics['domain_total'] if metrics['domain_total'] > 0 else 0,
+        'grad_norm_feature_extractor': metrics['grad_norm_feature_extractor'] / num_batches if num_batches > 0 else 0,
+        'grad_norm_class_predictor': metrics['grad_norm_class_predictor'] / num_batches if num_batches > 0 else 0,
+        'grad_norm_domain_classifier': metrics['grad_norm_domain_classifier'] / num_batches if num_batches > 0 else 0,
     }
 
     return return_dict
@@ -329,6 +344,13 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
         if lambda_dann > 0:
             writer.add_scalar('Loss/dann', train_metrics['dann_loss'], epoch)
             writer.add_scalar('Accuracy/domain_classifier', train_metrics['domain_acc'], epoch)
+            writer.add_scalar('DANN/grl_lambda', model.grl.lambda_, epoch)
+
+        # Log gradient norms
+        writer.add_scalar('GradNorm/feature_extractor', train_metrics['grad_norm_feature_extractor'], epoch)
+        writer.add_scalar('GradNorm/class_predictor', train_metrics['grad_norm_class_predictor'], epoch)
+        if lambda_dann > 0:
+            writer.add_scalar('GradNorm/domain_classifier', train_metrics['grad_norm_domain_classifier'], epoch)
 
         print(f"Epoch {epoch+1}: Train Loss={train_metrics['train_loss']:.4f}, Accuracy={train_metrics['train_acc']:.2f}%")
         print(f"         Val Loss={val_loss:.4f}, Accuracy={val_acc:.2f}%")

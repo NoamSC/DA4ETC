@@ -7,7 +7,7 @@ class Config:
     # Experiment Details
     # EXPERIMENT_NAME: str = "allot_daily_degradation_v14_tensorboard/{}"
     # EXPERIMENT_NAME: str = "debug/{}"
-    EXPERIMENT_NAME: str = "cesnet_v4_dann/{}"
+    EXPERIMENT_NAME: str = "debug/{}"
     DESCRIPTION: str = "same as v3 with dann"
     # EXPERIMENT_PATH: Path = field(init=False)
     BASE_EXPERIMENTS_PATH: Path = Path("exps/")
@@ -29,7 +29,7 @@ class Config:
     # DATA_PATH: Path = Path("data/ben_bucket")
     # SAMPLE_FRAC: float = 1.0
     # TRAIN_SPLIT_RATIO: float = 0.7
-    BATCH_SIZE: int = 32
+    BATCH_SIZE: int = 256
     NUM_WORKERS: int = 8  # Number of workers for data loading
     # LABEL_MAPPING: dict = field(default_factory=lambda: {'Amazon': 0, 'Google Search': 1, 'Twitch': 2, 'Youtube': 3})
     # LOCATIONS: list = field(default_factory=lambda: [
@@ -45,23 +45,45 @@ class Config:
     MODEL_PARAMS: dict = field(default_factory=lambda: {
         'conv_type': '1d',
         # 'input_shape': 256, # This will be set in __post_init__
-        'conv_layers': [
-            {'out_channels': 16, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-            {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
-        ],
-        'pool_kernel_size': 2,
-        'pool_stride': 2,
-        'fc1_out_features': 64,
         'dropout_prob': 0.3,
         'use_batch_norm': True,
-        
+
+        # Feature Extractor (fully convolutional)
+        'feature_extractor': {
+            'conv_layers': [
+                {'out_channels': 16, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+                {'out_channels': 32, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+                {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+            ],
+            'pool_kernel_size': 2,
+            'pool_stride': 2,
+        },
+
+        # Label Predictor (convs + FCs)
+        'label_predictor': {
+            'conv_layers': [
+                {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+            ],
+            'pool_kernel_size': 2,
+            'pool_stride': 2,
+            'fc_layers': [64],  # FC layer sizes (not including final classification layer)
+        },
+
+        # Domain Classifier (convs + FCs)
+        'domain_classifier': {
+            'conv_layers': [
+                {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+                {'out_channels': 64, 'kernel_size': 3, 'stride': 1, 'padding': 1},
+            ],
+            'pool_kernel_size': 2,
+            'pool_stride': 2,
+            'fc_layers': [128, 64],  # FC layer sizes (not including final 2-class output)
+        },
+
         # Domain Adaptation Model Parameters
-        'lambda_rgl': 0.002168,
-        'dann_fc_out_features': 64,
+        'lambda_rgl': 0.1, #0.002168,
         'lambda_grl_gamma': 10,
-        
+
     })
 
     # Training Parameters
@@ -93,6 +115,7 @@ class Config:
 
     # Logging and Checkpoints
     SAVE_PLOTS: bool = True
+    ENABLE_PROFILER: bool = False
     # EXPERIMENT_PLOTS_PATH: Path = field(init=False)
     # EXPERIMENT_WEIGHTS_PATH: Path = field(init=False)
     # SAVE_MODEL_CHECKPOINT: Path = field(init=False)
