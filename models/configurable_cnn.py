@@ -7,7 +7,7 @@ class GradientReversalFunction(torch.autograd.Function):
     def forward(ctx, x, lambda_):
         """Forward pass: acts as identity."""
         ctx.lambda_ = lambda_
-        return x.clone()
+        return x.view_as(x)  # Identity operation that preserves computation graph
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -212,3 +212,30 @@ class ConfigurableCNN(nn.Module):
         return_dict['features'] = label_features
 
         return return_dict
+
+    def get_grad_norms(self):
+        """Compute gradient norms for each component of the model."""
+        def _compute_grad_norm(parameters):
+            total_norm = 0.0
+            for p in parameters:
+                if p.grad is not None:
+                    total_norm += p.grad.data.norm(2).item() ** 2
+            return total_norm ** 0.5
+
+        grad_norms = {
+            'feature_extractor': _compute_grad_norm(self.feature_extractor.parameters()),
+            'class_predictor': _compute_grad_norm(
+                list(self.label_predictor_convs.parameters()) +
+                list(self.label_predictor_fcs.parameters()) +
+                list(self.label_output.parameters())
+            ),
+        }
+
+        if self.params['lambda_rgl'] > 0:
+            grad_norms['domain_classifier'] = _compute_grad_norm(
+                list(self.domain_classifier_convs.parameters()) +
+                list(self.domain_classifier_fcs.parameters()) +
+                list(self.domain_output.parameters())
+            )
+
+        return grad_norms
