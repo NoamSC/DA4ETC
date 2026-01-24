@@ -1,0 +1,48 @@
+ID: int64
+SRC_IP: string
+DST_IP: string
+DST_ASN: int64
+DST_PORT: int64
+PROTOCOL: int64
+TLS_SNI: string
+TLS_JA3: string
+TIME_FIRST: string
+TIME_LAST: string
+DURATION: double
+BYTES: int64
+BYTES_REV: int64
+PACKETS: int64
+PACKETS_REV: int64
+PPI_LEN: int64
+PPI_DURATION: double
+PPI_ROUNDTRIPS: int64
+APP: string
+CATEGORY: string
+FLAG_CWR: int64
+FLAG_CWR_REV: int64
+FLAG_ECE: int64
+FLAG_ECE_REV: int64
+FLAG_URG: int64
+FLAG_URG_REV: int64
+FLAG_ACK: int64
+FLAG_ACK_REV: int64
+FLAG_PSH: int64
+FLAG_PSH_REV: int64
+FLAG_RST: int64
+FLAG_RST_REV: int64
+FLAG_SYN: int64
+FLAG_SYN_REV: int64
+FLAG_FIN: int64
+FLAG_FIN_REV: int64
+FLOW_ENDREASON_IDLE: bool
+FLOW_ENDREASON_ACTIVE: bool
+FLOW_ENDREASON_END: bool
+FLOW_ENDREASON_OTHER: bool
+PHIST_SRC_SIZES: string
+PHIST_DST_SIZES: string
+PHIST_SRC_IPT: string
+PHIST_DST_IPT: string
+PPI_IPT: list<item: int64>
+  child 0, item: int64
+PPI_SIZES: list<item: int64>
+  child 0, item: int64
