@@ -44,7 +44,7 @@ def get_week_directories(dataset_root):
     return week_dirs
 
 
-def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False, val_week_dir=None):
+def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False, val_week_dir=None, enable_profiler=False):
     """
     Train a model on a single week's data.
 
@@ -55,6 +55,7 @@ def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False
         num_classes: Number of classes
         override: If True, delete existing experiment and start fresh
         val_week_dir: Path to the week directory for validation (default: same as week_dir)
+        enable_profiler: If True, enable PyTorch profiler for the first 2 epochs
 
     Returns:
         dict: Training results/metrics
@@ -203,7 +204,8 @@ def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False
         resume_checkpoint_path=existing_checkpoint,
         resume_from_epoch=resume_from_epoch,
         train_per_epoch_data_frac=cfg.TRAIN_PER_EPOCH_DATA_FRAC,
-        seed=cfg.SEED
+        seed=cfg.SEED,
+        enable_profiler=cfg.ENABLE_PROFILER
     )
 
     print(f"\n✓ Completed training for {week_name}")
@@ -219,7 +221,7 @@ def main():
     parser.add_argument(
         '--dataset_root',
         type=str,
-        default='/home/anatbr/dataset/CESNET-TLS-Year22',
+        default='/home/anatbr/dataset/CESNET-TLS-Year22_v1',
         help='Path to CESNET-TLS-Year22 dataset root'
     )
     parser.add_argument(
@@ -239,6 +241,12 @@ def main():
         type=int,
         default=None,
         help='Train only on this specific week number (e.g., 18 for WEEK-2022-18)'
+    )
+    parser.add_argument(
+        '--val_week',
+        type=int,
+        default=None,
+        help='Validate on this specific week number (e.g., 40 for WEEK-2022-40). If not specified, uses same week as training'
     )
     parser.add_argument(
         '--override',
@@ -299,12 +307,17 @@ def main():
         default=None,
         help='Lambda DANN for domain adaptation (default: use value from config.py)'
     )
+    parser.add_argument(
+        '--enable_profiler',
+        action='store_true',
+        help='Enable PyTorch profiler for the first 2 epochs'
+    )
 
     args = parser.parse_args()
 
     # Create configuration
     cfg = Config()
-    cfg.RESOLUTION = 256  # Force 256x256 flowpics
+    # cfg.RESOLUTION = 256  # Force 256x256 flowpics
     cfg.TRAIN_DATA_FRAC = args.train_data_frac
     cfg.VAL_DATA_FRAC = args.val_data_frac if args.val_data_frac is not None else (args.train_data_frac * args.train_per_epoch_data_frac)
     cfg.TRAIN_PER_EPOCH_DATA_FRAC = args.train_per_epoch_data_frac
@@ -323,6 +336,9 @@ def main():
     if args.lambda_dann is not None:
         cfg.LAMBDA_DANN = args.lambda_dann
 
+    # Set profiler flag
+    cfg.ENABLE_PROFILER = args.enable_profiler
+
     # Set seed for reproducibility
     set_seed(cfg.SEED)
 
@@ -339,6 +355,14 @@ def main():
     # Get week directories
     week_dirs = get_week_directories(dataset_root)
     print(f"\nFound {len(week_dirs)} week directories")
+
+    # Get validation week directory if specified
+    val_week_dir = None
+    if args.val_week is not None:
+        val_week_dir = dataset_root / f'WEEK-2022-{args.val_week:02d}'
+        if not val_week_dir.exists():
+            raise ValueError(f"Validation week directory not found: {val_week_dir}")
+        print(f"Validation week: WEEK-2022-{args.val_week:02d}")
 
     # Filter weeks based on arguments
     if args.week is not None:
@@ -372,7 +396,9 @@ def main():
             week_dir=week_dir,
             label_indices_mapping=label_indices_mapping,
             num_classes=num_classes,
-            override=args.override
+            override=args.override,
+            val_week_dir=val_week_dir,
+            enable_profiler=args.enable_profiler
         )
 
         if result is not None:
