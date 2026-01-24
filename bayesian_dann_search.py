@@ -16,7 +16,7 @@ from config import Config
 from train_per_week_cesnet import train_week, load_label_mapping
 
 
-def objective(trial, train_week_num=33, val_week_num=None, exp_name="cesnet_dann_search_v1"):
+def objective(trial, train_week_num=33, val_week_num=None, exp_name="cesnet_dann_search_v1", baseline=False):
     """
     Optuna objective function - trains model with sampled hyperparameters.
 
@@ -25,6 +25,7 @@ def objective(trial, train_week_num=33, val_week_num=None, exp_name="cesnet_dann
         train_week_num: Week number to train on (default: 33)
         val_week_num: Week number to validate on (default: same as train_week_num)
         exp_name: Experiment name prefix (default: cesnet_dann_search_v1)
+        baseline: If True, use lambda_dann=0 and lambda_grl_gamma=0 (no DANN)
 
     Returns:
         Best validation accuracy achieved
@@ -34,8 +35,13 @@ def objective(trial, train_week_num=33, val_week_num=None, exp_name="cesnet_dann
         val_week_num = train_week_num
 
     # Sample hyperparameters using Bayesian optimization
-    lambda_rgl = trial.suggest_float('lambda_rgl', 0.001, 10.0, log=True)
-    lambda_dann = trial.suggest_float('lambda_dann', 0.001, 10.0, log=True)
+    if baseline:
+        lambda_rgl = 0.0
+        lambda_dann = 0.0
+        trial.set_user_attr('baseline', True)
+    else:
+        lambda_rgl = trial.suggest_float('lambda_rgl', 0.001, 10.0, log=True)
+        lambda_dann = trial.suggest_float('lambda_dann', 0.001, 10.0, log=True)
 
     print(f"\n{'='*70}")
     print(f"Trial {trial.number}")
@@ -50,13 +56,13 @@ def objective(trial, train_week_num=33, val_week_num=None, exp_name="cesnet_dann
     cfg.EXPERIMENT_NAME = f"{exp_name}/trial_{trial.number:03d}/{{}}"
     cfg.MODEL_PARAMS['lambda_rgl'] = lambda_rgl
     cfg.LAMBDA_DANN = lambda_dann
-    cfg.NUM_EPOCHS = 10
+    cfg.NUM_EPOCHS = 30
     cfg.TRAIN_DATA_FRAC = 1.0
     cfg.TRAIN_PER_EPOCH_DATA_FRAC = 0.1
     cfg.VAL_DATA_FRAC = 0.1  # Use 10% of validation data (same as cesnet_v3)
 
     # Set up paths
-    dataset_root = Path('/home/anatbr/dataset/CESNET-TLS-Year22')
+    dataset_root = Path('/home/anatbr/dataset/CESNET-TLS-Year22_v1')
     train_week_dir = dataset_root / f'WEEK-2022-{train_week_num:02d}'
     val_week_dir = dataset_root / f'WEEK-2022-{val_week_num:02d}'
 
@@ -135,6 +141,11 @@ def main():
         default=30,
         help='Number of random sampling trials before switching to Bayesian optimization (default: 30)'
     )
+    parser.add_argument(
+        '--baseline',
+        action='store_true',
+        help='Run a baseline trial with lambda_dann=0 and lambda_rgl=0 (no DANN)'
+    )
     args = parser.parse_args()
 
     # Create storage directory if needed
@@ -184,6 +195,16 @@ def main():
                 print(f"Failed to connect to database after {max_retries} attempts")
                 raise
 
+    # If baseline requested, check if it already ran; if so, run a regular trial instead
+    if args.baseline:
+        baseline_done = any(
+            t.user_attrs.get('baseline') and t.state == optuna.trial.TrialState.COMPLETE
+            for t in study.trials
+        )
+        if baseline_done:
+            print("Baseline already completed, running a regular trial instead.")
+            args.baseline = False
+
     # Determine which sampler to use
     n_completed = len([t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE])
     if n_completed >= args.n_random_trials:
@@ -199,7 +220,7 @@ def main():
     # 2. Use the appropriate sampler (random or Bayesian) to pick hyperparameters
     # 3. Avoid sampling hyperparameters that are currently being evaluated
     study.optimize(
-        lambda trial: objective(trial, train_week_num=args.train_week, val_week_num=args.val_week, exp_name=args.exp_name),
+        lambda trial: objective(trial, train_week_num=args.train_week, val_week_num=args.val_week, exp_name=args.exp_name, baseline=args.baseline),
         n_trials=1
     )
 
