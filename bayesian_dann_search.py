@@ -195,15 +195,28 @@ def main():
                 print(f"Failed to connect to database after {max_retries} attempts")
                 raise
 
-    # If baseline requested, check if it already ran; if so, run a regular trial instead
+    # If baseline requested, check status of existing baseline trials
     if args.baseline:
-        baseline_done = any(
-            t.user_attrs.get('baseline') and t.state == optuna.trial.TrialState.COMPLETE
-            for t in study.trials
-        )
-        if baseline_done:
-            print("Baseline already completed, running a regular trial instead.")
-            args.baseline = False
+        baseline_trials = [t for t in study.trials if t.user_attrs.get('baseline')]
+        if baseline_trials:
+            print(f"\nBaseline trial status:")
+            for t in baseline_trials:
+                print(f"  Trial {t.number}: {t.state.name}")
+
+            baseline_complete = any(t.state == optuna.trial.TrialState.COMPLETE for t in baseline_trials)
+            baseline_running = any(t.state == optuna.trial.TrialState.RUNNING for t in baseline_trials)
+            baseline_failed = any(t.state == optuna.trial.TrialState.FAIL for t in baseline_trials)
+
+            if baseline_complete:
+                print("Baseline already completed, running a regular trial instead.")
+                args.baseline = False
+            elif baseline_running:
+                print("Baseline is currently running, running a regular trial instead.")
+                args.baseline = False
+            elif baseline_failed:
+                print("Baseline previously failed, will retry baseline.")
+        else:
+            print("\nNo existing baseline trial found, will run baseline.")
 
     # Determine which sampler to use
     n_completed = len([t for t in study.trials if t.state == optuna.trial.TrialState.COMPLETE])
