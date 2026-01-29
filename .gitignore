@@ -12,3 +12,6 @@ __pycache__/
 exps/*/*/plots/confusion_*.png
 exps/*/*/*/plots/confusion_*.png
 exps/*/*/training_*.png
+*.tmp
+*tfevents*
+.vscode/
