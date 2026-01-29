@@ -32,7 +32,7 @@
         965,
         42
     ],
-    "LAMBDA_DANN": 1.0,
+    "LAMBDA_DANN": 0.0,
     "LAMBDA_MMD": 0,
     "LEARNING_RATE": 0.003,
     "MIN_FLOW_LENGTH": 100,
@@ -106,7 +106,7 @@
                 64
             ]
         },
-        "lambda_rgl": 10000.0,
+        "lambda_rgl": 0.0,
         "lambda_grl_gamma": 10,
         "input_shape": 256
     },
@@ -126,13 +126,15 @@
         "eps": 1e-08
     },
     "NUM_EPOCHS": 50,
-    "NUM_WORKERS": 8,
+    "NUM_WORKERS": 4,
     "RESOLUTION": 256,
+    "RUN_SANITY_CHECK": true,
     "SAVE_MODEL_CHECKPOINT": "exps/debug/weights/model_checkpoint_epoch_{epoch}.pth",
     "SAVE_PLOTS": true,
     "SEED": 42,
     "TRAIN_DATA_FRAC": 0.001,
     "TRAIN_PER_EPOCH_DATA_FRAC": 1.0,
+    "USE_MULTIMODAL": true,
     "VAL_DATA_FRAC": 0.001,
     "WEIGHT_DECAY": 0.0001
 }
