@@ -30,7 +30,7 @@ class Config:
     # SAMPLE_FRAC: float = 1.0
     # TRAIN_SPLIT_RATIO: float = 0.7
     BATCH_SIZE: int = 256
-    NUM_WORKERS: int = 8  # Number of workers for data loading
+    NUM_WORKERS: int = 4  # Number of workers for data loading
     # LABEL_MAPPING: dict = field(default_factory=lambda: {'Amazon': 0, 'Google Search': 1, 'Twitch': 2, 'Youtube': 3})
     # LOCATIONS: list = field(default_factory=lambda: [
     #     'AwsCont', 'BenContainer', # 'CabSpicy1',

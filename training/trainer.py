@@ -49,7 +49,11 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
     test_iter = cycle(test_loader) if test_loader is not None else None
 
     for train_inputs, train_labels in tqdm(train_loader, desc="Training", leave=False, ncols=100, mininterval=10.0):
-        train_inputs, train_labels = train_inputs.to(device), train_labels.to(device).long()
+        if type(train_inputs) is list:
+            train_inputs = [inp.to(device) for inp in train_inputs]
+        else:
+            train_inputs = train_inputs.to(device)
+        train_labels = train_labels.to(device).long()
         optimizer.zero_grad()
 
         # Source domain forward pass
@@ -59,7 +63,12 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
         target_outputs = None
         if test_iter is not None:
             test_inputs, _ = next(test_iter)
-            target_outputs = model(test_inputs.to(device))
+            if type(test_inputs) is list:
+                test_inputs = [inp.to(device) for inp in test_inputs]
+            else:
+                test_inputs = test_inputs.to(device)
+
+            target_outputs = model(test_inputs)
 
         # Loss computation
         classification_loss = criterion(source_outputs['class_preds'], train_labels)
@@ -98,7 +107,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
         optimizer.step()
 
         # Track metrics
-        metrics['train_loss'] += total_loss.item() * train_inputs.size(0)
+        metrics['train_loss'] += total_loss.item() * train_labels.size(0)
         metrics['classification_loss'] += classification_loss.item()
         metrics['mmd_loss'] += mmd_loss.item() if isinstance(mmd_loss, torch.Tensor) else 0
         metrics['dann_loss'] += dann_loss.item() if isinstance(dann_loss, torch.Tensor) else 0
@@ -144,12 +153,17 @@ def validate(model, val_loader, criterion, device, return_features=False):
 
     with torch.no_grad():
         for inputs, labels in tqdm(val_loader, desc="Validation", leave=False, ncols=100, mininterval=5.0):
-            inputs, labels = inputs.to(device), labels.to(device).long()
+            labels = labels.to(device).long()
+            if type(inputs) is list:
+                inputs = [inp.to(device) for inp in inputs]
+            else:
+                inputs = inputs.to(device)
+
             outputs = model(inputs)
             class_preds = outputs['class_preds']
             loss = criterion(class_preds, labels)
 
-            val_loss += loss.item() * inputs.size(0)
+            val_loss += loss.item() * labels.size(0)
             _, predicted = class_preds.max(1)
             val_correct += predicted.eq(labels).sum().item()
             val_total += labels.size(0)
@@ -291,7 +305,8 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
                 original_train_loader.dataset,
                 batch_size=original_train_loader.batch_size,
                 sampler=sampler,
-                num_workers=original_train_loader.num_workers
+                num_workers=original_train_loader.num_workers,
+                drop_last=True,  # Avoid BatchNorm issues with batch_size=1
             )
 
         model.set_epoch(epoch / num_epochs)

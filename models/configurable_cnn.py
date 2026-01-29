@@ -2,28 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-class GradientReversalFunction(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx, x, lambda_):
-        """Forward pass: acts as identity."""
-        ctx.lambda_ = lambda_
-        return x.view_as(x)  # Identity operation that preserves computation graph
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        """Backward pass: reverses gradient by multiplying with -lambda_."""
-        lambda_ = ctx.lambda_
-        grad_input = -lambda_ * grad_output
-        return grad_input, None  # None because lambda_ is not trainable
-
-
-class GradientReversalLayer(nn.Module):
-    def __init__(self, lambda_=1.0):
-        super().__init__()
-        self.lambda_ = lambda_
-
-    def forward(self, x):
-        return GradientReversalFunction.apply(x, self.lambda_)
+from models.dann_utils import GradientReversalLayer, compute_grl_lambda
 
 
 class ConfigurableCNN(nn.Module):
@@ -144,8 +123,7 @@ class ConfigurableCNN(nn.Module):
         self.epoch = epoch
         if self.params['lambda_rgl'] > 0:
             gamma = self.params['lambda_grl_gamma']
-            factor = (2 / (1 + torch.exp(torch.tensor(-gamma * epoch))) - 1)
-            self.grl.lambda_ = self.params['lambda_rgl'] * factor
+            self.grl.lambda_ = compute_grl_lambda(epoch, self.params['lambda_rgl'], gamma)
             print(f"Epoch {epoch}: GRL Lambda = {self.grl.lambda_}")
 
     def _get_flattened_size(self, input_shape, *conv_modules):
