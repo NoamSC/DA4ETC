@@ -1,23 +1,23 @@
 #!/bin/bash
 #SBATCH --job-name=dann_search_13_to_33
 #SBATCH --output=logs/dann_search_13_to_33/slurm-%A_%a.out.tmp
-#SBATCH --error=logs/dann_search_13_to_33/slurm-%A_%a.err.tmp
+#SBATCH --error=logs/dann_search_33_to_40/slurm-%A_%a.err.tmp
 #SBATCH --time=16:30:00
 #SBATCH --partition=killable
 #SBATCH --signal=USR1@120
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:1
-#SBATCH --mem=16G
 #SBATCH --cpus-per-task=4
-#SBATCH --array=0-99%10
+#SBATCH --array=0-49%10
+#SBATCH --mem-per-cpu=4G
 
 # Change to project directory
 cd /home/anatbr/students/noamshakedc/da4etc
 PYTHON=/home/anatbr/students/noamshakedc/env/anaconda3/envs/ml2/bin/python
 
 # Extract experiment name for log files
-EXP_NAME_FULL="cesnet_v10_dann_search_13_to_33"
+EXP_NAME_FULL="cesnet_v11_dann_search_13_to_33"
 # Convert slashes to underscores and remove brackets for filename
 EXPNAME=$(echo "$EXP_NAME_FULL" | sed 's/\//_/g' | sed 's/[{}]//g')
 
