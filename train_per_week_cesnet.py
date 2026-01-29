@@ -14,10 +14,13 @@ from datetime import datetime
 import torch.nn as nn
 import torch.optim as optim
 import pandas as pd
+from torch.utils.data import Dataset, DataLoader
 
 from data_utils.csv_dataloader import create_csv_flowpic_loader
+from data_utils.cesnet_dataloader import create_parquet_loader
 from models.configurable_cnn import ConfigurableCNN
-from training.trainer import train_model
+from models.multimodal_cesnet import Multimodal_CESNET
+from training.trainer import train_model, train_one_epoch
 from training.utils import set_seed, save_config_to_json
 from config import Config
 
@@ -44,7 +47,30 @@ def get_week_directories(dataset_root):
     return week_dirs
 
 
-def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False, val_week_dir=None, enable_profiler=False):
+class MockDataset(Dataset):
+    """Mock dataset for sanity checking the training pipeline."""
+
+    def __init__(self, num_samples, num_classes, use_multimodal, resolution=256):
+        self.num_samples = num_samples
+        self.num_classes = num_classes
+        self.use_multimodal = use_multimodal
+        self.resolution = resolution
+
+    def __len__(self):
+        return self.num_samples
+
+    def __getitem__(self, idx):
+        label = torch.tensor(idx % self.num_classes, dtype=torch.long)
+        if self.use_multimodal:
+            ppi = torch.randn(3, 30)
+            flowstats = torch.randn(44)
+            return (ppi, flowstats), label
+        else:
+            flowpic = torch.randn(1, self.resolution, self.resolution)
+            return flowpic, label
+
+
+def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False, val_week_dir=None, enable_profiler=False, use_multimodal=False, run_sanity_check=True):
     """
     Train a model on a single week's data.
 
@@ -56,6 +82,8 @@ def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False
         override: If True, delete existing experiment and start fresh
         val_week_dir: Path to the week directory for validation (default: same as week_dir)
         enable_profiler: If True, enable PyTorch profiler for the first 2 epochs
+        use_multimodal: If True, use Multimodal_CESNET model with PPI and flowstats
+        run_sanity_check: If True, run a synthetic batch through the model before loading data
 
     Returns:
         dict: Training results/metrics
@@ -135,37 +163,115 @@ def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False
     # Save configuration
     save_config_to_json(config_module=cfg, output_file_path=experiment_path / "config.json")
 
+    # Create model first (before loading data) for sanity check
+    if use_multimodal:
+        model = Multimodal_CESNET(
+            num_classes=num_classes,
+            flowstats_input_size=44,
+            ppi_input_channels=3,
+        ).to(cfg.DEVICE)
+    else:
+        cfg.MODEL_PARAMS['num_classes'] = num_classes
+        model = ConfigurableCNN(cfg.MODEL_PARAMS).to(cfg.DEVICE)
+
+    # Sanity check: create mock dataloader and run train_one_epoch
+    if run_sanity_check:
+        print("Running sanity check with mock dataloader...")
+        mock_dataset = MockDataset(
+            num_samples=32,
+            num_classes=num_classes,
+            use_multimodal=use_multimodal,
+            resolution=cfg.RESOLUTION
+        )
+        mock_train_loader = DataLoader(mock_dataset, batch_size=8, shuffle=True)
+        mock_test_loader = DataLoader(mock_dataset, batch_size=8, shuffle=False)
+
+        mock_optimizer = optim.Adam(model.parameters(), lr=1e-4)
+        mock_criterion = nn.CrossEntropyLoss()
+
+        model.set_epoch(0)
+        metrics = train_one_epoch(
+            model=model,
+            train_loader=mock_train_loader,
+            criterion=mock_criterion,
+            optimizer=mock_optimizer,
+            device=cfg.DEVICE,
+            lambda_mmd=cfg.LAMBDA_MMD,
+            test_loader=mock_test_loader,
+            mmd_bandwidths=cfg.MMD_BANDWIDTHS,
+            lambda_dann=cfg.LAMBDA_DANN
+        )
+
+        print(f"Sanity check passed: train_loss={metrics['train_loss']:.4f}, train_acc={metrics['train_acc']:.2f}%")
+
+        # Reinitialize model after sanity check
+        if use_multimodal:
+            model = Multimodal_CESNET(
+                num_classes=num_classes,
+                flowstats_input_size=44,
+                ppi_input_channels=3,
+            ).to(cfg.DEVICE)
+        else:
+            model = ConfigurableCNN(cfg.MODEL_PARAMS).to(cfg.DEVICE)
+
     # Create data loaders
     print(f"Loading data from {week_name}...")
-    train_loader = create_csv_flowpic_loader(
-        [train_path],
-        batch_size=cfg.BATCH_SIZE,
-        num_workers=cfg.NUM_WORKERS,
-        shuffle=True,
-        resolution=cfg.RESOLUTION,
-        data_sample_frac=cfg.TRAIN_DATA_FRAC,
-        seed=cfg.SEED,
-        label_mapping=label_indices_mapping,
-        log_t_axis=False,
-        max_dt_ms=4000,
-        dataset_format='cesnet_parquet',
-        verbose=True
-    )
+    if use_multimodal:
+        # Use CESNET parquet loader for multimodal model (PPI + flowstats)
+        normalization_stats_path = Path(__file__).parent / 'normalization_stats.npz'
+        train_loader = create_parquet_loader(
+            parquet_files=[train_path],
+            label_mapping=label_indices_mapping,
+            batch_size=cfg.BATCH_SIZE,
+            shuffle=True,
+            num_workers=cfg.NUM_WORKERS,
+            data_sample_frac=cfg.TRAIN_DATA_FRAC,
+            seed=cfg.SEED,
+            normalization_stats=normalization_stats_path,
+        )
 
-    test_loader = create_csv_flowpic_loader(
-        [test_path],
-        batch_size=cfg.BATCH_SIZE,
-        num_workers=cfg.NUM_WORKERS,
-        shuffle=False,
-        resolution=cfg.RESOLUTION,
-        data_sample_frac=cfg.VAL_DATA_FRAC,
-        seed=cfg.SEED,
-        label_mapping=label_indices_mapping,
-        log_t_axis=False,
-        max_dt_ms=4000,
-        dataset_format='cesnet_parquet',
-        verbose=True
-    )
+        test_loader = create_parquet_loader(
+            parquet_files=[test_path],
+            label_mapping=label_indices_mapping,
+            batch_size=cfg.BATCH_SIZE,
+            shuffle=False,
+            num_workers=cfg.NUM_WORKERS,
+            data_sample_frac=cfg.VAL_DATA_FRAC,
+            seed=cfg.SEED,
+            normalization_stats=normalization_stats_path,
+            drop_last=False,  # Evaluate all test samples
+        )
+    else:
+        # Use flowpic loader for CNN model
+        train_loader = create_csv_flowpic_loader(
+            [train_path],
+            batch_size=cfg.BATCH_SIZE,
+            num_workers=cfg.NUM_WORKERS,
+            shuffle=True,
+            resolution=cfg.RESOLUTION,
+            data_sample_frac=cfg.TRAIN_DATA_FRAC,
+            seed=cfg.SEED,
+            label_mapping=label_indices_mapping,
+            log_t_axis=False,
+            max_dt_ms=4000,
+            dataset_format='cesnet_parquet',
+            verbose=True
+        )
+
+        test_loader = create_csv_flowpic_loader(
+            [test_path],
+            batch_size=cfg.BATCH_SIZE,
+            num_workers=cfg.NUM_WORKERS,
+            shuffle=False,
+            resolution=cfg.RESOLUTION,
+            data_sample_frac=cfg.VAL_DATA_FRAC,
+            seed=cfg.SEED,
+            label_mapping=label_indices_mapping,
+            log_t_axis=False,
+            max_dt_ms=4000,
+            dataset_format='cesnet_parquet',
+            verbose=True
+        )
 
     print(f"\nDataset sizes:")
     print(f"  Train ({week_name}): {len(train_loader.dataset):,} samples ({len(train_loader)} batches)")
@@ -173,10 +279,6 @@ def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False
         print(f"  Test: {len(test_loader.dataset):,} samples ({len(test_loader)} batches)")
     else:
         print(f"  Test ({val_week_name}): {len(test_loader.dataset):,} samples ({len(test_loader)} batches)")
-
-    # Create model
-    cfg.MODEL_PARAMS['num_classes'] = num_classes
-    model = ConfigurableCNN(cfg.MODEL_PARAMS).to(cfg.DEVICE)
 
     # Create optimizer and loss
     optimizer = optim.Adam(model.parameters(), lr=cfg.LEARNING_RATE, weight_decay=cfg.WEIGHT_DECAY)
@@ -312,6 +414,16 @@ def main():
         action='store_true',
         help='Enable PyTorch profiler for the first 2 epochs'
     )
+    parser.add_argument(
+        '--multimodal',
+        action='store_true',
+        help='Use Multimodal_CESNET model with PPI and flowstats instead of flowpic CNN'
+    )
+    parser.add_argument(
+        '--skip_sanity_check',
+        action='store_true',
+        help='Skip the sanity check that runs a synthetic batch through the model before training'
+    )
 
     args = parser.parse_args()
 
@@ -338,6 +450,12 @@ def main():
 
     # Set profiler flag
     cfg.ENABLE_PROFILER = args.enable_profiler
+
+    # Set multimodal flag
+    cfg.USE_MULTIMODAL = args.multimodal
+
+    # Set sanity check flag
+    cfg.RUN_SANITY_CHECK = not args.skip_sanity_check
 
     # Set seed for reproducibility
     set_seed(cfg.SEED)
@@ -398,7 +516,9 @@ def main():
             num_classes=num_classes,
             override=args.override,
             val_week_dir=val_week_dir,
-            enable_profiler=args.enable_profiler
+            enable_profiler=args.enable_profiler,
+            use_multimodal=cfg.USE_MULTIMODAL,
+            run_sanity_check=cfg.RUN_SANITY_CHECK
         )
 
         if result is not None:
