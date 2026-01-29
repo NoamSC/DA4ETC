@@ -137,7 +137,7 @@ def process_week(week_dir: Path, test_ratio: float = 0.3, seed: int = 42):
 
 def main():
     # Configuration
-    dataset_root = Path("../../../dataset/CESNET-TLS-Year22")
+    dataset_root = Path("../../../dataset/CESNET-TLS-Year22_v2")
     test_ratio = 0.3
     seed = 42
     n_workers = 1
