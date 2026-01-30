@@ -218,7 +218,7 @@ def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False
     print(f"Loading data from {week_name}...")
     if use_multimodal:
         # Use CESNET parquet loader for multimodal model (PPI + flowstats)
-        normalization_stats_path = Path(__file__).parent / 'normalization_stats.npz'
+        normalization_stats_path = week_dir.parent / 'normalization_stats.npz'
         train_loader = create_parquet_loader(
             parquet_files=[train_path],
             label_mapping=label_indices_mapping,
