@@ -183,7 +183,7 @@ class Multimodal_CESNET(nn.Module):
                 nn.ReLU(inplace=False),
                 linear_norm(domain_classifier_hidden),
                 nn.Dropout(domain_classifier_dropout),
-                nn.Linear(domain_classifier_hidden, 1),
+                nn.Linear(domain_classifier_hidden, 2),
             )
         else:
             self.grl = None
