@@ -42,6 +42,8 @@ from collections import defaultdict
 from models.configurable_cnn import ConfigurableCNN
 from data_utils.csv_dataloader import create_csv_flowpic_loader
 from training.trainer import validate
+from models.multimodal_cesnet import Multimodal_CESNET
+from data_utils.cesnet_dataloader import create_parquet_loader
 
 
 def load_model_from_checkpoint(checkpoint_path, config_path, num_classes, device='cuda:0'):
@@ -66,7 +68,15 @@ def load_model_from_checkpoint(checkpoint_path, config_path, num_classes, device
     model_params['num_classes'] = num_classes
 
     # Create model
-    model = ConfigurableCNN(model_params).to(device)
+    model = Multimodal_CESNET(
+        num_classes=num_classes,
+        flowstats_input_size=44,
+        ppi_input_channels=3,
+        lambda_rgl=config['MODEL_PARAMS'].get('lambda_rgl', 0.0),
+        lambda_grl_gamma=config['MODEL_PARAMS'].get('lambda_grl_gamma', 10.0),
+            ).to(config['DEVICE'])
+
+    # model = ConfigurableCNN(model_params).to(device)
 
     # Load weights
     if checkpoint_path.suffix == '.pth' and 'best_model' in checkpoint_path.name:
@@ -104,20 +114,31 @@ def create_week_loader(week_dir, label_indices_mapping, batch_size=64, num_worke
     if not test_path.exists():
         return None
 
-    loader = create_csv_flowpic_loader(
-        [test_path],
+    normalization_stats_path = week_dir.parent / 'normalization_stats.npz'
+    loader = create_parquet_loader(
+        parquet_files=[test_path],
+        label_mapping=label_indices_mapping,
         batch_size=batch_size,
+        shuffle=True,
         num_workers=num_workers,
-        shuffle=False,
-        resolution=resolution,
         data_sample_frac=data_sample_frac,
         seed=seed,
-        label_mapping=label_indices_mapping,
-        log_t_axis=False,
-        max_dt_ms=4000,
-        dataset_format='cesnet_parquet',
-        verbose=False
+        normalization_stats=normalization_stats_path,
     )
+    # loader = create_csv_flowpic_loader(
+    #     [test_path],
+    #     batch_size=batch_size,
+    #     num_workers=num_workers,
+    #     shuffle=False,
+    #     resolution=resolution,
+    #     data_sample_frac=data_sample_frac,
+    #     seed=seed,
+    #     label_mapping=label_indices_mapping,
+    #     log_t_axis=False,
+    #     max_dt_ms=4000,
+    #     dataset_format='cesnet_parquet',
+    #     verbose=False
+    # )
 
     return loader
 
@@ -170,7 +191,8 @@ def get_available_weeks(dataset_root):
 def evaluate_temporal_generalization(experiment_dir, dataset_root, label_indices_mapping,
                                      num_classes, batch_size=64, num_workers=4, resolution=256,
                                      data_sample_frac=0.1, seed=42, device='cuda:0',
-                                     checkpoint_name='best_model.pth'):
+                                     checkpoint_name='best_model.pth',
+                                     test_week_indices=None):
     """
     Evaluate how models trained on each week generalize to future weeks.
 
@@ -202,9 +224,14 @@ def evaluate_temporal_generalization(experiment_dir, dataset_root, label_indices
 
     print(f"\nFound {len(test_week_names)} weeks with data: {test_week_names[0]} to {test_week_names[-1]}")
 
+    # Filter test weeks if indices provided
+    if test_week_indices is not None:
+        test_week_dirs = [test_week_dirs[i] for i in test_week_indices if i < len(test_week_dirs)]
+        print(f"Filtering to {len(test_week_dirs)} test weeks (indices {test_week_indices[0]}-{test_week_indices[-1]})")
+
     # Find all trained models
     train_week_dirs = sorted([d for d in experiment_dir.iterdir()
-                             if d.is_dir() and d.name.startswith('WEEK-2022-')])
+                             if d.is_dir()])
 
     print(f"Found {len(train_week_dirs)} trained models")
 
@@ -221,11 +248,19 @@ def evaluate_temporal_generalization(experiment_dir, dataset_root, label_indices
             print(f"  Skipping {train_week_name} - missing checkpoint or config")
             continue
 
-        model = load_model_from_checkpoint(checkpoint_path, config_path, num_classes, device)
-        models[train_week_name] = model
+        try:
+            model = load_model_from_checkpoint(checkpoint_path, config_path, num_classes, device)
+            models[train_week_name] = model
+        except Exception as e:
+            print(f"  Skipping {train_week_name} - failed to load: {e}")
 
     print(f"Loaded {len(models)} models\n")
 
+    # Create per-week results directory
+    per_week_results_dir = experiment_dir / 'temporal_generalization_per_week'
+    per_week_results_dir.mkdir(parents=True, exist_ok=True)
+
+    model_names_set = set(models.keys())
     results = {}
 
     # Step 2: Iterate through test weeks, evaluate all models on each week
@@ -234,6 +269,23 @@ def evaluate_temporal_generalization(experiment_dir, dataset_root, label_indices
     print("Evaluating models on all test weeks...")
     for test_week_dir in tqdm(test_week_dirs, desc="Test weeks", position=0):
         test_week_name = test_week_dir.name
+        week_results_path = per_week_results_dir / f'{test_week_name}.json'
+
+        # Check if results already exist for this week with same models
+        if week_results_path.exists():
+            try:
+                with open(week_results_path, 'r') as f:
+                    cached = json.load(f)
+                cached_models = set(cached.get('model_names', []))
+                if cached_models == model_names_set:
+                    print(f"  Skipping {test_week_name} - results already exist")
+                    # Load cached results into main results dict
+                    for key, metrics in cached.get('results', {}).items():
+                        train_week, test_week = key.rsplit('_', 1)
+                        results[(train_week, test_week)] = metrics
+                    continue
+            except Exception:
+                pass  # If loading fails, re-evaluate
 
         # Load this week's data once
         loader = create_week_loader(
@@ -244,6 +296,7 @@ def evaluate_temporal_generalization(experiment_dir, dataset_root, label_indices
         if loader is None:
             continue
 
+        week_results = {}
         # Evaluate all models on this week's data
         for train_week_name, model in tqdm(models.items(), desc=f"  Models on {test_week_name}", position=1, leave=False):
             # Evaluate
@@ -251,6 +304,16 @@ def evaluate_temporal_generalization(experiment_dir, dataset_root, label_indices
 
             if metrics is not None:
                 results[(train_week_name, test_week_name)] = metrics
+                week_results[f"{train_week_name}_{test_week_name}"] = metrics
+
+        # Save per-week results
+        week_data = {
+            'model_names': list(model_names_set),
+            'test_week': test_week_name,
+            'results': week_results
+        }
+        with open(week_results_path, 'w') as f:
+            json.dump(week_data, f, indent=2)
 
         # Delete loader to free memory
         del loader
@@ -259,8 +322,10 @@ def evaluate_temporal_generalization(experiment_dir, dataset_root, label_indices
 
 
 def extract_week_number(week_name):
-    """Extract week number from week name (e.g., 'WEEK-2022-33' -> 33)"""
-    return int(week_name.split('-')[-1])
+    """Extract week number from week name (e.g., 'WEEK-2022-33' -> 33, 'week_33' -> 33)"""
+    import re
+    match = re.search(r'(\d+)$', week_name)
+    return int(match.group(1))
 
 
 def results_to_dataframe(results):

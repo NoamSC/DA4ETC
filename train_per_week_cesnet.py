@@ -169,6 +169,8 @@ def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False
             num_classes=num_classes,
             flowstats_input_size=44,
             ppi_input_channels=3,
+            lambda_rgl=cfg.MODEL_PARAMS.get('lambda_rgl', 0.0),
+            lambda_grl_gamma=cfg.MODEL_PARAMS.get('lambda_grl_gamma', 10.0),
         ).to(cfg.DEVICE)
     else:
         cfg.MODEL_PARAMS['num_classes'] = num_classes
@@ -210,6 +212,8 @@ def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False
                 num_classes=num_classes,
                 flowstats_input_size=44,
                 ppi_input_channels=3,
+                lambda_rgl=cfg.MODEL_PARAMS.get('lambda_rgl', 0.0),
+                lambda_grl_gamma=cfg.MODEL_PARAMS.get('lambda_grl_gamma', 10.0),
             ).to(cfg.DEVICE)
         else:
             model = ConfigurableCNN(cfg.MODEL_PARAMS).to(cfg.DEVICE)

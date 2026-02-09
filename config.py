@@ -17,10 +17,10 @@ class Config:
     DEVICE: torch.device = field(default_factory=lambda: torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))
 
 
-    LABEL_WHITELIST: list = field(default_factory=lambda: [
-        386, 497, 998, 171, 485, 2613, 340, 373, 561, 967, 436, 1088,
-        961, 682, 521, 964, 1450, 1448, 965, 42
-    ])
+    # LABEL_WHITELIST: list = field(default_factory=lambda: [
+    #     386, 497, 998, 171, 485, 2613, 340, 373, 561, 967, 436, 1088,
+    #     961, 682, 521, 964, 1450, 1448, 965, 42
+    # ])
     TRAIN_DATA_FRAC: float = 1.0             # Load 100% from train.parquet
     VAL_DATA_FRAC: float = 0.001              # Load 1% from test.parquet
     TRAIN_PER_EPOCH_DATA_FRAC: float = 0.001 # Use 0.1% of loaded training data per epoch
@@ -100,18 +100,18 @@ class Config:
     ADAPT_BATCH_NORM = False
 
     # MUST Domain Adaptation Parameters
-    MUST_PARAMS: dict = field(default_factory=lambda: {
-        'iterations': 10000,            # Number of training iterations
-        'alpha': 0.5,                  # Ping-pong loss weight (coupling teacher-student)
-        'pseudo_threshold': 0.75,      # Confidence threshold for pseudo-labels
-        'warm_start_epochs': 5,        # Pre-training epochs on source
-        'eval_every': 500,              # Evaluation frequency (iterations)
-        'target_batches_per_iter': 2,  # How many target batches to process per source batch
-        'optimizer': 'adamw',          # Optimizer: 'sgd' or 'adamw'
-        'momentum': 0.9,               # SGD momentum (only used if optimizer='sgd')
-        'betas': (0.9, 0.999),         # AdamW betas (only used if optimizer='adamw')
-        'eps': 1e-8,                   # AdamW epsilon (only used if optimizer='adamw')
-    })
+    # MUST_PARAMS: dict = field(default_factory=lambda: {
+    #     'iterations': 10000,            # Number of training iterations
+    #     'alpha': 0.5,                  # Ping-pong loss weight (coupling teacher-student)
+    #     'pseudo_threshold': 0.75,      # Confidence threshold for pseudo-labels
+    #     'warm_start_epochs': 5,        # Pre-training epochs on source
+    #     'eval_every': 500,              # Evaluation frequency (iterations)
+    #     'target_batches_per_iter': 2,  # How many target batches to process per source batch
+    #     'optimizer': 'adamw',          # Optimizer: 'sgd' or 'adamw'
+    #     'momentum': 0.9,               # SGD momentum (only used if optimizer='sgd')
+    #     'betas': (0.9, 0.999),         # AdamW betas (only used if optimizer='adamw')
+    #     'eps': 1e-8,                   # AdamW epsilon (only used if optimizer='adamw')
+    # })
 
     # Logging and Checkpoints
     SAVE_PLOTS: bool = True

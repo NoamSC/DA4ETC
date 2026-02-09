@@ -1,0 +1,307 @@
+{
+  "model_names": [
+    "week_36",
+    "week_33",
+    "week_31",
+    "week_13",
+    "week_2",
+    "week_35",
+    "week_52",
+    "week_12",
+    "week_18",
+    "week_38",
+    "week_44",
+    "week_50",
+    "week_51",
+    "week_28",
+    "week_47",
+    "week_22",
+    "week_4",
+    "week_14",
+    "week_15",
+    "week_48",
+    "week_39",
+    "week_43",
+    "week_5",
+    "week_11",
+    "week_49",
+    "week_16",
+    "week_46",
+    "week_21",
+    "week_34",
+    "week_17",
+    "week_3",
+    "week_0",
+    "week_26",
+    "week_41",
+    "week_1",
+    "week_37",
+    "week_40",
+    "week_27",
+    "week_24",
+    "week_19",
+    "week_23",
+    "week_10",
+    "week_8",
+    "week_20",
+    "week_45",
+    "week_30",
+    "week_25",
+    "week_32",
+    "week_29",
+    "week_42"
+  ],
+  "test_week": "WEEK-2022-31",
+  "results": {
+    "week_0_WEEK-2022-31": {
+      "accuracy": 49.83854325894222,
+      "loss": 2.634787787614121,
+      "total_samples": 209344
+    },
+    "week_1_WEEK-2022-31": {
+      "accuracy": 57.77715148272699,
+      "loss": 1.8529134282858792,
+      "total_samples": 209344
+    },
+    "week_10_WEEK-2022-31": {
+      "accuracy": 74.64651482726995,
+      "loss": 1.0776752796114055,
+      "total_samples": 209344
+    },
+    "week_11_WEEK-2022-31": {
+      "accuracy": 77.40656527055947,
+      "loss": 1.0257030084697305,
+      "total_samples": 209344
+    },
+    "week_12_WEEK-2022-31": {
+      "accuracy": 79.67125878936105,
+      "loss": 1.0189948763888532,
+      "total_samples": 209344
+    },
+    "week_13_WEEK-2022-31": {
+      "accuracy": 78.80378706817487,
+      "loss": 0.9453006822266224,
+      "total_samples": 209344
+    },
+    "week_14_WEEK-2022-31": {
+      "accuracy": 78.42020788749618,
+      "loss": 0.8834902523435681,
+      "total_samples": 209344
+    },
+    "week_15_WEEK-2022-31": {
+      "accuracy": 79.96407826352797,
+      "loss": 0.8476773824204512,
+      "total_samples": 209344
+    },
+    "week_16_WEEK-2022-31": {
+      "accuracy": 80.29654539896056,
+      "loss": 0.8450738838946408,
+      "total_samples": 209344
+    },
+    "week_17_WEEK-2022-31": {
+      "accuracy": 78.87591715071844,
+      "loss": 0.8768658407034767,
+      "total_samples": 209344
+    },
+    "week_18_WEEK-2022-31": {
+      "accuracy": 80.42886349740141,
+      "loss": 1.13903375307069,
+      "total_samples": 209344
+    },
+    "week_19_WEEK-2022-31": {
+      "accuracy": 82.63671277896668,
+      "loss": 0.7794939678940195,
+      "total_samples": 209344
+    },
+    "week_2_WEEK-2022-31": {
+      "accuracy": 56.970823142769795,
+      "loss": 1.9731871650256136,
+      "total_samples": 209344
+    },
+    "week_20_WEEK-2022-31": {
+      "accuracy": 81.73819168450015,
+      "loss": 0.7861830884074261,
+      "total_samples": 209344
+    },
+    "week_21_WEEK-2022-31": {
+      "accuracy": 82.32144221950473,
+      "loss": 0.8053648841924093,
+      "total_samples": 209344
+    },
+    "week_22_WEEK-2022-31": {
+      "accuracy": 81.69472256190767,
+      "loss": 0.7758780063036858,
+      "total_samples": 209344
+    },
+    "week_23_WEEK-2022-31": {
+      "accuracy": 83.20849892999082,
+      "loss": 0.7620873501936036,
+      "total_samples": 209344
+    },
+    "week_24_WEEK-2022-31": {
+      "accuracy": 82.69833384286152,
+      "loss": 0.8300300158562554,
+      "total_samples": 209344
+    },
+    "week_25_WEEK-2022-31": {
+      "accuracy": 84.7131993274228,
+      "loss": 0.9246456683666033,
+      "total_samples": 209344
+    },
+    "week_26_WEEK-2022-31": {
+      "accuracy": 85.56013069397737,
+      "loss": 0.6063931215838058,
+      "total_samples": 209344
+    },
+    "week_27_WEEK-2022-31": {
+      "accuracy": 86.11567563436257,
+      "loss": 0.6082691182531883,
+      "total_samples": 209344
+    },
+    "week_28_WEEK-2022-31": {
+      "accuracy": 86.90910654234179,
+      "loss": 0.8874691625648738,
+      "total_samples": 209344
+    },
+    "week_29_WEEK-2022-31": {
+      "accuracy": 88.52845077957811,
+      "loss": 0.4449143854804959,
+      "total_samples": 209344
+    },
+    "week_3_WEEK-2022-31": {
+      "accuracy": 52.331569092020786,
+      "loss": 2.311070311802019,
+      "total_samples": 209344
+    },
+    "week_30_WEEK-2022-31": {
+      "accuracy": 89.15660348517272,
+      "loss": 0.43280026506153096,
+      "total_samples": 209344
+    },
+    "week_31_WEEK-2022-31": {
+      "accuracy": 90.18409889941914,
+      "loss": 0.362072181144518,
+      "total_samples": 209344
+    },
+    "week_32_WEEK-2022-31": {
+      "accuracy": 89.49384744726383,
+      "loss": 0.4041431737999346,
+      "total_samples": 209344
+    },
+    "week_33_WEEK-2022-31": {
+      "accuracy": 88.58863879547539,
+      "loss": 0.42232595140627494,
+      "total_samples": 209344
+    },
+    "week_34_WEEK-2022-31": {
+      "accuracy": 86.50403164169978,
+      "loss": 0.5231952877542689,
+      "total_samples": 209344
+    },
+    "week_35_WEEK-2022-31": {
+      "accuracy": 86.0406794558239,
+      "loss": 0.6523762084441206,
+      "total_samples": 209344
+    },
+    "week_36_WEEK-2022-31": {
+      "accuracy": 85.8362312748395,
+      "loss": 0.6571535808240664,
+      "total_samples": 209344
+    },
+    "week_37_WEEK-2022-31": {
+      "accuracy": 85.27543182512993,
+      "loss": 0.6201505916621918,
+      "total_samples": 209344
+    },
+    "week_38_WEEK-2022-31": {
+      "accuracy": 81.32595154387037,
+      "loss": 0.8720516400353072,
+      "total_samples": 209344
+    },
+    "week_39_WEEK-2022-31": {
+      "accuracy": 80.80002292876796,
+      "loss": 0.7379393338592218,
+      "total_samples": 209344
+    },
+    "week_4_WEEK-2022-31": {
+      "accuracy": 50.5713084683583,
+      "loss": 2.3830548396208204,
+      "total_samples": 209344
+    },
+    "week_40_WEEK-2022-31": {
+      "accuracy": 82.60423035768878,
+      "loss": 0.8214282806870479,
+      "total_samples": 209344
+    },
+    "week_41_WEEK-2022-31": {
+      "accuracy": 81.34075970651178,
+      "loss": 0.7991768892516203,
+      "total_samples": 209344
+    },
+    "week_42_WEEK-2022-31": {
+      "accuracy": 81.2705403546316,
+      "loss": 0.7836507120534427,
+      "total_samples": 209344
+    },
+    "week_43_WEEK-2022-31": {
+      "accuracy": 78.84343472944053,
+      "loss": 0.9085912668479031,
+      "total_samples": 209344
+    },
+    "week_44_WEEK-2022-31": {
+      "accuracy": 80.26167456435341,
+      "loss": 1.007696241295254,
+      "total_samples": 209344
+    },
+    "week_45_WEEK-2022-31": {
+      "accuracy": 80.57694512381535,
+      "loss": 0.8519025662374656,
+      "total_samples": 209344
+    },
+    "week_46_WEEK-2022-31": {
+      "accuracy": 78.11735707734638,
+      "loss": 0.9105138383357031,
+      "total_samples": 209344
+    },
+    "week_47_WEEK-2022-31": {
+      "accuracy": 77.91195353103026,
+      "loss": 0.9242006201548738,
+      "total_samples": 209344
+    },
+    "week_48_WEEK-2022-31": {
+      "accuracy": 78.89502445735249,
+      "loss": 0.9256271344191873,
+      "total_samples": 209344
+    },
+    "week_49_WEEK-2022-31": {
+      "accuracy": 79.60103943748089,
+      "loss": 0.877936921469373,
+      "total_samples": 209344
+    },
+    "week_5_WEEK-2022-31": {
+      "accuracy": 50.19346147966983,
+      "loss": 2.4940405570196105,
+      "total_samples": 209344
+    },
+    "week_50_WEEK-2022-31": {
+      "accuracy": 77.11947798838276,
+      "loss": 1.0403527034072473,
+      "total_samples": 209344
+    },
+    "week_51_WEEK-2022-31": {
+      "accuracy": 77.86561831244268,
+      "loss": 1.5981318619647764,
+      "total_samples": 209344
+    },
+    "week_52_WEEK-2022-31": {
+      "accuracy": 74.54046927545093,
+      "loss": 1.1146773176887865,
+      "total_samples": 209344
+    },
+    "week_8_WEEK-2022-31": {
+      "accuracy": 50.27180143686946,
+      "loss": 2.5507051694724803,
+      "total_samples": 209344
+    }
+  }
+}

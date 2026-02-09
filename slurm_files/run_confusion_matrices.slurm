@@ -1,15 +1,15 @@
 #!/bin/bash
-#SBATCH --job-name=cesnet_multimodal
+#SBATCH --job-name=conf_mat
 #SBATCH --output=logs/slurm-%j.out.tmp
 #SBATCH --error=logs/slurm-%j.err.tmp
-#SBATCH --time=16:30:00
+#SBATCH --time=2:00:00
 #SBATCH --partition=killable
 #SBATCH --signal=USR1@120
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --gres=gpu:1
 #SBATCH --mem=16G
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=8
 
 # Change to project directory
 cd /home/anatbr/students/noamshakedc/da4etc
@@ -21,9 +21,7 @@ mkdir -p logs
 PYTHON=/home/anatbr/students/noamshakedc/env/anaconda3/envs/ml2/bin/python
 
 # Extract experiment name for log files
-EXP_NAME_FULL="cesnet_multimodal_v1_dann_v02/{}"
-# Convert slashes to underscores and remove brackets for filename
-EXPNAME=$(echo "$EXP_NAME_FULL" | sed 's/\//_/g' | sed 's/[{}]//g')
+EXPNAME="conf_mat"
 
 # Rename log files with timestamp for chronological sorting
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
@@ -37,17 +35,7 @@ mv "logs/slurm-${SLURM_JOB_ID}.err.tmp" "$ERRFILE" 2>/dev/null || true
 exec 1>>"$OUTFILE"
 exec 2>>"$ERRFILE"
 
-# Run multimodal training
-$PYTHON train_per_week_cesnet.py \
-    --week 33 \
-    --val_week 40 \
-    --exp_name "$EXP_NAME_FULL" \
-    --lambda_rgl 0 \
-    --lambda_dann 0 \
-    --train_data_frac 1.0 \
-    --train_per_epoch_data_frac 0.1 \
-    --num_epochs 100 \
-    --multimodal \
-    --dataset_root '/home/anatbr/dataset/CESNET-TLS-Year22_v2'
+# Run confusion matrix computation
+$PYTHON compute_confusion_matrices.py
 
-echo "Completed multimodal training for week 33"
+echo "Completed confusion matrix computation"
