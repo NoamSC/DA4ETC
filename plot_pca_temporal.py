@@ -67,7 +67,7 @@ def sample_class(emb, lab, c, max_n, rng):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--inference_dir', default='figs/week_1_inference')
+    ap.add_argument('--inference_dir', default='results/inference/week_1_inference')
     ap.add_argument('--dataset_root', default='/home/anatbr/dataset/CESNET-TLS-Year22_v2')
     ap.add_argument('--focal_class', type=int, default=98)
     ap.add_argument('--max_bg_per_class', type=int, default=25,

@@ -5,16 +5,16 @@
 # Outputs land in figs/ with a w16_16to52 tag in the filename.
 #
 # Usage:
-#   ./run_drift_figs.sh                                  # week_16_inference, weeks>=16
-#   ./run_drift_figs.sh figs/week_16_inference 16        # explicit dir + min week
-#   ./run_drift_figs.sh figs/week_9_inference  9 151     # different dir/min-week/focal
+#   ./run_drift_figs.sh                                            # week_16_inference, weeks>=16
+#   ./run_drift_figs.sh results/inference/week_16_inference 16     # explicit dir + min week
+#   ./run_drift_figs.sh results/inference/week_9_inference  9 151  # different dir/min-week/focal
 #
 # Assumes the ml2 conda env (set PYTHON to override the interpreter).
 set -euo pipefail
 
-DIR=${1:-figs/week_16_inference}
+DIR=${1:-results/inference/week_16_inference}
 MINWEEK=${2:-16}
-FOCAL=${3:-49}
+FOCAL=${3:-57}
 TOP=${4:-10}
 PY=${PYTHON:-/home/anatbr/students/noamshakedc/env/anaconda3/envs/ml2/bin/python}
 

@@ -195,7 +195,7 @@ def rank_classes(weeks, embs, labs, min_per_week=20):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--inference_dir', default='figs/week_1_inference')
+    ap.add_argument('--inference_dir', default='results/inference/week_1_inference')
     ap.add_argument('--dataset_root', default='/home/anatbr/dataset/CESNET-TLS-Year22_v2')
     ap.add_argument('--out_dir', default='figs/drift')
     ap.add_argument('--class_idx', type=int, default=None)

@@ -15,3 +15,8 @@ exps/*/*/training_*.png
 *.tmp
 *tfevents*
 .vscode/
+# large outputs / data (kept on disk, never committed)
+results/
+logs/
+*.gif
+*.npz
