@@ -17,6 +17,7 @@ for _p in [_root, *sorted((_root / 'scripts').glob('*'))]:
 
 
 import argparse
+import json
 import numpy as np
 from pathlib import Path
 
@@ -91,7 +92,9 @@ def main():
     train_week_dir = experiment_dir / args.train_week
     checkpoint_path = train_week_dir / 'weights' / 'best_model.pth'
     config_path = train_week_dir / 'config.json'
-    print(f"Loading model: {checkpoint_path}")
+    with open(config_path) as f:
+        use_multimodal = json.load(f).get('USE_MULTIMODAL', True)
+    print(f"Loading model: {checkpoint_path}  (multimodal={use_multimodal})")
     model = load_model_from_checkpoint(checkpoint_path, config_path, num_classes, args.device)
     print("  Done.")
 
@@ -120,6 +123,7 @@ def main():
             num_workers=args.num_workers,
             data_sample_frac=args.data_sample_frac,
             seed=args.seed,
+            use_multimodal=use_multimodal,
         )
         if loader is None:
             print(f"  {week_name}: no data, skipping")

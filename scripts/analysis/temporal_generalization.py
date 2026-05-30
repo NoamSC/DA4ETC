@@ -77,16 +77,20 @@ def load_model_from_checkpoint(checkpoint_path, config_path, num_classes, device
     model_params = config['MODEL_PARAMS'].copy()
     model_params['num_classes'] = num_classes
 
-    # Create model
-    model = Multimodal_CESNET(
-        num_classes=num_classes,
-        flowstats_input_size=44,
-        ppi_input_channels=3,
-        lambda_rgl=config['MODEL_PARAMS'].get('lambda_rgl', 0.0),
-        lambda_grl_gamma=config['MODEL_PARAMS'].get('lambda_grl_gamma', 10.0),
-            ).to(config['DEVICE'])
+    # Pick architecture from the saved config. Existing checkpoints are multimodal,
+    # so default to multimodal when the flag is absent.
+    use_multimodal = config.get('USE_MULTIMODAL', True)
 
-    # model = ConfigurableCNN(model_params).to(device)
+    if use_multimodal:
+        model = Multimodal_CESNET(
+            num_classes=num_classes,
+            flowstats_input_size=44,
+            ppi_input_channels=3,
+            lambda_rgl=config['MODEL_PARAMS'].get('lambda_rgl', 0.0),
+            lambda_grl_gamma=config['MODEL_PARAMS'].get('lambda_grl_gamma', 10.0),
+        ).to(device)
+    else:
+        model = ConfigurableCNN(model_params).to(device)
 
     # Load weights
     if checkpoint_path.suffix == '.pth' and 'best_model' in checkpoint_path.name:
@@ -103,7 +107,7 @@ def load_model_from_checkpoint(checkpoint_path, config_path, num_classes, device
 
 
 def create_week_loader(week_dir, label_indices_mapping, batch_size=64, num_workers=4,
-                       resolution=256, data_sample_frac=0.1, seed=42):
+                       resolution=256, data_sample_frac=0.1, seed=42, use_multimodal=True):
     """
     Create a data loader for a specific week.
 
@@ -115,6 +119,8 @@ def create_week_loader(week_dir, label_indices_mapping, batch_size=64, num_worke
         resolution: FlowPic resolution
         data_sample_frac: Fraction of data to load
         seed: Random seed
+        use_multimodal: If True, build the multimodal (PPI + flowstats) parquet
+            loader; if False, build the flowpic loader for the CNN model.
 
     Returns:
         DataLoader for the week's test data
@@ -124,33 +130,33 @@ def create_week_loader(week_dir, label_indices_mapping, batch_size=64, num_worke
     if not test_path.exists():
         return None
 
-    normalization_stats_path = week_dir.parent / 'normalization_stats.npz'
-    loader = create_parquet_loader(
-        parquet_files=[test_path],
-        label_mapping=label_indices_mapping,
+    if use_multimodal:
+        normalization_stats_path = week_dir.parent / 'normalization_stats.npz'
+        return create_parquet_loader(
+            parquet_files=[test_path],
+            label_mapping=label_indices_mapping,
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            data_sample_frac=data_sample_frac,
+            seed=seed,
+            normalization_stats=normalization_stats_path,
+        )
+
+    return create_csv_flowpic_loader(
+        [test_path],
         batch_size=batch_size,
-        shuffle=True,
         num_workers=num_workers,
+        shuffle=False,
+        resolution=resolution,
         data_sample_frac=data_sample_frac,
         seed=seed,
-        normalization_stats=normalization_stats_path,
+        label_mapping=label_indices_mapping,
+        log_t_axis=False,
+        max_dt_ms=4000,
+        dataset_format='cesnet_parquet',
+        verbose=False,
     )
-    # loader = create_csv_flowpic_loader(
-    #     [test_path],
-    #     batch_size=batch_size,
-    #     num_workers=num_workers,
-    #     shuffle=False,
-    #     resolution=resolution,
-    #     data_sample_frac=data_sample_frac,
-    #     seed=seed,
-    #     label_mapping=label_indices_mapping,
-    #     log_t_axis=False,
-    #     max_dt_ms=4000,
-    #     dataset_format='cesnet_parquet',
-    #     verbose=False
-    # )
-
-    return loader
 
 
 def evaluate_model_on_loader(model, loader, device='cuda:0'):

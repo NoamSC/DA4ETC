@@ -18,6 +18,10 @@ for _p in [_root, *sorted((_root / 'scripts').glob('*'))]:
 import os
 import json
 import torch
+# DataLoader workers shuttle large flowpic tensors through /dev/shm, which is small
+# under the slurm cgroup and overflows ("Bus error / out of shared memory"). The
+# file_system sharing strategy uses TMPDIR files instead and avoids the crash.
+torch.multiprocessing.set_sharing_strategy('file_system')
 import argparse
 from pathlib import Path
 from datetime import datetime
