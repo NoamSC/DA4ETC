@@ -12,6 +12,21 @@ from training.visualization import (plot_confusion_matrix, plot_metrics,
                                      compute_topk_accuracy, compute_per_class_precision,
                                      create_tsne_visualization)
 
+def compute_coral_loss(source_features, target_features):
+    """CORAL loss: squared Frobenius distance between source/target feature covariances,
+    normalized by 4*d^2 (Sun & Saenko, 2016)."""
+    d = source_features.size(1)
+    ns, nt = source_features.size(0), target_features.size(0)
+
+    src_centered = source_features - source_features.mean(dim=0, keepdim=True)
+    tgt_centered = target_features - target_features.mean(dim=0, keepdim=True)
+
+    cov_s = (src_centered.T @ src_centered) / max(ns - 1, 1)
+    cov_t = (tgt_centered.T @ tgt_centered) / max(nt - 1, 1)
+
+    return (cov_s - cov_t).pow(2).sum() / (4.0 * d * d)
+
+
 def compute_mmd_loss(source_features, target_features, kernel='rbf', bandwidths=[0.1, 1, 10]):
     def rbf_kernel(x, y, bandwidth):
         x_norm = (x ** 2).sum(dim=1, keepdim=True)
@@ -35,12 +50,12 @@ def compute_mmd_loss(source_features, target_features, kernel='rbf', bandwidths=
     return loss / len(bandwidths)
 
 
-def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mmd=0.0, test_loader=None, mmd_bandwidths=[0.1, 1, 10], lambda_dann=0.0):
-    """Train model for one epoch. Supports optional MMD and DANN losses."""
+def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mmd=0.0, test_loader=None, mmd_bandwidths=[0.1, 1, 10], lambda_dann=0.0, lambda_coral=0.0):
+    """Train model for one epoch. Supports optional MMD, DANN, and CORAL losses."""
     model.train()
     metrics = {
         'train_loss': 0, 'train_correct': 0, 'train_total': 0,
-        'classification_loss': 0, 'mmd_loss': 0, 'dann_loss': 0,
+        'classification_loss': 0, 'mmd_loss': 0, 'dann_loss': 0, 'coral_loss': 0,
         'domain_correct': 0, 'domain_total': 0,
         'grad_norm_feature_extractor': 0, 'grad_norm_class_predictor': 0,
         'grad_norm_domain_classifier': 0, 'grad_norm_count': 0
@@ -77,6 +92,10 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
         if target_outputs is not None and lambda_mmd > 0:
             mmd_loss = compute_mmd_loss(source_outputs['features'], target_outputs['features'], bandwidths=mmd_bandwidths)
 
+        coral_loss = 0
+        if target_outputs is not None and lambda_coral > 0:
+            coral_loss = compute_coral_loss(source_outputs['features'], target_outputs['features'])
+
         dann_loss = 0
         if target_outputs is not None and lambda_dann > 0:
             source_domain_labels = torch.zeros(len(source_outputs['domain_preds'])).long().to(device)
@@ -93,7 +112,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
                 metrics['domain_correct'] += target_pred.eq(target_domain_labels).sum().item()
                 metrics['domain_total'] += len(source_domain_labels) + len(target_domain_labels)
 
-        total_loss = classification_loss + lambda_mmd * mmd_loss + lambda_dann * dann_loss
+        total_loss = classification_loss + lambda_mmd * mmd_loss + lambda_dann * dann_loss + lambda_coral * coral_loss
         total_loss.backward()
 
         # Compute gradient norms before optimizer step
@@ -111,6 +130,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
         metrics['classification_loss'] += classification_loss.item()
         metrics['mmd_loss'] += mmd_loss.item() if isinstance(mmd_loss, torch.Tensor) else 0
         metrics['dann_loss'] += dann_loss.item() if isinstance(dann_loss, torch.Tensor) else 0
+        metrics['coral_loss'] += coral_loss.item() if isinstance(coral_loss, torch.Tensor) else 0
 
         _, predicted = source_outputs['class_preds'].max(1)
         metrics['train_correct'] += predicted.eq(train_labels).sum().item()
@@ -124,6 +144,7 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
         'classification_loss': metrics['classification_loss'] / len(train_loader),
         'mmd_loss': metrics['mmd_loss'] / len(train_loader) * lambda_mmd if lambda_mmd > 0 else 0,
         'dann_loss': metrics['dann_loss'] / len(train_loader) * lambda_dann if lambda_dann > 0 else 0,
+        'coral_loss': metrics['coral_loss'] / len(train_loader) * lambda_coral if lambda_coral > 0 else 0,
         'domain_acc': 100.0 * metrics['domain_correct'] / metrics['domain_total'] if metrics['domain_total'] > 0 else 0,
         'grad_norm_feature_extractor': metrics['grad_norm_feature_extractor'] / num_batches if num_batches > 0 else 0,
         'grad_norm_class_predictor': metrics['grad_norm_class_predictor'] / num_batches if num_batches > 0 else 0,
@@ -207,10 +228,11 @@ def batch_norm_adaptation(model, target_loader, device):
 def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
                 weights_save_dir, plots_save_dir, label_mapping, lambda_mmd=0.0,
                 test_loader=None, adapt_batch_norm=False, mmd_bandwidths=[1], lambda_dann=0.0,
+                lambda_coral=0.0,
                 resume_checkpoint_path=None, resume_from_epoch=0,
                 train_per_epoch_data_frac=1.0, seed=42, enable_profiler=False):
     """
-    General training function with support for MMD, DANN, and batch norm adaptation.
+    General training function with support for MMD, DANN, CORAL, and batch norm adaptation.
     Logs to TensorBoard and saves the best model based on validation accuracy.
     Supports resuming from checkpoint.
 
@@ -229,9 +251,10 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
     # other losses
     mmd_loss_name = 'MMD Loss'
     dann_loss_name = 'DANN Loss'
+    coral_loss_name = 'CORAL Loss'
     train_losses, val_losses = [], []
     train_accuracies, val_accuracies = [], []
-    train_regular_losses, train_other_losses = [], {mmd_loss_name: [], dann_loss_name: []}
+    train_regular_losses, train_other_losses = [], {mmd_loss_name: [], dann_loss_name: [], coral_loss_name: []}
 
     # Resume from checkpoint if provided
     start_epoch = 0
@@ -254,7 +277,8 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
             train_accuracies = history.get('train_accuracies', [])
             val_accuracies = history.get('val_accuracies', [])
             train_regular_losses = history.get('train_regular_losses', [])
-            train_other_losses = history.get('train_other_losses', {mmd_loss_name: [], dann_loss_name: []})
+            train_other_losses = history.get('train_other_losses', {mmd_loss_name: [], dann_loss_name: [], coral_loss_name: []})
+            train_other_losses.setdefault(coral_loss_name, [])
             print(f"Loaded training history up to epoch {len(train_losses)}")
 
             # Find best epoch so far
@@ -315,7 +339,7 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
         train_start_time = time.time()
         with record_function("train_epoch"):
             train_metrics = train_one_epoch(
-                model, train_loader, criterion, optimizer, device, lambda_mmd, test_loader, mmd_bandwidths, lambda_dann
+                model, train_loader, criterion, optimizer, device, lambda_mmd, test_loader, mmd_bandwidths, lambda_dann, lambda_coral
             )
         train_time = time.time() - train_start_time
 
@@ -324,6 +348,7 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
         train_regular_losses.append(train_metrics['classification_loss'])
         train_other_losses[mmd_loss_name].append(train_metrics['mmd_loss'])
         train_other_losses[dann_loss_name].append(train_metrics['dann_loss'])
+        train_other_losses[coral_loss_name].append(train_metrics['coral_loss'])
 
         # Validation with enhanced metrics
         val_start_time = time.time()
@@ -356,6 +381,8 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
 
         if lambda_mmd > 0:
             writer.add_scalar('Loss/mmd', train_metrics['mmd_loss'], epoch)
+        if lambda_coral > 0:
+            writer.add_scalar('Loss/coral', train_metrics['coral_loss'], epoch)
         if lambda_dann > 0:
             writer.add_scalar('Loss/dann', train_metrics['dann_loss'], epoch)
             writer.add_scalar('Accuracy/domain_classifier', train_metrics['domain_acc'], epoch)

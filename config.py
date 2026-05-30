@@ -97,6 +97,8 @@ class Config:
     
     LAMBDA_DANN: float = 0.020626 # 1e0 # 1e0
 
+    LAMBDA_CORAL: float = 0.0
+
     ADAPT_BATCH_NORM = False
 
     # MUST Domain Adaptation Parameters

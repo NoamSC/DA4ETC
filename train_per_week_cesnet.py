@@ -307,6 +307,7 @@ def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False
         lambda_mmd=cfg.LAMBDA_MMD,
         mmd_bandwidths=cfg.MMD_BANDWIDTHS,
         lambda_dann=cfg.LAMBDA_DANN,
+        lambda_coral=cfg.LAMBDA_CORAL,
         resume_checkpoint_path=existing_checkpoint,
         resume_from_epoch=resume_from_epoch,
         train_per_epoch_data_frac=cfg.TRAIN_PER_EPOCH_DATA_FRAC,
@@ -414,6 +415,12 @@ def main():
         help='Lambda DANN for domain adaptation (default: use value from config.py)'
     )
     parser.add_argument(
+        '--lambda_coral',
+        type=float,
+        default=None,
+        help='Lambda CORAL for domain adaptation (default: use value from config.py)'
+    )
+    parser.add_argument(
         '--enable_profiler',
         action='store_true',
         help='Enable PyTorch profiler for the first 2 epochs'
@@ -451,6 +458,9 @@ def main():
 
     if args.lambda_dann is not None:
         cfg.LAMBDA_DANN = args.lambda_dann
+
+    if args.lambda_coral is not None:
+        cfg.LAMBDA_CORAL = args.lambda_coral
 
     # Set profiler flag
     cfg.ENABLE_PROFILER = args.enable_profiler
