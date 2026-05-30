@@ -13,46 +13,39 @@ This repository contains code for training and evaluating deep learning models o
 
 ## Project Structure
 
+> **Running scripts:** entrypoints live under `scripts/<stage>/` and are meant to
+> be run **from the repo root** (e.g. `python scripts/train/train_per_week_cesnet.py …`).
+> Each script adds the repo root + `scripts/*` to `sys.path` so the library
+> (`config`, `data_utils`, `models`, `training`) and cross-script imports resolve.
+
 ```
 da4etc/
-├── config.py                          # Global configuration and hyperparameters
-├── train_per_week_cesnet.py          # Main training script for weekly models
-├── split_cesnet_train_test.py        # Split CESNET data into train/test sets
-├── preprocess_cesnet_to_parquet.py   # Convert raw CESNET data to parquet format
-├── simple_model_train.py             # Simple baseline training script
+├── config.py                          # Global configuration and hyperparameters (only root module)
 │
-├── data_utils/                        # Data loading and preprocessing utilities
-│   ├── csv_dataloader.py             # FlowPic dataset and dataloader creation
-│   └── ...
+├── scripts/                           # Runnable entrypoints, grouped by pipeline stage
+│   ├── data_prep/                     # preprocess / sample / split / normalization-stats / schema-verify
+│   ├── train/                         # train_per_week_cesnet, simple_model_train, bayesian_dann_search
+│   ├── inference/                     # run_inference, run_week1_inference{,_tent,_cotta}
+│   ├── analysis/                      # temporal_generalization, compute_confusion_matrices, ...
+│   └── viz/                           # drift visualizations (plot_*.py) + run_drift_figs.sh
 │
-├── models/                            # Neural network architectures
-│   ├── configurable_cnn.py           # Configurable CNN for FlowPic classification
-│   └── ...
+├── data_utils/                        # Data loading + label mapping (library)
+│   ├── cesnet_dataloader.py / csv_dataloader.py / ...
+│   └── cesnet_labels.py              # load_label_mapping (canonical)
+├── models/                            # Neural network architectures (library)
+├── training/                          # Training loop, DA methods, viz utils (library)
+│   └── domain_adaptation_methods/    # MMD / DANN / CORAL / BBSE implementations
 │
-├── training/                          # Training utilities and domain adaptation
-│   ├── trainer.py                    # Main training loop with MMD/DANN support
-│   ├── visualization.py              # Plotting and TensorBoard logging
-│   ├── utils.py                      # Helper functions (set_seed, save_config, etc.)
-│   └── domain_adaptation_methods/    # Domain adaptation implementations
-│       ├── bbse_resampling.py        # Black Box Shift Estimation
-│       └── ...
+├── notebooks/                         # Exploratory notebooks
+├── tests/                             # Unit / integration tests
+├── slurm_files/                       # SLURM job scripts (invoke scripts/<stage>/...)
+├── archive/                           # Obsolete one-offs + vendored cotta/tent (not run)
 │
-├── exps/                              # Experiment results (auto-generated)
-│   └── debug/                        # Experiment outputs organized by name
-│       └── WEEK-2022-XX/             # Per-week experiment directories
-│           ├── weights/              # Model checkpoints
-│           ├── plots/                # Training visualizations
-│           ├── tensorboard/          # TensorBoard logs
-│           └── config.json           # Experiment configuration
-│
-├── logs/                              # SLURM job logs (auto-generated)
-├── figs/                              # Analysis figures and visualizations
-│   ├── cesnet_figs/                  # CESNET dataset analysis
-│   └── mirage_analysis_results/      # MIRAGE dataset analysis
-│
-├── run_weekly_training.slurm         # SLURM script for parallel weekly training
-├── CESNET_PREPROCESSING_README.md    # CESNET data preprocessing guide
-├── WEEKLY_TRAINING_README.md         # Weekly training workflow guide
+├── data/                              # Small reference data (app-id mappings) [gitignored]
+├── results/                           # Model outputs — inference/<week>_inference/*.npz [gitignored]
+├── figs/                              # Figures (figs/drift/ = drift analysis) 
+├── exps/                              # Experiment outputs (checkpoints, tensorboard)
+├── logs/                              # SLURM logs [gitignored]
 └── README.md                          # This file
 ```
 
@@ -97,7 +90,7 @@ Main script for training weekly models with FlowPic representation.
 
 **Usage:**
 ```bash
-python train_per_week_cesnet.py \
+python scripts/train/train_per_week_cesnet.py \
     --week 18 \
     --dataset_root /path/to/CESNET-TLS-Year22 \
     --train_data_frac 0.01 \
@@ -235,21 +228,21 @@ Controls what fraction of the **loaded** training data to use each epoch.
 
 ```bash
 # Example 1: Standard training (1% data, full epochs)
-python train_per_week_cesnet.py \
+python scripts/train/train_per_week_cesnet.py \
     --train_data_frac 0.01 \
     --train_per_epoch_data_frac 1.0
 # Loads: 1% train, 1% val
 # Per epoch: Uses 100% of loaded data
 
 # Example 2: Per-epoch sampling (1% data, 50% per epoch)
-python train_per_week_cesnet.py \
+python scripts/train/train_per_week_cesnet.py \
     --train_data_frac 0.01 \
     --train_per_epoch_data_frac 0.5
 # Loads: 1% train, 0.5% val (auto-calculated)
 # Per epoch: Uses 50% of loaded data (different samples each epoch)
 
 # Example 3: Custom validation size (1% train, 10% val)
-python train_per_week_cesnet.py \
+python scripts/train/train_per_week_cesnet.py \
     --train_data_frac 0.01 \
     --val_data_frac 0.1 \
     --train_per_epoch_data_frac 1.0
@@ -257,7 +250,7 @@ python train_per_week_cesnet.py \
 # Per epoch: Uses 100% of loaded data
 
 # Example 4: Large data experiment (10% train, 2% val, 20% per epoch)
-python train_per_week_cesnet.py \
+python scripts/train/train_per_week_cesnet.py \
     --train_data_frac 0.1 \
     --val_data_frac 0.02 \
     --train_per_epoch_data_frac 0.2
@@ -285,10 +278,10 @@ python train_per_week_cesnet.py \
 
 ```bash
 # Train on week 18 with default settings
-python train_per_week_cesnet.py --week 18
+python scripts/train/train_per_week_cesnet.py --week 18
 
 # Train with custom sampling
-python train_per_week_cesnet.py \
+python scripts/train/train_per_week_cesnet.py \
     --week 18 \
     --train_data_frac 0.05 \
     --val_data_frac 0.1 \
@@ -315,10 +308,10 @@ The system automatically detects and resumes from checkpoints:
 
 ```bash
 # Run same command - will resume from last checkpoint
-python train_per_week_cesnet.py --week 18
+python scripts/train/train_per_week_cesnet.py --week 18
 
 # Force restart (delete existing experiment)
-python train_per_week_cesnet.py --week 18 --override
+python scripts/train/train_per_week_cesnet.py --week 18 --override
 ```
 
 ### Experiment Outputs
