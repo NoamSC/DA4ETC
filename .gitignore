@@ -20,3 +20,8 @@ results/
 logs/
 *.gif
 *.npz
+.pytest_cache/
+__pycache__/
+# vendored upstream reference repos (kept on disk under archive/, not tracked)
+archive/cotta/
+archive/tent/
