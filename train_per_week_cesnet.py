@@ -24,21 +24,9 @@ from training.trainer import train_model, train_one_epoch
 from training.utils import set_seed, save_config_to_json
 from config import Config
 
-
-def load_label_mapping(dataset_root):
-    """Load label mapping from CESNET dataset root."""
-    label_mapping_path = dataset_root / 'label_mapping.json'
-    with open(label_mapping_path, 'r') as f:
-        label_mapping = json.load(f)
-
-    # The label_mapping.json maps app_name (string) -> integer_id
-    # The parquet files have APP column containing string app names
-    # We need to create label_indices_mapping: app_name (string) -> index
-    # This maps directly from what's in the APP column to final label indices
-    app_names = sorted(label_mapping.keys())
-    label_indices_mapping = {app_name: i for i, app_name in enumerate(app_names)}
-
-    return label_indices_mapping, len(app_names)
+# Canonical definition now lives in the library; re-exported for backward compat
+# (scripts still do `from train_per_week_cesnet import load_label_mapping`).
+from data_utils.cesnet_labels import load_label_mapping
 
 
 def get_week_directories(dataset_root):
