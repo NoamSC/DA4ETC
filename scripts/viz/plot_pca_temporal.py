@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 """
-Focal-class drift over a global t-SNE map of *all weeks* — static PNG.
+Focal-class drift over a global PCA map of *all weeks* — static PNG.
 
-Same idea and styling as plot_pca_temporal.py, but the 2-D map is t-SNE instead of
-PCA. t-SNE gives tighter, better-separated cluster islands (at the cost of a
-non-linear, non-parametric embedding: there is no out-of-sample transform, so the
-background + focal points are embedded jointly in one fit).
+Companion to plot_density_drift.py. Where the ridgeline shows the drift along a
+single axis, this shows it in the full latent context: where the focal class sits
+relative to *the rest of the data*, and how it migrates across that map over time.
 
 Layout (dark theme, à la figs/domain_gap_tsne.png):
-  - t-SNE is fit jointly on the data from ALL weeks (focal class every week + a
-    sample of every other class).
+  - PCA(2) is fit on the data from ALL weeks (focal class every week + a sample of
+    every other class) so the projection is a single, fixed global map.
   - Background (grey): all other classes — the latent cluster structure / context.
   - Focal class: samples from each week, coloured by week (plasma), so you can see
     the cloud move across the map. A faint track connects the weekly centroids.
@@ -17,30 +16,32 @@ Layout (dark theme, à la figs/domain_gap_tsne.png):
 Output: static PNG.
 
 Usage:
-    python plot_tsne_temporal_static.py --focal_class 98
-    python plot_tsne_temporal_static.py --focal_class 102 --perplexity 50 \
-        --max_focal_per_week 150 --output figs/tsne_temporal_microsoft-settings.png
+    python plot_pca_temporal.py --focal_class 98
+    python plot_pca_temporal.py --focal_class 102 --max_bg_per_class 40 \
+        --max_focal_per_week 150 --output figs/pca_temporal_microsoft-settings.png
 """
+
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root: config, data_utils, ...
 
 import argparse
 import re
-from pathlib import Path
 
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib import cm
 from matplotlib.collections import LineCollection
 from matplotlib.lines import Line2D
-from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 
 
 # ── label mapping ───────────────────────────────────────────────────────────
 
 def load_class_names(dataset_root):
-    import sys
-    sys.path.insert(0, str(Path(__file__).parent))
-    from train_per_week_cesnet import load_label_mapping
+    from data_utils.cesnet_labels import load_label_mapping
     mapping, num_classes = load_label_mapping(Path(dataset_root))
     return {v: k for k, v in mapping.items()}, num_classes
 
@@ -74,7 +75,6 @@ def main():
                     help='Background samples per other class, pooled across all weeks')
     ap.add_argument('--max_focal_per_week', type=int, default=120,
                     help='Focal-class samples drawn per week')
-    ap.add_argument('--perplexity', type=float, default=40.0)
     ap.add_argument('--output', default=None)
     ap.add_argument('--out_dir', default='figs/drift')
     ap.add_argument('--seed', type=int, default=42)
@@ -122,17 +122,18 @@ def main():
     print(f'focal points: {len(focal_emb)}   background points: {len(bg_emb)} '
           f'({len(bg_pool)} classes)')
 
-    # ── t-SNE fit jointly on the data from ALL weeks (focal + background) ──────
-    all_emb = np.concatenate([bg_emb, focal_emb])
-    print(f'running t-SNE on {len(all_emb)} points (dim {all_emb.shape[1]}, '
-          f'perplexity {args.perplexity})...')
-    tsne = TSNE(n_components=2, perplexity=args.perplexity, n_iter=1000,
-                init='pca', random_state=args.seed, n_jobs=-1, verbose=1)
-    xy = tsne.fit_transform(all_emb)
-    bg_xy = xy[:len(bg_emb)]
-    focal_xy = xy[len(bg_emb):]
+    # ── PCA fit on the BACKGROUND only (all other apps over all weeks), then
+    # project the focal class into that fixed map. Fitting on the background
+    # alone keeps the over-sampled focal from steering the axes it maximizes
+    # variance on, so we see the focal "in the wild" against a stable context.
+    print(f'fitting PCA(2) on {len(bg_emb)} background points '
+          f'(dim {bg_emb.shape[1]})...')
+    pca = PCA(2, random_state=args.seed).fit(bg_emb)
+    bg_xy = pca.transform(bg_emb)
+    focal_xy = pca.transform(focal_emb)
+    var = pca.explained_variance_ratio_ * 100
 
-    # weekly centroids (in t-SNE space) for the movement track
+    # weekly centroids (in PCA space) for the movement track
     uw = np.array(sorted(np.unique(focal_weeks)))
     cent = np.array([focal_xy[focal_weeks == w].mean(0) for w in uw])
 
@@ -161,6 +162,8 @@ def main():
     ax.scatter(*cent[-1], marker='s', s=120, facecolor='none', edgecolor='white',
                linewidths=1.8, zorder=5)
 
+    # robust framing: clip axes to the bulk so a few outliers don't zoom us out.
+    # base the window on the focal cloud (the subject) plus the dense background.
     # frame on the bulk of ALL points (background + focal), dropping outliers.
     frame = np.vstack([bg_xy, focal_xy])
     xlo, xhi = np.percentile(frame[:, 0], [0.5, 99.5])
@@ -168,9 +171,9 @@ def main():
     px = 0.05 * (xhi - xlo + 1e-9); py = 0.05 * (yhi - ylo + 1e-9)
     ax.set_xlim(xlo - px, xhi + px); ax.set_ylim(ylo - py, yhi + py)
 
-    ax.set_xlabel('t-SNE 1', color='white')
-    ax.set_ylabel('t-SNE 2', color='white')
-    ax.set_title(f'Latent space: {focal_name} drift over time  (t-SNE fit on all weeks)\n'
+    ax.set_xlabel(f'PC1 ({var[0]:.1f}% var)', color='white')
+    ax.set_ylabel(f'PC2 ({var[1]:.1f}% var)', color='white')
+    ax.set_title(f'Latent space: {focal_name} drift over time  (PCA fit on background)\n'
                  f'background = all other classes (grey)  |  '
                  f'coloured = {focal_name}, weeks {wmin}–{wmax}  |  '
                  f'○ first week  □ last week',
@@ -195,7 +198,7 @@ def main():
     if args.min_week is not None or args.max_week is not None:
         inf_tag += f'_{weeks[0]}to{weeks[-1]}'
     out = Path(args.output) if args.output else \
-        Path(args.out_dir) / f'tsne_temporal_{inf_tag}_{focal:03d}_{focal_name}.png'
+        Path(args.out_dir) / f'pca_temporal_{inf_tag}_{focal:03d}_{focal_name}.png'
     out.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out, dpi=150, bbox_inches='tight', facecolor=BG)
     print(f'saved -> {out}')

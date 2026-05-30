@@ -18,21 +18,22 @@ FOCAL=${3:-57}
 TOP=${4:-10}
 PY=${PYTHON:-/home/anatbr/students/noamshakedc/env/anaconda3/envs/ml2/bin/python}
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/../.."          # repo root (paths below are repo-root-relative)
+V=scripts/viz
 
 echo "=== inference dir : $DIR  (weeks >= $MINWEEK) ==="
 echo "=== focal class   : $FOCAL ==="
 
 echo; echo "[1/4] per-app density ridgelines (top 6) ..."
-$PY plot_density_drift.py        --inference_dir "$DIR" --min_week "$MINWEEK" --top 6
+$PY $V/plot_density_drift.py        --inference_dir "$DIR" --min_week "$MINWEEK" --top 6
 
 echo; echo "[2/4] multi-app concentration overlay (top $TOP) ..."
-$PY plot_density_drift_multi.py  --inference_dir "$DIR" --min_week "$MINWEEK" --top "$TOP"
+$PY $V/plot_density_drift_multi.py  --inference_dir "$DIR" --min_week "$MINWEEK" --top "$TOP"
 
 echo; echo "[3/4] PCA temporal map (focal $FOCAL) ..."
-$PY plot_pca_temporal.py         --inference_dir "$DIR" --min_week "$MINWEEK" --focal_class "$FOCAL"
+$PY $V/plot_pca_temporal.py         --inference_dir "$DIR" --min_week "$MINWEEK" --focal_class "$FOCAL"
 
 echo; echo "[4/4] t-SNE temporal map (focal $FOCAL) ..."
-$PY plot_tsne_temporal_static.py --inference_dir "$DIR" --min_week "$MINWEEK" --focal_class "$FOCAL"
+$PY $V/plot_tsne_temporal_static.py --inference_dir "$DIR" --min_week "$MINWEEK" --focal_class "$FOCAL"
 
 echo; echo "=== done. figures in figs/ tagged w${MINWEEK}_* ==="

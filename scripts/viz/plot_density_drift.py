@@ -28,6 +28,10 @@ Usage:
     python plot_density_drift.py --class_idx 102 --n_modes 3
 """
 
+import sys
+from pathlib import Path as _Path
+sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))  # repo root: config, data_utils, ...
+
 import argparse
 import re
 from pathlib import Path
@@ -73,8 +77,7 @@ def load_all(inference_dir, min_week=None, max_week=None):
 
 def class_names(dataset_root):
     try:
-        import sys; sys.path.insert(0, str(Path(__file__).parent))
-        from train_per_week_cesnet import load_label_mapping
+        from data_utils.cesnet_labels import load_label_mapping
         mapping, _ = load_label_mapping(Path(dataset_root))
         return {v: k for k, v in mapping.items()}
     except Exception:

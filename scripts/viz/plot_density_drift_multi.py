@@ -25,8 +25,11 @@ Usage:
     python plot_density_drift_multi.py --top 30
 """
 
-import argparse
+import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # repo root: config, data_utils, ...
+
+import argparse
 
 import numpy as np
 import matplotlib
