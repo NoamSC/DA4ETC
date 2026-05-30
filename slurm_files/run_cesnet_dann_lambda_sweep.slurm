@@ -45,7 +45,7 @@ exec 2>>"$ERRFILE"
 echo "Running with lambda_rgl=${LAMBDA_RGL} (task ${SLURM_ARRAY_TASK_ID})"
 
 # Run training with varying lambda_rgl
-$PYTHON train_per_week_cesnet.py \
+$PYTHON scripts/train/train_per_week_cesnet.py \
     --week 33 \
     --val_week 40 \
     --exp_name "$EXP_NAME_FULL" \

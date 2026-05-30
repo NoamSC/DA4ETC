@@ -22,7 +22,7 @@ mkdir -p logs
 PYTHON=/home/anatbr/students/noamshakedc/env/anaconda3/envs/ml2/bin/python
 
 # Run training for specific week based on SLURM_ARRAY_TASK_ID
-$PYTHON train_per_week_cesnet.py \
+$PYTHON scripts/train/train_per_week_cesnet.py \
     --week ${SLURM_ARRAY_TASK_ID} \
     --dataset_root /home/anatbr/dataset/CESNET-TLS-Year22 \
     --train_data_frac 1.0 \

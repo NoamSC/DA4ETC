@@ -23,6 +23,6 @@ PYTHON=/home/anatbr/students/noamshakedc/env/anaconda3/envs/ml2/bin/python
 
 # Run the Bayesian search trial
 # Each array task runs the same script, which uses Optuna to pick the next hyperparameters
-$PYTHON bayesian_dann_search.py --trial_index ${SLURM_ARRAY_TASK_ID}
+$PYTHON scripts/train/bayesian_dann_search.py --trial_index ${SLURM_ARRAY_TASK_ID}
 
 echo "Completed trial ${SLURM_ARRAY_TASK_ID}"

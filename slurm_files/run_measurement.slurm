@@ -13,4 +13,4 @@
 #SBATCH --gres=gpu:1
 #SBATCH --array=0-22
 
-python simple_model_train.py --test_index=${SLURM_ARRAY_TASK_ID} --use_cheat_to_match_target_label_distribution --use_must
+python scripts/train/simple_model_train.py --test_index=${SLURM_ARRAY_TASK_ID} --use_cheat_to_match_target_label_distribution --use_must

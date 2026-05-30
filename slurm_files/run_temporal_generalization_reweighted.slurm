@@ -39,7 +39,7 @@ exec 1>>"$OUTFILE"
 exec 2>>"$ERRFILE"
 
 # Run future-only temporal generalization with importance weighting
-$PYTHON run_temporal_generalization_reweighted.py \
+$PYTHON scripts/analysis/run_temporal_generalization_reweighted.py \
     --experiment_dir 'exps/cesnet_multimodal_each_week_train_v01' \
     --dataset_root '/home/anatbr/dataset/CESNET-TLS-Year22_v2' \
     --train_week 33 \

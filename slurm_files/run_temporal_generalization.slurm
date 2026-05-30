@@ -36,7 +36,7 @@ exec 1>>"$OUTFILE"
 exec 2>>"$ERRFILE"
 
 # Run temporal generalization evaluation
-$PYTHON run_temporal_generalization.py \
+$PYTHON scripts/analysis/run_temporal_generalization.py \
     --experiment_dir 'exps/cesnet_multimodal_each_week_train_v01' \
     --dataset_root '/home/anatbr/dataset/CESNET-TLS-Year22_v2' \
     --batch_size 64 \

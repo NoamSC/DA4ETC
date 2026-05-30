@@ -22,7 +22,7 @@ PYTHON=/home/anatbr/students/noamshakedc/env/anaconda3/envs/ml2/bin/python
 
 # Run training for specific week based on SLURM_ARRAY_TASK_ID
 # Configuration 2: Tiny DANN
-$PYTHON train_per_week_cesnet.py \
+$PYTHON scripts/train/train_per_week_cesnet.py \
     --week 33 \
     --dataset_root /home/anatbr/dataset/CESNET-TLS-Year22 \
     --exp_name ""cesnet_v4_dann_sanity/tiny_{}"" \

@@ -39,7 +39,7 @@ exec 2>>"$ERRFILE"
 
 # Run training for specific week based on SLURM_ARRAY_TASK_ID
 # Configuration 1: Large DANN
-$PYTHON train_per_week_cesnet.py \
+$PYTHON scripts/train/train_per_week_cesnet.py \
     --week 33 \
     --exp_name "$EXP_NAME_FULL" \
     --lambda_rgl 10000.0 \

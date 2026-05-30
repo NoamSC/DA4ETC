@@ -6,6 +6,16 @@ Usage:
     python compute_confusion_matrices.py --test_week_idx 0  # same as --test_week 10
 """
 
+# --- repo path bootstrap (added during refactor: keeps flat cross-imports working) ---
+import sys as _sys
+from pathlib import Path as _Path
+_root = _Path(__file__).resolve().parents[2]
+for _p in [_root, *sorted((_root / 'scripts').glob('*'))]:
+    if _p.is_dir() and str(_p) not in _sys.path:
+        _sys.path.insert(0, str(_p))
+# --- end bootstrap ---
+
+
 import argparse
 import numpy as np
 import matplotlib

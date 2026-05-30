@@ -38,7 +38,7 @@ exec 1>>"$OUTFILE"
 exec 2>>"$ERRFILE"
 
 # Run baseline (no DANN)
-$PYTHON bayesian_dann_search.py \
+$PYTHON scripts/train/bayesian_dann_search.py \
     --trial_index 0 \
     --train_week 13 \
     --val_week 33 \

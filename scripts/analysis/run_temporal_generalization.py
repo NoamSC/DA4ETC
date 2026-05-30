@@ -4,6 +4,16 @@ Script to run temporal generalization evaluation.
 Equivalent to running the temporal_generalization_analysis.ipynb notebook up to the evaluation step.
 """
 
+# --- repo path bootstrap (added during refactor: keeps flat cross-imports working) ---
+import sys as _sys
+from pathlib import Path as _Path
+_root = _Path(__file__).resolve().parents[2]
+for _p in [_root, *sorted((_root / 'scripts').glob('*'))]:
+    if _p.is_dir() and str(_p) not in _sys.path:
+        _sys.path.insert(0, str(_p))
+# --- end bootstrap ---
+
+
 import argparse
 from pathlib import Path
 

@@ -38,7 +38,7 @@ exec 1>>"$OUTFILE"
 exec 2>>"$ERRFILE"
 
 # Run multimodal training
-$PYTHON train_per_week_cesnet.py \
+$PYTHON scripts/train/train_per_week_cesnet.py \
     --week 33 \
     --val_week 40 \
     --exp_name "$EXP_NAME_FULL" \

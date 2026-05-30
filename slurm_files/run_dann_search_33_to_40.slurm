@@ -45,7 +45,7 @@ if [ ${SLURM_ARRAY_TASK_ID} -eq 0 ]; then
     BASELINE_FLAG="--baseline"
 fi
 
-$PYTHON bayesian_dann_search.py \
+$PYTHON scripts/train/bayesian_dann_search.py \
     --trial_index ${SLURM_ARRAY_TASK_ID} \
     --train_week 13 \
     --val_week 33 \
