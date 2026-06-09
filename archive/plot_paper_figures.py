@@ -32,7 +32,7 @@ import seaborn as sns
 def load_class_names(dataset_root):
     import sys; sys.path.insert(0, '.')
     try:
-        from train_per_week_cesnet import load_label_mapping
+        from data_utils.cesnet_labels import load_label_mapping
         mapping, _ = load_label_mapping(Path(dataset_root))
         return {v: k for k, v in mapping.items()}
     except Exception:
@@ -52,7 +52,7 @@ def load_weeks(inference_dir):
     return out
 
 
-def regularized_bbse(confusion_matrix_T, observed_preds):
+def regularized_bbse(confusion_matrix_T, observed_preds, ftol=1e-10, maxiter=1000):
     """
     Constrained least-squares label shift estimation.
 
@@ -61,6 +61,10 @@ def regularized_bbse(confusion_matrix_T, observed_preds):
 
     Solves: min ||C^T @ mu - q_hat||²  s.t.  mu >= 0, sum(mu) = 1
     This is equivalent to the user-supplied formulation with confusion_matrix=C^T.
+
+    ftol/maxiter : SLSQP stopping tolerance. The defaults give a high-accuracy
+    solve; looser values (e.g. ftol=1e-8, maxiter=300) are ~3× faster with
+    negligible difference in the recovered prior — useful for dense sweeps.
     """
     K    = confusion_matrix_T.shape[1]
     cons = ({'type': 'eq', 'fun': lambda x: np.sum(x) - 1.0})
@@ -71,7 +75,7 @@ def regularized_bbse(confusion_matrix_T, observed_preds):
         method='SLSQP',
         bounds=bnds,
         constraints=cons,
-        options={'ftol': 1e-10, 'maxiter': 1000},
+        options={'ftol': ftol, 'maxiter': maxiter},
     )
     return res.x
 
@@ -242,12 +246,16 @@ def main():
                         help='Number of top classes for the app grid (4 or 9)')
     parser.add_argument('--output_dir',     default='figs')
     parser.add_argument('--skip', nargs='+', default=[],
-                        choices=['a', 'b', 'c', 'c2', 'd', 'e', 'f', 'g', 'h'],
-                        metavar='FIG', help='Figures to skip: a b c c2 d e f g h')
+                        choices=['a', 'b', 'c', 'c2', 'd', 'e', 'f', 'g', 'h', 'i'],
+                        metavar='FIG', help='Figures to skip: a b c c2 d e f g h i')
     parser.add_argument('--recompute', action='store_true',
                         help='Ignore cached metrics and recompute from scratch')
     parser.add_argument('--em', action='store_true',
                         help='Run SLD-EM estimation (slow; off by default)')
+    parser.add_argument('--clean_lo', type=int, default=1,
+                        help='Fig I: first week of the healthy regime to resample from')
+    parser.add_argument('--clean_hi', type=int, default=9,
+                        help='Fig I: last week of the healthy regime to resample from')
     parser.add_argument('--confidence', action='store_true',
                         help='Use max-softmax confidence gap instead of entropy gap in Fig B')
     args = parser.parse_args()
@@ -877,6 +885,194 @@ def main():
                 fig_h.savefig(out_h, dpi=200, bbox_inches='tight')
                 plt.close(fig_h)
             print(f"  Saved → {out_h}")
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # Figure I — Estimation ROBUSTNESS vs label-shift SEVERITY (clean weeks only)
+    #
+    #   Isolates the claim "BBSE is robust to extreme label shift" with NO
+    #   covariate-shift confound. We use only the clean weeks (1–9, where the
+    #   model is healthy and the P(X|Y) invariant holds), and synthetically tilt
+    #   the class prior away from the train prior with growing severity s:
+    #
+    #       p_synth ∝ p_train · exp(s · z),   z ~ N(0, I)
+    #
+    #   At s=0 there is no shift; as s grows the shift becomes arbitrarily
+    #   extreme (multiplicative importance ratios spanning many orders of
+    #   magnitude). For each draw we resample a clean week's flows to p_synth and
+    #   measure each estimator's L1 error against the realised proportions.
+    #
+    #   x-axis = induced label-shift magnitude  = mean|p_true − p_train| (MAE).
+    #   By construction the Static-prior error EQUALS this magnitude (the y=x
+    #   diagonal); the question is whether BBSE stays flat below it.
+    # ═══════════════════════════════════════════════════════════════════════════
+    if 'i' in skip:
+        print("Skipping Fig I")
+    else:
+        print("Plotting Fig I — estimation robustness vs label-shift severity...")
+        rng_sev    = np.random.default_rng(123)
+        CLEAN_LO, CLEAN_HI = args.clean_lo, args.clean_hi
+        SEVERITIES = [round(s, 3) for s in np.linspace(0.0, 4.0, 17)]  # finer x-resolution
+        M_DRAWS    = 60          # more draws per level → denser scatter, tighter bands
+        N_RES      = 6_000
+
+        clean = [(wn, t, p) for wn, t, p, _ in test_weeks if CLEAN_LO <= wn <= CLEAN_HI]
+        if not clean:
+            print("  No clean weeks available — skipping Fig I.")
+        else:
+            log_ptrain = np.log(np.clip(p_train, 1e-12, None))
+
+            def _draw_prior(s):
+                lp = log_ptrain + s * rng_sev.standard_normal(num_classes)
+                lp -= lp.max()
+                pp = np.exp(lp)
+                return pp / pp.sum()
+
+            # cache the (slow, RLLS-bound) per-draw records so plot tweaks are free
+            sev_cache = (inference_dir /
+                         f'fig_i_severity_ref{args.reference_week}'
+                         f'_w{CLEAN_LO}-{CLEAN_HI}_m{M_DRAWS}_s{len(SEVERITIES)}.npz')
+            rec_keys = ('x', 'sev', 'prior', 'naive', 'bbse', 'reg')
+            if sev_cache.exists() and not args.recompute:
+                print(f"  Loading Fig I cache from {sev_cache} ...")
+                _c = np.load(sev_cache)
+                rec = {k: _c[k] for k in rec_keys}
+            else:
+                # per-draw records, tagged by severity level
+                rec = {k: [] for k in rec_keys}
+                for s in tqdm(SEVERITIES, desc='  severity'):
+                    for _ in range(M_DRAWS):
+                        wn, true, pred = clean[rng_sev.integers(len(clean))]
+                        present = np.unique(true)
+                        p_tgt   = _draw_prior(s)
+                        mask    = np.zeros(num_classes, bool); mask[present] = True
+                        p_tgt   = p_tgt * mask
+                        if p_tgt.sum() == 0:
+                            continue
+                        p_tgt  /= p_tgt.sum()
+
+                        idx = []
+                        for c in present:
+                            n_c = int(round(p_tgt[c] * N_RES))
+                            if n_c > 0:
+                                ci = np.where(true == c)[0]
+                                idx.append(rng_sev.choice(ci, size=n_c, replace=True))
+                        if not idx:
+                            continue
+                        idx = np.concatenate(idx)
+                        tw, pw = true[idx], pred[idx]
+
+                        p_emp = np.bincount(tw, minlength=num_classes).astype(float)
+                        p_emp /= p_emp.sum()
+
+                        p_bbse, q_hat = estimate_label_dist(pw, num_classes, C_T_pinv)
+                        p_reg = regularized_bbse(C_T, q_hat, ftol=1e-8, maxiter=300)
+
+                        rec['x'].append(    float(np.mean(np.abs(p_emp   - p_train))))
+                        rec['sev'].append(  s)
+                        rec['prior'].append(float(np.mean(np.abs(p_train - p_emp))))
+                        rec['naive'].append(float(np.mean(np.abs(q_hat   - p_emp))))
+                        rec['bbse'].append( float(np.mean(np.abs(p_bbse  - p_emp))))
+                        rec['reg'].append(  float(np.mean(np.abs(p_reg   - p_emp))))
+
+                for k in rec:
+                    rec[k] = np.array(rec[k])
+                np.savez_compressed(sev_cache, **rec)
+                print(f"  Saved Fig I cache → {sev_cache}")
+
+            # aggregate per severity level: mean x and mean±std y for each method
+            sev_levels = np.array(SEVERITIES)
+            agg = {m: {'x': [], 'y': [], 'e': []} for m in ('prior', 'naive', 'bbse', 'reg')}
+            for s in sev_levels:
+                sel = rec['sev'] == s
+                if sel.sum() == 0:
+                    continue
+                xs = rec['x'][sel].mean()
+                for m in agg:
+                    agg[m]['x'].append(xs)
+                    agg[m]['y'].append(rec[m][sel].mean())
+                    agg[m]['e'].append(rec[m][sel].std())
+            for m in agg:
+                for k in agg[m]:
+                    agg[m][k] = np.array(agg[m][k])
+
+            # natural weekly shift magnitudes (all test weeks) for context band
+            nat_mag = []
+            for wn, t, _, _ in test_weeks:
+                pw = np.bincount(t, minlength=num_classes).astype(float); pw /= pw.sum()
+                nat_mag.append(float(np.mean(np.abs(pw - p_train))))
+            nat_mag = np.array(nat_mag)
+
+            # log-scale floor: a touch below the smallest mean error we plot
+            ymin_pos = min(agg[m]['y'].min() for m in agg)
+            floor    = max(1e-4, ymin_pos * 0.6)
+
+            with sns.axes_style("whitegrid"):
+                fig_i, ax_i = plt.subplots(figsize=(9.2, 5.2))
+                ax_i.set_yscale('log')
+
+                # context: range of label shift actually seen in real data.
+                # Anchor the label in axes-fraction y so it can never drive autoscale.
+                ax_i.axvspan(nat_mag.min(), nat_mag.max(), color='#7f8c8d',
+                             alpha=0.10, zorder=0)
+                ax_i.text(nat_mag.max(), 0.97, '  natural\n  weekly range',
+                          transform=ax_i.get_xaxis_transform(),
+                          fontsize=8.5, color='#566573', va='top', ha='left')
+
+                style = [
+                    ('prior', '#999999', 's', '--', 'Static prior (train distribution)'),
+                    ('naive', '#e07b39', '^', '-',  'Uncalibrated (raw predicted frequencies)'),
+                    ('reg',   '#1a9641', 'D', '-',  'Regularized BBSE (constrained least-squares)'),
+                    ('bbse',  '#2c7bb6', 'o', '-',  'BBSE (truncated pseudo-inverse)'),
+                ]
+                for m, col, mk, ls, lab in style:
+                    # faint per-draw scatter (clip to floor so log-axis stays valid)
+                    ax_i.scatter(rec['x'], np.clip(rec[m], floor, None), s=9, color=col,
+                                 alpha=0.09, edgecolors='none', zorder=1)
+                    # binned trend with ±1σ band, lower edge clipped for the log axis
+                    x, y, e = agg[m]['x'], agg[m]['y'], agg[m]['e']
+                    ax_i.fill_between(x, np.clip(y - e, floor, None), y + e,
+                                      color=col, alpha=0.15, zorder=2)
+                    ax_i.plot(x, y, color=col, marker=mk, markersize=5.5, linewidth=2.0,
+                              linestyle=ls, label=lab, zorder=3)
+
+                # annotate the robustness gap at the most extreme shift
+                xm = agg['prior']['x'][-1]
+                ax_i.annotate(
+                    f'≈{agg["prior"]["y"][-1] / agg["bbse"]["y"][-1]:.0f}× lower',
+                    xy=(xm, agg['bbse']['y'][-1]), xytext=(xm, agg['prior']['y'][-1]),
+                    ha='center', va='bottom', fontsize=9, color='#2c7bb6',
+                    arrowprops=dict(arrowstyle='<->', color='#2c7bb6', lw=1.2, alpha=0.8))
+
+                ax_i.set_xlabel(r'Induced label-shift magnitude   $\frac{1}{K}\,\|P(Y_t)-P_{\mathrm{train}}\|_1$',
+                                fontsize=12)
+                ax_i.set_ylabel(r'$L_1$ Estimation Error (MAE, log scale)', fontsize=12)
+                ax_i.set_xlim(left=0)
+                ax_i.set_ylim(bottom=floor)
+                ax_i.grid(True, which='both', alpha=0.18)
+                ax_i.set_title(
+                    'Estimation Robustness to Extreme Label Shift\n'
+                    f'(clean weeks {CLEAN_LO}–{CLEAN_HI}, $P(X\\,|\\,Y)$ intact;  '
+                    f'severity $s\\!\\in\\![{SEVERITIES[0]:.0f},{SEVERITIES[-1]:.0f}]$,  '
+                    f'{M_DRAWS} draws/level)',
+                    fontsize=12, fontweight='bold'
+                )
+                ax_i.legend(fontsize=10, framealpha=0.9, loc='lower right')
+                plt.tight_layout()
+                out_i = output_dir / f'fig_estimation_robustness_severity_ref{args.reference_week}.png'
+                fig_i.savefig(out_i, dpi=200, bbox_inches='tight')
+                plt.close(fig_i)
+            print(f"  Saved → {out_i}")
+
+            # headline numbers for the paper
+            xmax = rec['x'].max()
+            hi = rec['sev'] == SEVERITIES[-1]
+            print(f"  [Fig I] max induced shift magnitude reached: {xmax:.4f} "
+                  f"({xmax / max(nat_mag.max(), 1e-9):.1f}× the worst natural week)")
+            print(f"  [Fig I] at highest severity s={SEVERITIES[-1]:.0f}: "
+                  f"static-prior L1={rec['prior'][hi].mean():.4f}, "
+                  f"naive L1={rec['naive'][hi].mean():.4f}, "
+                  f"BBSE L1={rec['bbse'][hi].mean():.4f}, "
+                  f"RLLS L1={rec['reg'][hi].mean():.4f}")
 
 
 if __name__ == '__main__':
