@@ -25,3 +25,6 @@ __pycache__/
 # vendored upstream reference repos (kept on disk under archive/, not tracked)
 archive/cotta/
 archive/tent/
+
+# Qt lock/junk files
+exps/.qt*
