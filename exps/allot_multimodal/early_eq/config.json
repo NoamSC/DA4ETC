@@ -1,0 +1,102 @@
+{
+    "ADAPT_BATCH_NORM": false,
+    "BASE_EXPERIMENTS_PATH": "exps",
+    "BATCH_SIZE": 256,
+    "DESCRIPTION": "cnn on cesnet, nothing special",
+    "DEVICE": "cuda:0",
+    "ENABLE_PROFILER": false,
+    "EXPERIMENT_NAME": "debug/{}",
+    "EXPERIMENT_PATH": "exps/debug/{}",
+    "EXPERIMENT_PLOTS_PATH": "exps/debug/{}/plots",
+    "EXPERIMENT_TENSORBOARD_PATH": "exps/debug/{}/tensorboard",
+    "EXPERIMENT_WEIGHTS_PATH": "exps/debug/{}/weights",
+    "LAMBDA_CORAL": 0.0,
+    "LAMBDA_DANN": 0,
+    "LAMBDA_MMD": 0,
+    "LEARNING_RATE": 0.003,
+    "MIN_FLOW_LENGTH": 100,
+    "MMD_BANDWIDTHS": [
+        0.1,
+        1.0,
+        10.0
+    ],
+    "MODEL_PARAMS": {
+        "conv_type": "1d",
+        "dropout_prob": 0.3,
+        "use_batch_norm": true,
+        "feature_extractor": {
+            "conv_layers": [
+                {
+                    "out_channels": 16,
+                    "kernel_size": 3,
+                    "stride": 1,
+                    "padding": 1
+                },
+                {
+                    "out_channels": 32,
+                    "kernel_size": 3,
+                    "stride": 1,
+                    "padding": 1
+                },
+                {
+                    "out_channels": 64,
+                    "kernel_size": 3,
+                    "stride": 1,
+                    "padding": 1
+                }
+            ],
+            "pool_kernel_size": 2,
+            "pool_stride": 2
+        },
+        "label_predictor": {
+            "conv_layers": [
+                {
+                    "out_channels": 64,
+                    "kernel_size": 3,
+                    "stride": 1,
+                    "padding": 1
+                }
+            ],
+            "pool_kernel_size": 2,
+            "pool_stride": 2,
+            "fc_layers": [
+                64
+            ]
+        },
+        "domain_classifier": {
+            "conv_layers": [
+                {
+                    "out_channels": 64,
+                    "kernel_size": 3,
+                    "stride": 1,
+                    "padding": 1
+                },
+                {
+                    "out_channels": 64,
+                    "kernel_size": 3,
+                    "stride": 1,
+                    "padding": 1
+                }
+            ],
+            "pool_kernel_size": 2,
+            "pool_stride": 2,
+            "fc_layers": [
+                128,
+                64
+            ]
+        },
+        "lambda_rgl": 0,
+        "lambda_grl_gamma": 0,
+        "input_shape": 256
+    },
+    "NUM_EPOCHS": 30,
+    "NUM_WORKERS": 4,
+    "RESOLUTION": 256,
+    "SAVE_MODEL_CHECKPOINT": "exps/debug/{}/weights/model_checkpoint_epoch_{epoch}.pth",
+    "SAVE_PLOTS": true,
+    "SEED": 42,
+    "TRAIN_DATA_FRAC": 1.0,
+    "TRAIN_PER_EPOCH_DATA_FRAC": 1.0,
+    "VAL_DATA_FRAC": 0.2,
+    "WEIGHT_DECAY": 0.0001
+}

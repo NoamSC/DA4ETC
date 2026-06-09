@@ -1,0 +1,17 @@
+{
+  "slice_name": "early",
+  "window_index": 0,
+  "window_frac": 0.02,
+  "train_files": [
+    "/home/anatbr/dataset/Allot/allot_hourly_chunks_parquets/domain_0/chunk_2024-09-05_11-00.parquet",
+    "/home/anatbr/dataset/Allot/allot_hourly_chunks_parquets/domain_0/chunk_2024-09-05_12-00.parquet",
+    "/home/anatbr/dataset/Allot/allot_hourly_chunks_parquets/domain_0/chunk_2024-09-05_13-00.parquet",
+    "/home/anatbr/dataset/Allot/allot_hourly_chunks_parquets/domain_0/chunk_2024-09-05_14-00.parquet",
+    "/home/anatbr/dataset/Allot/allot_hourly_chunks_parquets/domain_0/chunk_2024-09-05_15-00.parquet",
+    "/home/anatbr/dataset/Allot/allot_hourly_chunks_parquets/domain_0/chunk_2024-09-05_16-00.parquet"
+  ],
+  "val_files": [
+    "/home/anatbr/dataset/Allot/allot_hourly_chunks_parquets/domain_0/chunk_2024-09-05_17-00.parquet",
+    "/home/anatbr/dataset/Allot/allot_hourly_chunks_parquets/domain_0/chunk_2024-09-05_18-00.parquet"
+  ]
+}
