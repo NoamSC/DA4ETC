@@ -148,18 +148,23 @@ def run_inference_cotta(model, loader, device, original_state,
     if reset:
         model.load_state_dict(original_state, strict=False)
 
-    configure_model_for_cotta(model)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-
-    # teacher and anchor are frozen copies
-    teacher = deepcopy(model).to(device)
-    for p in teacher.parameters():
-        p.detach_()
-
+    # anchor = frozen source model: copied BEFORE configure_model_for_cotta()
+    # nulls BatchNorm stats, so eval() uses source running stats + dropout off.
     anchor = deepcopy(model).to(device)
     anchor.eval()
     for p in anchor.parameters():
         p.requires_grad_(False)
+
+    configure_model_for_cotta(model)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+    # teacher = EMA of student; its outputs are the pseudo-labels AND the saved
+    # predictions. eval() turns OFF dropout (else every prediction is noised by
+    # p=0.3); BN still uses batch stats (track_running_stats=False).
+    teacher = deepcopy(model).to(device)
+    teacher.eval()
+    for p in teacher.parameters():
+        p.detach_()
 
     # state dict on device for stochastic restore
     state_on_device = {k: v.to(device) for k, v in original_state.items()

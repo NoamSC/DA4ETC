@@ -52,6 +52,12 @@ def configure_model_for_tent(model: nn.Module) -> nn.Module:
             m.track_running_stats = False
             m.running_mean = None
             m.running_var = None
+    # train() above turns dropout ON; TENT reads predictions from this same
+    # model, so dropout would noise both the entropy gradient and the saved
+    # predictions. Disable dropout while keeping BN on batch stats.
+    for m in model.modules():
+        if isinstance(m, nn.Dropout):
+            m.eval()
     return model
 
 

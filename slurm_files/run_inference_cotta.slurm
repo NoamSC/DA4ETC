@@ -36,6 +36,7 @@ $PYTHON scripts/inference/run_inference.py \
     --experiment_dir 'exps/cesnet_multimodal_each_week_train_v01' \
     --dataset_root '/home/anatbr/dataset/CESNET-TLS-Year22_v2' \
     --train_week 'week_1' \
+    --output_dir 'results/inference/week_1_inference_cotta_fixed' \
     --batch_size 64 \
     --num_workers 0 \
     --data_sample_frac 0.1 \

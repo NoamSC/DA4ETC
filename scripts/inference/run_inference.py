@@ -80,6 +80,42 @@ def run_vanilla(model, loader, device):
             np.concatenate(all_softmax), np.concatenate(all_embeds))
 
 
+# ── BN-stats diagnostic (no adaptation) ───────────────────────────────────────
+
+def _configure_bnstats(model):
+    """Use test-batch BN statistics (like TENT/CoTTA) but perform NO adaptation.
+
+    Isolates the effect of swapping the trained BN running-stats for per-test-batch
+    stats from the effect of the adaptation gradient updates. `model.eval()` keeps
+    dropout OFF; nulling running_mean/var forces BN to use batch stats even in eval
+    (PyTorch BN uses batch stats whenever running_mean/var is None).
+    """
+    model.eval()
+    model.requires_grad_(False)
+    for m in model.modules():
+        if isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d)):
+            m.track_running_stats = False
+            m.running_mean = m.running_var = None
+    return model
+
+
+def run_bnstats(model, loader, device, original_state):
+    model.load_state_dict(original_state, strict=False)
+    _configure_bnstats(model)
+    all_true, all_pred, all_softmax, all_embeds = [], [], [], []
+    with torch.no_grad():
+        for inputs, labels in tqdm(loader, desc="  batches", leave=False, ncols=100):
+            labels = labels.to(device).long()
+            outputs = model(_move(inputs, device))
+            logits, feats = outputs['class_preds'], outputs['features']
+            all_true.append(labels.cpu().numpy())
+            all_pred.append(logits.argmax(1).cpu().numpy())
+            all_softmax.append(F.softmax(logits, 1).cpu().numpy())
+            all_embeds.append(feats.cpu().numpy())
+    return (np.concatenate(all_true), np.concatenate(all_pred),
+            np.concatenate(all_softmax), np.concatenate(all_embeds))
+
+
 # ── TENT ──────────────────────────────────────────────────────────────────────
 
 def _configure_tent(model):
@@ -90,6 +126,12 @@ def _configure_tent(model):
             m.requires_grad_(True)
             m.track_running_stats = False
             m.running_mean = m.running_var = None
+    # train() above turns dropout ON; TENT reads its predictions from this same
+    # model, so leaving dropout active would noise both the entropy gradient and
+    # the saved predictions. Disable dropout while keeping BN on batch stats.
+    for m in model.modules():
+        if isinstance(m, nn.Dropout):
+            m.eval()
     return model
 
 
@@ -180,12 +222,19 @@ def run_cotta(model, loader, device, original_state,
               lr, rst_m, ap, n_aug, noise_std, steps, reset):
     if reset:
         model.load_state_dict(original_state, strict=False)
-    _configure_cotta(model)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    teacher = deepcopy(model).to(device)
-    for p in teacher.parameters(): p.detach_()
+    # anchor = frozen source model for the confidence gate. Copied BEFORE
+    # _configure_cotta() nulls BatchNorm running stats, so eval() here uses the
+    # source running stats (and dropout is off) as the paper intends.
     anchor = deepcopy(model).to(device).eval()
     for p in anchor.parameters(): p.requires_grad_(False)
+    _configure_cotta(model)
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    # teacher = EMA of the student; its outputs are the pseudo-labels AND the
+    # predictions we save. eval() turns OFF dropout (otherwise every saved
+    # prediction is noised by p=0.3 dropout); BN still uses batch stats because
+    # _configure_cotta set track_running_stats=False.
+    teacher = deepcopy(model).to(device).eval()
+    for p in teacher.parameters(): p.detach_()
     src_state = {k: v.to(device) for k, v in original_state.items()
                  if not any(s in k for s in ('running_mean', 'running_var', 'num_batches'))}
     all_true, all_pred, all_softmax, all_embeds = [], [], [], []
@@ -209,7 +258,7 @@ def run_cotta(model, loader, device, original_state,
 def main():
     parser = argparse.ArgumentParser()
     # shared
-    parser.add_argument('--method', required=True, choices=['vanilla', 'tent', 'cotta'])
+    parser.add_argument('--method', required=True, choices=['vanilla', 'tent', 'cotta', 'bnstats'])
     parser.add_argument('--experiment_dir', default='exps/cesnet_multimodal_each_week_train_v01')
     parser.add_argument('--dataset_root',   default='/home/anatbr/dataset/CESNET-TLS-Year22_v2')
     parser.add_argument('--train_week',     default='week_1')
@@ -242,7 +291,8 @@ def main():
 
     experiment_dir = Path(args.experiment_dir)
     dataset_root   = Path(args.dataset_root)
-    suffix = {'vanilla': 'inference', 'tent': 'inference_tent', 'cotta': 'inference_cotta'}
+    suffix = {'vanilla': 'inference', 'tent': 'inference_tent', 'cotta': 'inference_cotta',
+              'bnstats': 'inference_bnstats'}
     output_dir = (Path(args.output_dir) if args.output_dir
                   else Path('figs') / f'{args.train_week}_{suffix[args.method]}')
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -288,6 +338,10 @@ def main():
         if args.method == 'vanilla':
             true_labels, pred_labels, softmax, embeddings = run_vanilla(
                 model, loader, args.device)
+
+        elif args.method == 'bnstats':
+            true_labels, pred_labels, softmax, embeddings = run_bnstats(
+                model, loader, args.device, original_state)
 
         elif args.method == 'tent':
             true_labels, pred_labels, softmax, embeddings = run_tent(
