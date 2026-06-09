@@ -423,6 +423,14 @@ def main():
         help='Lambda CORAL for domain adaptation (default: use value from config.py)'
     )
     parser.add_argument(
+        '--lambda_grl_gamma',
+        type=float,
+        default=None,
+        help='GRL schedule gamma for DANN (default: use value from config.py). '
+             'NOTE: with gamma=0 the GRL coefficient is identically 0 (DANN disabled); '
+             'use ~10 for a standard DANN schedule.'
+    )
+    parser.add_argument(
         '--enable_profiler',
         action='store_true',
         help='Enable PyTorch profiler for the first 2 epochs'
@@ -463,6 +471,9 @@ def main():
 
     if args.lambda_coral is not None:
         cfg.LAMBDA_CORAL = args.lambda_coral
+
+    if args.lambda_grl_gamma is not None:
+        cfg.MODEL_PARAMS['lambda_grl_gamma'] = args.lambda_grl_gamma
 
     # Set profiler flag
     cfg.ENABLE_PROFILER = args.enable_profiler

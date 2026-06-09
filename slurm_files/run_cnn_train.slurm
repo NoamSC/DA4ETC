@@ -47,7 +47,8 @@ $PYTHON scripts/train/train_per_week_cesnet.py \
     --num_epochs 30 \
     --batch_size 256 \
     --learning_rate 3e-3 \
-    --skip_sanity_check
+    --skip_sanity_check \
+    --override
 STATUS=$?
 
 echo "=== train exit ${STATUS}; checkpoint -> exps/cesnet_cnn/WEEK-2022-${WEEK2}/weights/best_model.pth ==="
