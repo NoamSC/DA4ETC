@@ -13,7 +13,10 @@ Usage:
 
 import argparse
 import re
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts' / 'analysis'))
 
 import numpy as np
 import matplotlib
@@ -210,6 +213,16 @@ def entropy_gap_raw(softmax, h_ref, p_train):
     return actual - expected
 
 
+def entropy_gap_from_p(softmax, p_est, h_ref):
+    """Entropy residual with an arbitrary estimated label marginal p_est
+    (RLLS / SLD-EM / ... variants of the BBSE-corrected gap)."""
+    valid    = ~np.isnan(h_ref)
+    expected = float(np.dot(p_est[valid], h_ref[valid]))
+    p_all    = np.clip(softmax, 1e-12, 1.0)
+    actual   = float(-np.sum(p_all * np.log(p_all), axis=1).mean())
+    return actual - expected
+
+
 def confidence_gap(softmax, pred, num_classes, C_T_pinv, conf_ref):
     """Confidence residual: actual mean max-softmax − BBSE-expected mean max-softmax."""
     p_hat, _ = estimate_label_dist(pred, num_classes, C_T_pinv)
@@ -225,6 +238,50 @@ def confidence_gap_raw(softmax, conf_ref, p_train):
     expected = float(np.dot(p_train[valid], conf_ref[valid]))
     actual   = float(softmax.max(axis=1).mean())
     return actual - expected
+
+
+def reconstruct_sampling_weights(dataset_root, class_names, num_classes, n_iter=20):
+    """Approximate per-service downsampling factors of CESNET-TLS-Year22.
+
+    The dataset deliberately flattens class imbalance via dynamic per-service
+    sampling (Hynek et al. 2024, 'Flow sampling'): services sorted by traffic
+    volume, the top 5% kept at 1:15, the next 35% between 1:9 and 1:2 (by
+    prevalence), the bottom 60% not sampled (the final uniform 1:10 is
+    proportion-neutral).  We invert this from the dataset's saved per-service
+    totals: assign each service the factor implied by its rank, re-rank by
+    saved*factor (estimated real volume), iterate to a fixed point.
+
+    Returns w (num_classes,):  p_network ∝ p_dataset * w.
+    """
+    import json
+    stats = json.loads((Path(dataset_root) / 'stats-dataset.json').read_text())
+    saved = np.ones(num_classes)
+    missing = 0
+    for c in range(num_classes):
+        name = class_names.get(c, '')
+        if name in stats['apps']:
+            saved[c] = float(stats['apps'][name])
+        else:
+            missing += 1
+    if missing:
+        print(f"  (debias: {missing} class names missing from stats-dataset.json)")
+    K = num_classes
+    n_top = int(round(0.05 * K))
+    n_bot = int(round(0.60 * K))
+    n_mid = K - n_top - n_bot
+    w = np.ones(K)
+    for _ in range(n_iter):
+        order = np.argsort(-(saved * w))      # rank by estimated REAL volume
+        w_new = np.ones(K)
+        w_new[order[:n_top]] = 15.0
+        w_new[order[n_top:n_top + n_mid]] = np.exp(
+            np.linspace(np.log(9.0), np.log(2.0), n_mid))
+        if np.allclose(w_new, w):
+            break
+        w = w_new
+    print(f"  (debias: top {n_top} services ×15, middle {n_mid} ×9→×2, "
+          f"bottom {n_bot} ×1)")
+    return w
 
 
 def per_class_f1(true, pred, cls):
@@ -258,6 +315,9 @@ def main():
                         help='Fig I: last week of the healthy regime to resample from')
     parser.add_argument('--confidence', action='store_true',
                         help='Use max-softmax confidence gap instead of entropy gap in Fig B')
+    parser.add_argument('--debias', action='store_true',
+                        help="Fig I: also emit a version with the dataset's per-service "
+                             "sampling bias undone (network-space proportions)")
     args = parser.parse_args()
     skip = set(args.skip)
 
@@ -280,6 +340,12 @@ def main():
 
     C_T_pinv, C_T, p_train, h_ref, conf_ref = build_bbse(ref_true, ref_pred, ref_soft, num_classes)
     C_base_norm = C_T.T  # C_base_norm[i,j] = P(pred=j | true=i) from reference week
+
+    bcts = None
+    if args.em:
+        from label_shift_estimators import fit_bcts_calibrator, calibrate
+        print("Fitting BCTS calibrator (Alexandari'20) on the reference week ...")
+        bcts = fit_bcts_calibrator(ref_soft, ref_true, num_classes)
 
     # Top classes by training frequency for the grid figure
     train_counts  = np.bincount(ref_true, minlength=num_classes).astype(float)
@@ -308,6 +374,9 @@ def main():
         l1_naive_arr    = cache['l1_naive_arr']
         l1_prior_arr    = cache['l1_prior_arr']
         l1_em_arr       = cache['l1_em_arr'] if 'l1_em_arr' in cache else None
+        l1_em_bcts_arr  = cache['l1_em_bcts_arr'] if 'l1_em_bcts_arr' in cache else None
+        ent_gaps_reg    = cache['ent_gaps_reg'] if 'ent_gaps_reg' in cache else None
+        ent_gaps_em     = cache['ent_gaps_em']  if 'ent_gaps_em'  in cache else None
         corrected_f1s   = cache['corrected_f1s']
         synthetic_f1s   = cache['synthetic_f1s']
         baseline_f1     = float(cache['baseline_f1'])
@@ -339,6 +408,9 @@ def main():
         l1_naive_arr     = []
         l1_prior_arr     = []
         l1_em_arr        = [] if args.em else None
+        l1_em_bcts_arr   = [] if args.em else None
+        ent_gaps_reg     = []
+        ent_gaps_em      = [] if args.em else None
         cls_f1_w         = {c: [] for c in grid_classes}
         cls_phat_w       = {c: [] for c in grid_classes}
         cls_ptrue_w      = {c: [] for c in grid_classes}
@@ -358,9 +430,13 @@ def main():
             l1_reg_arr.append( float(np.mean(np.abs(p_reg    - p_true_week))))
             l1_naive_arr.append(float(np.mean(np.abs(q_hat   - p_true_week))))
             l1_prior_arr.append(float(np.mean(np.abs(p_train - p_true_week))))
+            ent_gaps_reg.append(entropy_gap_from_p(softmax, p_reg, h_ref))
             if args.em:
                 p_em = sld_em_estimation(p_train, softmax)
                 l1_em_arr.append(float(np.mean(np.abs(p_em - p_true_week))))
+                ent_gaps_em.append(entropy_gap_from_p(softmax, p_em, h_ref))
+                p_em_bcts = sld_em_estimation(p_train, calibrate(softmax, bcts))
+                l1_em_bcts_arr.append(float(np.mean(np.abs(p_em_bcts - p_true_week))))
 
             macro_f1s.append(f1_score(true, pred, labels=list(range(num_classes)),
                                       average='macro', zero_division=0))
@@ -396,6 +472,9 @@ def main():
         l1_naive_arr    = np.array(l1_naive_arr)
         l1_prior_arr    = np.array(l1_prior_arr)
         l1_em_arr       = np.array(l1_em_arr) if args.em else None
+        l1_em_bcts_arr  = np.array(l1_em_bcts_arr) if args.em else None
+        ent_gaps_reg    = np.array(ent_gaps_reg)
+        ent_gaps_em     = np.array(ent_gaps_em) if args.em else None
         corrected_f1s   = np.array(corrected_f1s)
         synthetic_f1s   = np.array(synthetic_f1s)
 
@@ -414,7 +493,9 @@ def main():
             conf_gaps=conf_gaps, conf_gaps_raw=conf_gaps_raw, conf_gaps_oracle=conf_gaps_oracle,
             l1_bbse_arr=l1_bbse_arr, l1_reg_arr=l1_reg_arr,
             l1_naive_arr=l1_naive_arr, l1_prior_arr=l1_prior_arr,
-            **(dict(l1_em_arr=l1_em_arr) if args.em else {}),
+            **(dict(l1_em_arr=l1_em_arr, l1_em_bcts_arr=l1_em_bcts_arr,
+                    ent_gaps_em=ent_gaps_em) if args.em else {}),
+            ent_gaps_reg=ent_gaps_reg,
             corrected_f1s=corrected_f1s, synthetic_f1s=synthetic_f1s,
             baseline_f1=np.array(baseline_f1),
             grid_classes_arr=grid_classes_arr,
@@ -481,6 +562,9 @@ def main():
         if l1_em_arr is not None:
             ax.plot(week_nums, l1_em_arr, color='#9b59b6', **MKW,
                     label='SLD-EM')
+        if l1_em_bcts_arr is not None:
+            ax.plot(week_nums, l1_em_bcts_arr, color='#c0392b', **MKW,
+                    linestyle='--', label='MLLS + BCTS calibration')
         ax.set_xlabel('Week Number', fontsize=12)
         ax.set_ylabel(r'$L_1$ Error (MAE)', fontsize=12)
         ax.set_title(
@@ -525,6 +609,19 @@ def main():
                             marker='D', markersize=4, linewidth=1.8, linestyle=':',
                             label=f'Perfect correction (true prior from the labels)  (ρ = {rho_oracle:.3f})')
             legend_handles.append(l4)
+        # estimator variants of the corrected gap (entropy mode only)
+        if not args.confidence and ent_gaps_reg is not None:
+            rho_reg = pearsonr(macro_f1s, ent_gaps_reg)[0]
+            l5, = ax_r.plot(week_nums, ent_gaps_reg, color='#0e7c7b',
+                            marker='v', markersize=4, linewidth=1.6, linestyle='-.',
+                            label=f'Entropy gap (RLLS-corrected)  (ρ = {rho_reg:.3f})')
+            legend_handles.append(l5)
+        if not args.confidence and ent_gaps_em is not None:
+            rho_em = pearsonr(macro_f1s, ent_gaps_em)[0]
+            l6, = ax_r.plot(week_nums, ent_gaps_em, color='#9b59b6',
+                            marker='P', markersize=4, linewidth=1.6, linestyle='--',
+                            label=f'Entropy gap (SLD-EM-corrected)  (ρ = {rho_em:.3f})')
+            legend_handles.append(l6)
         ax_l.set_xlabel('Week Number', fontsize=12)
         ax_l.set_ylabel('Macro F1', fontsize=12, color='#2c7bb6')
         ax_r.set_ylabel(gap_ylabel, fontsize=12, color='#d7191c')
@@ -915,7 +1012,7 @@ def main():
         M_DRAWS    = 60          # more draws per level → denser scatter, tighter bands
         N_RES      = 6_000
 
-        clean = [(wn, t, p) for wn, t, p, _ in test_weeks if CLEAN_LO <= wn <= CLEAN_HI]
+        clean = [(wn, t, p, s) for wn, t, p, s in test_weeks if CLEAN_LO <= wn <= CLEAN_HI]
         if not clean:
             print("  No clean weeks available — skipping Fig I.")
         else:
@@ -927,21 +1024,25 @@ def main():
                 pp = np.exp(lp)
                 return pp / pp.sum()
 
-            # cache the (slow, RLLS-bound) per-draw records so plot tweaks are free
+            # cache per-draw PRIOR VECTORS (realized + every estimate) so any
+            # metric or sampling-bias-corrected view can be replotted for free
+            em_tag = '_em' if args.em else ''
+            est_keys = ['naive', 'bbse', 'reg'] + (['em', 'em_bcts'] if args.em else [])
             sev_cache = (inference_dir /
                          f'fig_i_severity_ref{args.reference_week}'
-                         f'_w{CLEAN_LO}-{CLEAN_HI}_m{M_DRAWS}_s{len(SEVERITIES)}.npz')
-            rec_keys = ('x', 'sev', 'prior', 'naive', 'bbse', 'reg')
+                         f'_w{CLEAN_LO}-{CLEAN_HI}_m{M_DRAWS}_s{len(SEVERITIES)}{em_tag}_vec.npz')
             if sev_cache.exists() and not args.recompute:
                 print(f"  Loading Fig I cache from {sev_cache} ...")
                 _c = np.load(sev_cache)
-                rec = {k: _c[k] for k in rec_keys}
+                sev_arr = _c['sev']
+                P_emp = _c['p_emp'].astype(np.float64)
+                EST = {k: _c[k].astype(np.float64) for k in est_keys}
             else:
-                # per-draw records, tagged by severity level
-                rec = {k: [] for k in rec_keys}
+                sev_l, p_emp_l = [], []
+                EST = {k: [] for k in est_keys}
                 for s in tqdm(SEVERITIES, desc='  severity'):
                     for _ in range(M_DRAWS):
-                        wn, true, pred = clean[rng_sev.integers(len(clean))]
+                        wn, true, pred, soft = clean[rng_sev.integers(len(clean))]
                         present = np.unique(true)
                         p_tgt   = _draw_prior(s)
                         mask    = np.zeros(num_classes, bool); mask[present] = True
@@ -967,112 +1068,155 @@ def main():
                         p_bbse, q_hat = estimate_label_dist(pw, num_classes, C_T_pinv)
                         p_reg = regularized_bbse(C_T, q_hat, ftol=1e-8, maxiter=300)
 
-                        rec['x'].append(    float(np.mean(np.abs(p_emp   - p_train))))
-                        rec['sev'].append(  s)
-                        rec['prior'].append(float(np.mean(np.abs(p_train - p_emp))))
-                        rec['naive'].append(float(np.mean(np.abs(q_hat   - p_emp))))
-                        rec['bbse'].append( float(np.mean(np.abs(p_bbse  - p_emp))))
-                        rec['reg'].append(  float(np.mean(np.abs(p_reg   - p_emp))))
+                        sev_l.append(s)
+                        p_emp_l.append(p_emp)
+                        EST['naive'].append(q_hat)
+                        EST['bbse'].append(p_bbse)
+                        EST['reg'].append(p_reg)
+                        if args.em:
+                            sw = soft[idx]
+                            EST['em'].append(sld_em_estimation(p_train, sw))
+                            EST['em_bcts'].append(
+                                sld_em_estimation(p_train, calibrate(sw, bcts)))
 
-                for k in rec:
-                    rec[k] = np.array(rec[k])
-                np.savez_compressed(sev_cache, **rec)
+                sev_arr = np.array(sev_l)
+                P_emp = np.array(p_emp_l)
+                EST = {k: np.array(v) for k, v in EST.items()}
+                np.savez_compressed(
+                    sev_cache, sev=sev_arr, p_emp=P_emp.astype(np.float32),
+                    **{k: v.astype(np.float32) for k, v in EST.items()})
                 print(f"  Saved Fig I cache → {sev_cache}")
 
-            # aggregate per severity level: mean x and mean±std y for each method
-            sev_levels = np.array(SEVERITIES)
-            agg = {m: {'x': [], 'y': [], 'e': []} for m in ('prior', 'naive', 'bbse', 'reg')}
-            for s in sev_levels:
-                sel = rec['sev'] == s
-                if sel.sum() == 0:
-                    continue
-                xs = rec['x'][sel].mean()
+            # metric: total-variation distance in % of traffic — "what share of
+            # the traffic mix changed application" — instead of the per-class MAE
+            def tvpct(a, b):
+                return 50.0 * np.abs(a - b).sum(axis=-1)
+
+            debias_w = None
+            if args.debias:
+                debias_w = reconstruct_sampling_weights(
+                    args.dataset_root, class_names, num_classes)
+
+            spaces = [('', None, 'dataset proportions (as recorded)')]
+            if debias_w is not None:
+                spaces.append(('_debiased', debias_w,
+                               'sampling bias undone → network proportions'))
+
+            for suffix, wvec, space_label in spaces:
+                if wvec is None:
+                    fmap = lambda p: np.asarray(p, dtype=float)
+                else:
+                    def fmap(p, _w=wvec):
+                        q = np.clip(np.asarray(p, dtype=float), 0, None) * _w
+                        return q / q.sum(axis=-1, keepdims=True)
+
+                pt = fmap(p_train)
+                Femp = fmap(P_emp)
+                X = tvpct(Femp, pt)                    # induced shift per draw
+                Y = {'prior': X}                       # static prior = the diagonal
+                for k in est_keys:
+                    Y[k] = tvpct(fmap(EST[k]), Femp)
+
+                # aggregate per severity level: mean x and mean±std y per method
+                methods = ('prior',) + tuple(est_keys)
+                agg = {m: {'x': [], 'y': [], 'e': []} for m in methods}
+                for s in np.array(SEVERITIES):
+                    sel = sev_arr == s
+                    if sel.sum() == 0:
+                        continue
+                    xs = X[sel].mean()
+                    for m in methods:
+                        agg[m]['x'].append(xs)
+                        agg[m]['y'].append(Y[m][sel].mean())
+                        agg[m]['e'].append(Y[m][sel].std())
                 for m in agg:
-                    agg[m]['x'].append(xs)
-                    agg[m]['y'].append(rec[m][sel].mean())
-                    agg[m]['e'].append(rec[m][sel].std())
-            for m in agg:
-                for k in agg[m]:
-                    agg[m][k] = np.array(agg[m][k])
+                    for k2 in agg[m]:
+                        agg[m][k2] = np.array(agg[m][k2])
 
-            # natural weekly shift magnitudes (all test weeks) for context band
-            nat_mag = []
-            for wn, t, _, _ in test_weeks:
-                pw = np.bincount(t, minlength=num_classes).astype(float); pw /= pw.sum()
-                nat_mag.append(float(np.mean(np.abs(pw - p_train))))
-            nat_mag = np.array(nat_mag)
+                # natural weekly shift magnitudes in this space (context band)
+                nat_mag = []
+                for wn, t, _, _ in test_weeks:
+                    pw = np.bincount(t, minlength=num_classes).astype(float)
+                    pw /= pw.sum()
+                    nat_mag.append(float(tvpct(fmap(pw), pt)))
+                nat_mag = np.array(nat_mag)
 
-            # log-scale floor: a touch below the smallest mean error we plot
-            ymin_pos = min(agg[m]['y'].min() for m in agg)
-            floor    = max(1e-4, ymin_pos * 0.6)
+                # log-scale floor: a touch below the smallest mean error we plot
+                ymin_pos = min(agg[m]['y'].min() for m in agg)
+                floor    = max(1e-2, ymin_pos * 0.6)
 
-            with sns.axes_style("whitegrid"):
-                fig_i, ax_i = plt.subplots(figsize=(9.2, 5.2))
-                ax_i.set_yscale('log')
+                with sns.axes_style("whitegrid"):
+                    fig_i, ax_i = plt.subplots(figsize=(9.2, 5.2))
+                    ax_i.set_yscale('log')
 
-                # context: range of label shift actually seen in real data.
-                # Anchor the label in axes-fraction y so it can never drive autoscale.
-                ax_i.axvspan(nat_mag.min(), nat_mag.max(), color='#7f8c8d',
-                             alpha=0.10, zorder=0)
-                ax_i.text(nat_mag.max(), 0.97, '  natural\n  weekly range',
-                          transform=ax_i.get_xaxis_transform(),
-                          fontsize=8.5, color='#566573', va='top', ha='left')
+                    # context: range of label shift actually seen in real data.
+                    ax_i.axvspan(nat_mag.min(), nat_mag.max(), color='#7f8c8d',
+                                 alpha=0.10, zorder=0)
+                    ax_i.text(nat_mag.max(), 0.97, '  natural\n  weekly range',
+                              transform=ax_i.get_xaxis_transform(),
+                              fontsize=8.5, color='#566573', va='top', ha='left')
 
-                style = [
-                    ('prior', '#999999', 's', '--', 'Static prior (train distribution)'),
-                    ('naive', '#e07b39', '^', '-',  'Uncalibrated (raw predicted frequencies)'),
-                    ('reg',   '#1a9641', 'D', '-',  'Regularized BBSE (constrained least-squares)'),
-                    ('bbse',  '#2c7bb6', 'o', '-',  'BBSE (truncated pseudo-inverse)'),
-                ]
-                for m, col, mk, ls, lab in style:
-                    # faint per-draw scatter (clip to floor so log-axis stays valid)
-                    ax_i.scatter(rec['x'], np.clip(rec[m], floor, None), s=9, color=col,
-                                 alpha=0.09, edgecolors='none', zorder=1)
-                    # binned trend with ±1σ band, lower edge clipped for the log axis
-                    x, y, e = agg[m]['x'], agg[m]['y'], agg[m]['e']
-                    ax_i.fill_between(x, np.clip(y - e, floor, None), y + e,
-                                      color=col, alpha=0.15, zorder=2)
-                    ax_i.plot(x, y, color=col, marker=mk, markersize=5.5, linewidth=2.0,
-                              linestyle=ls, label=lab, zorder=3)
+                    style = [
+                        ('prior', '#999999', 's', '--', 'Static prior (train distribution)'),
+                        ('naive', '#e07b39', '^', '-',  'Uncalibrated (raw predicted frequencies)'),
+                        ('reg',   '#1a9641', 'D', '-',  'Regularized BBSE (constrained least-squares)'),
+                        ('bbse',  '#2c7bb6', 'o', '-',  'BBSE (truncated pseudo-inverse)'),
+                    ]
+                    if args.em:
+                        style += [
+                            ('em',      '#9b59b6', 'v', '-',  'SLD-EM / MLLS'),
+                            ('em_bcts', '#c0392b', 'P', '--', 'MLLS + BCTS calibration'),
+                        ]
+                    for m, col, mk, ls, lab in style:
+                        # faint per-draw scatter (one dot per synthetic draw)
+                        ax_i.scatter(X, np.clip(Y[m], floor, None), s=9, color=col,
+                                     alpha=0.09, edgecolors='none', zorder=1)
+                        x, y, e = agg[m]['x'], agg[m]['y'], agg[m]['e']
+                        ax_i.fill_between(x, np.clip(y - e, floor, None), y + e,
+                                          color=col, alpha=0.15, zorder=2)
+                        ax_i.plot(x, y, color=col, marker=mk, markersize=5.5,
+                                  linewidth=2.0, linestyle=ls, label=lab, zorder=3)
 
-                # annotate the robustness gap at the most extreme shift
-                xm = agg['prior']['x'][-1]
-                ax_i.annotate(
-                    f'≈{agg["prior"]["y"][-1] / agg["bbse"]["y"][-1]:.0f}× lower',
-                    xy=(xm, agg['bbse']['y'][-1]), xytext=(xm, agg['prior']['y'][-1]),
-                    ha='center', va='bottom', fontsize=9, color='#2c7bb6',
-                    arrowprops=dict(arrowstyle='<->', color='#2c7bb6', lw=1.2, alpha=0.8))
+                    # annotate the robustness gap at the most extreme shift
+                    xm = agg['prior']['x'][-1]
+                    ax_i.annotate(
+                        f'≈{agg["prior"]["y"][-1] / agg["bbse"]["y"][-1]:.0f}× lower',
+                        xy=(xm, agg['bbse']['y'][-1]), xytext=(xm, agg['prior']['y'][-1]),
+                        ha='center', va='bottom', fontsize=9, color='#2c7bb6',
+                        arrowprops=dict(arrowstyle='<->', color='#2c7bb6', lw=1.2,
+                                        alpha=0.8))
 
-                ax_i.set_xlabel(r'Induced label-shift magnitude   $\frac{1}{K}\,\|P(Y_t)-P_{\mathrm{train}}\|_1$',
-                                fontsize=12)
-                ax_i.set_ylabel(r'$L_1$ Estimation Error (MAE, log scale)', fontsize=12)
-                ax_i.set_xlim(left=0)
-                ax_i.set_ylim(bottom=floor)
-                ax_i.grid(True, which='both', alpha=0.18)
-                ax_i.set_title(
-                    'Estimation Robustness to Extreme Label Shift\n'
-                    f'(clean weeks {CLEAN_LO}–{CLEAN_HI}, $P(X\\,|\\,Y)$ intact;  '
-                    f'severity $s\\!\\in\\![{SEVERITIES[0]:.0f},{SEVERITIES[-1]:.0f}]$,  '
-                    f'{M_DRAWS} draws/level)',
-                    fontsize=12, fontweight='bold'
-                )
-                ax_i.legend(fontsize=10, framealpha=0.9, loc='lower right')
-                plt.tight_layout()
-                out_i = output_dir / f'fig_estimation_robustness_severity_ref{args.reference_week}.png'
-                fig_i.savefig(out_i, dpi=200, bbox_inches='tight')
-                plt.close(fig_i)
-            print(f"  Saved → {out_i}")
+                    ax_i.set_xlabel('Induced label shift — share of traffic that '
+                                    'changed application vs the training mix '
+                                    '(TV distance, %)', fontsize=12)
+                    ax_i.set_ylabel('Estimation error — TV distance to realized '
+                                    'mix (%, log scale)', fontsize=12)
+                    ax_i.set_xlim(left=0)
+                    ax_i.set_ylim(bottom=floor)
+                    ax_i.grid(True, which='both', alpha=0.18)
+                    ax_i.set_title(
+                        'Estimation Robustness to Extreme Label Shift\n'
+                        f'(clean weeks {CLEAN_LO}–{CLEAN_HI}, $P(X\\,|\\,Y)$ intact;  '
+                        f'severity $s\\!\\in\\![{SEVERITIES[0]:.0f},{SEVERITIES[-1]:.0f}]$,  '
+                        f'{M_DRAWS} draws/level;  {space_label})',
+                        fontsize=12, fontweight='bold'
+                    )
+                    ax_i.legend(fontsize=10, framealpha=0.9, loc='lower right')
+                    plt.tight_layout()
+                    out_i = (output_dir /
+                             f'fig_estimation_robustness_severity_ref'
+                             f'{args.reference_week}{suffix}.png')
+                    fig_i.savefig(out_i, dpi=200, bbox_inches='tight')
+                    plt.close(fig_i)
+                print(f"  Saved → {out_i}")
 
-            # headline numbers for the paper
-            xmax = rec['x'].max()
-            hi = rec['sev'] == SEVERITIES[-1]
-            print(f"  [Fig I] max induced shift magnitude reached: {xmax:.4f} "
-                  f"({xmax / max(nat_mag.max(), 1e-9):.1f}× the worst natural week)")
-            print(f"  [Fig I] at highest severity s={SEVERITIES[-1]:.0f}: "
-                  f"static-prior L1={rec['prior'][hi].mean():.4f}, "
-                  f"naive L1={rec['naive'][hi].mean():.4f}, "
-                  f"BBSE L1={rec['bbse'][hi].mean():.4f}, "
-                  f"RLLS L1={rec['reg'][hi].mean():.4f}")
+                # headline numbers for the paper
+                hi = sev_arr == SEVERITIES[-1]
+                print(f"  [Fig I{suffix}] max induced shift: {X.max():.1f}% TV "
+                      f"({X.max() / max(nat_mag.max(), 1e-9):.1f}× the worst natural week; "
+                      f"natural range {nat_mag.min():.1f}–{nat_mag.max():.1f}%)")
+                print(f"  [Fig I{suffix}] at s={SEVERITIES[-1]:.0f}: "
+                      + ", ".join(f"{m} TV={Y[m][hi].mean():.2f}%" for m in methods))
 
 
 if __name__ == '__main__':

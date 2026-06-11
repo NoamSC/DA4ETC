@@ -1,0 +1,41 @@
+{
+  "config": {
+    "reference_week": 16,
+    "inference_dir": "results/inference/week_16_inference",
+    "n_valid_fit": 100000,
+    "seed": 42,
+    "n_test_weeks": 52
+  },
+  "detection": {
+    "ours": {
+      "auroc": 0.9034581391726041,
+      "n_eval": 6476,
+      "n_pos": 2957
+    },
+    "bbse_soft": {
+      "auroc": 0.9027091253885016,
+      "n_eval": 6476,
+      "n_pos": 2957
+    },
+    "rlls": {
+      "auroc": 0.9352487482080705,
+      "n_eval": 6476,
+      "n_pos": 2957
+    },
+    "em": {
+      "auroc": 0.9336946935631232,
+      "n_eval": 6476,
+      "n_pos": 2957
+    },
+    "em_bcts": {
+      "auroc": 0.9336946935631232,
+      "n_eval": 6476,
+      "n_pos": 2957
+    },
+    "naive": {
+      "auroc": 0.9674923308734275,
+      "n_eval": 6476,
+      "n_pos": 2957
+    }
+  }
+}

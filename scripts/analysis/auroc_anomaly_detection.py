@@ -49,6 +49,7 @@ Outputs
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -56,6 +57,12 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, f1_score, roc_curve, roc_auc_score
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'archive'))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from plot_paper_figures import sld_em_estimation, regularized_bbse
+from label_shift_estimators import (fit_bcts_calibrator, calibrate,
+                                    build_soft_confusion_pinv, bbse_soft_estimate)
 
 
 # ── BBSE machinery (mirrors archive/plot_paper_figures.py) ──────────────────────
@@ -84,7 +91,7 @@ def build_bbse(ref_true, ref_pred, ref_softmax, num_classes):
         if m.sum() > 0:
             p = np.clip(ref_softmax[m], 1e-12, 1.0)
             h_ref[c] = float(-np.sum(p * np.log(p), axis=1).mean())
-    return C_T_pinv, p_train, h_ref
+    return C_T_pinv, C_T, p_train, h_ref
 
 
 def bbse_estimate(pred, num_classes, C_T_pinv):
@@ -106,6 +113,11 @@ def gap_uncorrected(softmax, h_ref, p_train, valid):
 
 def gap_bbse(softmax, pred, num_classes, C_T_pinv, h_ref, valid):
     w = bbse_estimate(pred, num_classes, C_T_pinv)
+    return mean_entropy(softmax) - float(np.dot(w[valid], h_ref[valid]))
+
+
+def gap_from_w(softmax, w, h_ref, valid):
+    """Entropy residual with an arbitrary estimated label marginal w."""
     return mean_entropy(softmax) - float(np.dot(w[valid], h_ref[valid]))
 
 
@@ -170,8 +182,13 @@ def main():
     ref = next((w for w in weeks if w[0] == args.reference_week), weeks[0])
     _, ref_true, ref_pred, ref_soft = ref
     K = ref_soft.shape[1]
-    C_T_pinv, p_train, h_ref = build_bbse(ref_true, ref_pred, ref_soft, K)
+    C_T_pinv, C_T, p_train, h_ref = build_bbse(ref_true, ref_pred, ref_soft, K)
     valid = ~np.isnan(h_ref)
+
+    # estimator variants: RLLS / SLD-EM share the same residual, only w changes
+    print('Fitting BCTS calibrator + soft confusion on the reference week ...')
+    bcts = fit_bcts_calibrator(ref_soft, ref_true, K, seed=args.seed)
+    Cs_T_pinv = build_soft_confusion_pinv(ref_soft, ref_true, K)
 
     # MFWDD reference: top-k classes by train freq, Σw=1, pre-sorted channels
     chan = np.argsort(-p_train)[:args.mfwdd_channels]
@@ -195,12 +212,23 @@ def main():
 
     def score(idx, true, pred, soft, wn, regime, win_f1=np.nan):
         p, sm = pred[idx], soft[idx]
-        records.append(dict(
+        rec = dict(
             week=int(wn), regime=regime, label=is_anom[wn], win_f1=float(win_f1),
             uncorrected=gap_uncorrected(sm, h_ref, p_train, valid),
             bbse=gap_bbse(sm, p, K, C_T_pinv, h_ref, valid),
             mfwdd=mfwdd_severity(sm, ref_sorted, w_mfwdd, chan, m_mfwdd, rng),
-        ))
+        )
+        # estimator variants (deterministic — placed after the rng-consuming
+        # mfwdd call so the original detectors' numbers reproduce exactly)
+        q = np.bincount(p, minlength=K).astype(float); q /= q.sum()
+        rec['rlls'] = gap_from_w(sm, regularized_bbse(C_T, q, ftol=1e-8, maxiter=300),
+                                 h_ref, valid)
+        rec['em'] = gap_from_w(sm, sld_em_estimation(p_train, sm), h_ref, valid)
+        rec['em_bcts'] = gap_from_w(sm, sld_em_estimation(p_train, calibrate(sm, bcts)),
+                                    h_ref, valid)
+        rec['bbse_soft'] = gap_from_w(sm, bbse_soft_estimate(sm, Cs_T_pinv),
+                                      h_ref, valid)
+        records.append(rec)
 
     print('Building CLEAN pool ...')
     for wn, true, pred, soft in test_weeks:
@@ -235,6 +263,10 @@ def main():
         ('uncorrected', 'Uncorrected entropy gap',       '#e08020'),
         ('mfwdd',       'MFWDD-style global drift',       '#7b3fa0'),
         ('bbse',        'BBSE-corrected residual (ours)', '#d7191c'),
+        ('bbse_soft',   'BBSE-soft-corrected residual',   '#74add1'),
+        ('rlls',        'RLLS-corrected residual',        '#1a9641'),
+        ('em',          'SLD-EM-corrected residual',      '#9b59b6'),
+        ('em_bcts',     'MLLS+BCTS-corrected residual',   '#c0392b'),
     ]
 
     def pool(regime):
