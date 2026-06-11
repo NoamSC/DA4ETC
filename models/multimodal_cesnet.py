@@ -1,3 +1,10 @@
+# Adapted from the cesnet-models package (https://github.com/CESNET/cesnet-models),
+# Copyright (c) 2023, CESNET. Licensed under the BSD 3-Clause License.
+# This file contains the Multimodal_CESNET (mm-CESNET-v2) architecture as published
+# upstream; modifications: added DANN gradient-reversal domain head and diagnostic
+# utilities (set_epoch, get_grad_norms); forward() returns a dict with class
+# predictions, features, and domain predictions.
+
 from enum import Enum
 from functools import partial
 from typing import Optional, Union
