@@ -28,3 +28,14 @@ archive/tent/
 
 # Qt lock/junk files
 exps/.qt*
+
+# Claude Code local state (settings.json + skills ARE tracked)
+.claude/settings.local.json
+.claude/worktrees/
+
+# runtime logs from the benchmark monitor/autoheal loops
+scripts/analysis/uda_bench_*.log
+
+# paper PDFs: literature copies and draft compiles stay on disk only
+paper/litrature/*.pdf
+paper/*.pdf
