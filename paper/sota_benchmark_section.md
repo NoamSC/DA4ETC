@@ -57,11 +57,13 @@ eval). Δ = change vs. the no-adaptation source-only model; negative Δ = negati
 
 | Method | Family | Adaptation scope | Mean acc | Δ | Macro-F1 | In-dist | Far (≥wk43) |
 |---|---|---|---:|---:|---:|---:|---:|
-| Source-only (no adaptation) | — | none | **0.614** | — | 0.463 | 0.845 | 0.530 |
-| AdaBN (BN-stat recalibration) | CTTA, non-param. | global (stats only) | 0.606 | −0.008 | 0.470 | 0.853 | 0.519 |
-| TENT | CTTA | global (BN affine, entropy) | 0.483 | **−0.130** | 0.367 | 0.834 | 0.434 |
-| CoTTA | CTTA | global (all params, consistency) | 0.509 | **−0.104** | 0.393 | 0.780 | 0.446 |
-| DANN (λ_dann=1, GRL λ=0.1) | UDA | global (adversarial align) | _(re-evaluating w/ correct WEEK-2022-01 source: job 522677)_ | | | | |
+| Source-only (no adaptation) | — | none | **0.613** | — | 0.461 | 0.845 | 0.530 |
+| AdaBN (BN-stat recalibration) | CTTA, non-param. | global (stats only) | 0.605 | −0.009 | 0.469 | 0.853 | 0.519 |
+| TENT (bs64) | CTTA | global (BN affine, entropy) | 0.483 | **−0.130** | 0.367 | 0.834 | 0.434 |
+| TENT (bs256) | CTTA | global (BN affine, entropy) | 0.585 | −0.028 | 0.450 | 0.847 | 0.522 |
+| CoTTA (bs64) | CTTA | global (all params, consistency) | 0.509 | **−0.104** | 0.393 | 0.780 | 0.446 |
+| CoTTA (bs256) | CTTA | global (all params, consistency) | 0.572 | −0.041 | 0.437 | 0.833 | 0.498 |
+| DANN (λ_dann=1, GRL λ=0.1) | UDA | global (adversarial align) | 0.545 | **−0.069** | 0.420 | 0.863 | 0.429 |
 | **Targeted adaptation (ours)** | targeted | per-application | — (to run) | | | | |
 
 **Table 2. Where the damage happens (CESNET-TLS-Year22, accuracy by drift regime).**
@@ -72,6 +74,20 @@ eval). Δ = change vs. the no-adaptation source-only model; negative Δ = negati
 | TENT | 0.834 | 0.684 | 0.434 |
 | CoTTA | 0.780 | 0.668 | 0.446 |
 
+**Table 2b. SOTA benchmark on CESNET-TLS-Year22 — week-16 source model** (post-Week-10
+healthy regime; 53-week forward eval). The effect reproduces under a second, healthier
+source week: higher absolute accuracy, milder but still-present negative transfer.
+
+| Method | Mean acc | Δ | Macro-F1 | In-dist | Far (≥wk43) |
+|---|---:|---:|---:|---:|---:|
+| Source-only | **0.759** | — | 0.622 | 0.883 | 0.746 |
+| AdaBN | 0.766 | **+0.007** | 0.626 | 0.876 | 0.731 |
+| TENT (bs64) | 0.713 | −0.046 | 0.580 | 0.872 | 0.677 |
+| TENT (bs256) | 0.752 | −0.007 | 0.617 | 0.880 | 0.721 |
+| CoTTA (bs64) | 0.689 | −0.070 | 0.568 | 0.817 | 0.688 |
+| CoTTA (bs256) | 0.746 | −0.012 | 0.610 | 0.853 | 0.731 |
+| DANN | 0.747 | −0.012 | 0.617 | 0.882 | 0.728 |
+
 ## 2.4 Findings
 
 ### 2.4.1 Primary dataset (TLS-Year22)
@@ -79,16 +95,17 @@ eval). Δ = change vs. the no-adaptation source-only model; negative Δ = negati
 **(F1) Every global adaptation method exhibits systematic negative transfer — across
 both the CTTA and UDA families.** Relative to doing nothing, mean accuracy *drops* for
 TENT (−13.0 pts, 0.613 → 0.483) and CoTTA (−10.4 pts, → 0.509); the adversarial UDA
-method DANN degrades comparably _(exact figure re-evaluating against the correct
-WEEK-2022-01 source — job 522677)_. That the UDA and CTTA families fail the same way
+method DANN degrades comparably (−6.9 pts, 0.613 → 0.545). That the UDA and CTTA families fail the same way
 shows the problem is **global adaptation scope**, not a quirk of any single algorithm.
-This is the core evidence for the negative-transfer hypothesis.
+This is the core evidence for the negative-transfer hypothesis. The TENT/CoTTA bs64
+figures are inflated by small-batch BatchNorm noise; at the training batch size (256) the
+damage shrinks to −0.028 / −0.041 (week-1) and −0.007 / −0.012 (week-16) but remains
+negative, isolating the genuine parametric-adaptation harm (cf. §2.4.1-F4, QUIC §2.4.2).
 
 **(F1b) DANN is fine in-distribution but worst on drift — the negative transfer is
-temporal.** _[Pending the corrected WEEK-2022-01-source eval (job 522677); the
-preliminary run showed DANN ≈ source-only in-distribution but collapsing on the far
-weeks, consistent with global source-alignment that does not generalize forward. Numbers
-to be finalized.]_
+temporal.** DANN matches source-only in-distribution (0.863 vs 0.845) yet collapses on the
+far weeks (0.429 vs source-only 0.530), the largest far-week drop of any method —
+consistent with global source-alignment that does not generalize forward.
 
 **(F2) The damage concentrates exactly where adaptation is supposed to help.** Table 2
 shows the loss grows with drift: on the far weeks (≥ wk43) TENT and CoTTA fall to
@@ -141,13 +158,13 @@ adaptation, not test-time inference itself. Full QUIC analysis: `QUIC_W44_RESULT
 
 ## 2.5 Experiments in flight / still required
 
-- **AdaBN on TLS-Year22** — ✅ done; Table 1 filled.
-- **DANN on TLS-Year22** — ✅ source-week forward-eval done (Table 1 filled); the full
-  per-week DANN training set (for a temporal train×test matrix, if needed) is finishing.
+- **AdaBN / TENT / CoTTA / DANN on TLS-Year22** — ✅ done for **both** source weeks
+  (week 1, Table 1; week 16, Table 2b), at batch 64 and batch 256.
 - **Targeted adaptation (ours)** — the proposed method's results (to provide).
-- **CORAL** — *excluded from this paper* (out of scope).
+- **CORAL** — *excluded from this paper* (out of scope; not run).
 
-Table 1 is now fully populated except the **Targeted (ours)** row.
+Tables 1 and 2b are fully populated except the **Targeted (ours)** row.
+Full cross-dataset numbers (incl. Allot) live in `UDA_BENCHMARK_STATUS.md`.
 
 ---
 ### Source of the numbers (reproduction / auditing)

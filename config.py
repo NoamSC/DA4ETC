@@ -95,7 +95,7 @@ class Config:
     LAMBDA_MMD: float = 0
     MMD_BANDWIDTHS: list = field(default_factory=lambda: [1e-1, 1e0, 1e1])
     
-    LAMBDA_DANN: float = 0 #0.020626 # 1e0 # 1e0
+    LAMBDA_DANN: float = 0 #0.020626 # 1e0 # 1e0 #
 
     LAMBDA_CORAL: float = 0.0
 
