@@ -55,6 +55,23 @@ def _move(inputs, device):
     return [x.to(device) for x in inputs] if isinstance(inputs, list) else inputs.to(device)
 
 
+def _pad_singleton(inputs):
+    """The adapting methods (TENT/CoTTA/AdaBN) run BatchNorm in train mode, which
+    raises `Expected more than 1 value per channel` on a size-1 batch — exactly what
+    happens on a week whose sample count leaves a trailing batch of 1 (drop_last is
+    False by protocol, so all samples are kept). Duplicate the lone sample to size 2
+    so batch-variance is defined (BN eps keeps it finite); callers slice outputs back
+    to the original count, so the duplicate never reaches the saved predictions and
+    its effect on the BN/adaptation step for that single batch is negligible."""
+    if isinstance(inputs, (list, tuple)):
+        if inputs[0].shape[0] == 1:
+            return [torch.cat([t, t], 0) for t in inputs]
+        return inputs
+    if inputs.shape[0] == 1:
+        return torch.cat([inputs, inputs], 0)
+    return inputs
+
+
 def _subsample_embeddings(embeddings, n_total, embed_seed):
     """Return (subsampled_embeddings, indices) — always 10 % of n_total."""
     n = max(1, n_total // 10)
@@ -106,8 +123,9 @@ def run_bnstats(model, loader, device, original_state):
     with torch.no_grad():
         for inputs, labels in tqdm(loader, desc="  batches", leave=False, ncols=100):
             labels = labels.to(device).long()
-            outputs = model(_move(inputs, device))
-            logits, feats = outputs['class_preds'], outputs['features']
+            n = labels.shape[0]
+            outputs = model(_pad_singleton(_move(inputs, device)))
+            logits, feats = outputs['class_preds'][:n], outputs['features'][:n]
             all_true.append(labels.cpu().numpy())
             all_pred.append(logits.argmax(1).cpu().numpy())
             all_softmax.append(F.softmax(logits, 1).cpu().numpy())
@@ -155,10 +173,11 @@ def run_tent(model, loader, device, original_state, lr, steps):
     all_true, all_pred, all_softmax, all_embeds = [], [], [], []
     for inputs, labels in tqdm(loader, desc="  batches", leave=False, ncols=100):
         labels = labels.to(device).long()
-        inputs = _move(inputs, device)
+        n = labels.shape[0]
+        inputs = _pad_singleton(_move(inputs, device))
         for _ in range(steps):
             out = _tent_step(inputs, model, optimizer)
-        logits, feats = out['class_preds'], out['features']
+        logits, feats = out['class_preds'][:n], out['features'][:n]
         all_true.append(labels.cpu().numpy())
         all_pred.append(logits.argmax(1).detach().cpu().numpy())
         all_softmax.append(F.softmax(logits, 1).detach().cpu().numpy())
@@ -176,6 +195,26 @@ def _configure_cotta(model):
         if isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d)):
             m.track_running_stats = False
             m.running_mean = m.running_var = None
+    return model
+
+
+def _restore_bn_buffers(model):
+    """Re-register BN running buffers that a previous week's _configure_cotta() set
+    to None. PyTorch removes a buffer from the module when it's set to None, so a
+    later load_state_dict(strict=False) SILENTLY SKIPS the source running_mean/var
+    keys (they have no destination) — leaving the buffers absent and BN falling back
+    to test-batch stats. Re-registering them first lets load_state_dict repopulate
+    the source stats, which the CoTTA anchor (the frozen source model behind the
+    confidence gate) requires. Without this the anchor was correct only on the first
+    week processed per SLURM shard, making results shard-position-dependent."""
+    for m in model.modules():
+        if isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d)) and m.running_mean is None:
+            dev = m.weight.device
+            m.register_buffer('running_mean', torch.zeros(m.num_features, device=dev))
+            m.register_buffer('running_var', torch.ones(m.num_features, device=dev))
+            m.register_buffer('num_batches_tracked',
+                              torch.tensor(0, dtype=torch.long, device=dev))
+            m.track_running_stats = True
     return model
 
 
@@ -215,17 +254,28 @@ def _cotta_step(inputs, student, teacher, anchor, optimizer,
                     mask = (torch.rand(p.shape) < rst_m).to(p.device)
                     with torch.no_grad():
                         p.data.copy_(src_state[key] * mask + p.data * (~mask))
-    return {'class_preds': ema_logits, 'features': out['features']}
+    # SAVE the clean (un-augmented) teacher prediction `std_ema`, NOT `ema_logits`.
+    # When the confidence gate fires, ema_logits is the MEAN of n_aug noise-augmented
+    # teacher passes — that augmented average is a pseudo-LABEL for the self-training
+    # loss above, not the model's prediction. Reporting it as the prediction injected
+    # augmentation noise into every evaluated sample (the gate fires on ~all 180-class
+    # samples), degrading even the source week where adaptation is a no-op.
+    return {'class_preds': std_ema, 'features': out['features']}
 
 
 def run_cotta(model, loader, device, original_state,
               lr, rst_m, ap, n_aug, noise_std, steps, reset):
     if reset:
         model.load_state_dict(original_state, strict=False)
-    # anchor = frozen source model for the confidence gate. Copied BEFORE
-    # _configure_cotta() nulls BatchNorm running stats, so eval() here uses the
-    # source running stats (and dropout is off) as the paper intends.
-    anchor = deepcopy(model).to(device).eval()
+    # anchor = frozen SOURCE model for the confidence gate. It MUST use source BN
+    # running stats. A previous week's _configure_cotta() may have nulled the model's
+    # BN buffers (and the reset above can't restore deregistered buffers), so rebuild
+    # the anchor from a buffer-restored copy loaded with the source state explicitly.
+    # eval() then uses source running stats (and dropout off) as the paper intends.
+    anchor = deepcopy(model)
+    _restore_bn_buffers(anchor)
+    anchor.load_state_dict(original_state, strict=False)
+    anchor = anchor.to(device).eval()
     for p in anchor.parameters(): p.requires_grad_(False)
     _configure_cotta(model)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
@@ -240,11 +290,12 @@ def run_cotta(model, loader, device, original_state,
     all_true, all_pred, all_softmax, all_embeds = [], [], [], []
     for inputs, labels in tqdm(loader, desc="  batches", leave=False, ncols=100):
         labels = labels.to(device).long()
-        inputs = _move(inputs, device)
+        n = labels.shape[0]
+        inputs = _pad_singleton(_move(inputs, device))
         for _ in range(steps):
             out = _cotta_step(inputs, model, teacher, anchor, optimizer,
                               src_state, rst_m, ap, n_aug, noise_std)
-        logits, feats = out['class_preds'], out['features']
+        logits, feats = out['class_preds'][:n], out['features'][:n]
         all_true.append(labels.cpu().numpy())
         all_pred.append(logits.argmax(1).detach().cpu().numpy())
         all_softmax.append(F.softmax(logits, 1).detach().cpu().numpy())
@@ -268,6 +319,10 @@ def main():
     parser.add_argument('--data_sample_frac', type=float, default=0.1)
     parser.add_argument('--seed',           type=int,   default=42,
                         help='Controls data loading / shuffling')
+    parser.add_argument('--acc_only',       action='store_true',
+                        help='Save ONLY true_labels + pred_labels (skip softmax + '
+                             'embeddings). ~100x smaller .npz — for the multi-seed '
+                             'significance study where only accuracy is needed.')
     parser.add_argument('--embed_seed',     type=int,   default=0,
                         help='Controls which 10%% of samples get embeddings saved '
                              '(same value across all methods → same indices)')
@@ -355,13 +410,29 @@ def main():
                 n_aug=args.n_aug, noise_std=args.noise_std,
                 steps=args.cotta_steps, reset=cotta_reset)
 
-        emb, idx = _subsample_embeddings(embeddings, len(true_labels), args.embed_seed)
-        np.savez_compressed(
-            out_path,
-            true_labels=true_labels, pred_labels=pred_labels, softmax=softmax,
-            embeddings=emb, embedding_indices=idx,
-        )
-        print(f"    saved {len(true_labels)} samples, {len(idx)} embeddings → {out_path}")
+        # Atomic write: save to a .tmp via a file handle (so numpy doesn't re-append
+        # .npz), then Path.replace() to rename atomically. If the job is preempted
+        # mid-write, only the .tmp is left (skip-existing checks out_path, so it
+        # regenerates) — a partial write can never masquerade as a complete .npz.
+        tmp_path = out_path.with_name(out_path.name + '.tmp')
+        if args.acc_only:
+            with open(tmp_path, 'wb') as _fh:
+                np.savez_compressed(
+                    _fh,
+                    true_labels=true_labels, pred_labels=pred_labels,
+                )
+            tmp_path.replace(out_path)
+            print(f"    saved {len(true_labels)} samples (acc_only) → {out_path}")
+        else:
+            emb, idx = _subsample_embeddings(embeddings, len(true_labels), args.embed_seed)
+            with open(tmp_path, 'wb') as _fh:
+                np.savez_compressed(
+                    _fh,
+                    true_labels=true_labels, pred_labels=pred_labels, softmax=softmax,
+                    embeddings=emb, embedding_indices=idx,
+                )
+            tmp_path.replace(out_path)
+            print(f"    saved {len(true_labels)} samples, {len(idx)} embeddings → {out_path}")
 
     print("\nDone.")
 

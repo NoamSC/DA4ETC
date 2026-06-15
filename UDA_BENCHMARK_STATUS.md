@@ -2,7 +2,124 @@
 
 _Generated from on-disk inference outputs (`frac=0.1`, `seed=42`, identical per-week/window
 samples across methods). All numbers are real (validated `np.load`, no 0-byte stubs).
-Last updated 2026-06-10._
+Last updated 2026-06-14._
+
+> ## ⚠️ VALIDITY AUDIT (2026-06-14) — the tables below are UNDER REVIEW, do not cite yet
+>
+> A per-method audit found a real defect in **every** row of the benchmark. Three code
+> fixes have been applied (working tree, not yet committed); the affected runs must be
+> regenerated before the numbers can be trusted. Severity ranges from "magnitude inflated"
+> to "result is meaningless."
+>
+> ### 🔧 UPDATE 2026-06-15 — DANN root cause found (BatchNorm); earlier DANN framings RETRACTED
+>
+> The real DANN bug was **BatchNorm + separate source/target forward passes**:
+> `train_one_epoch` forwarded source then target as two separate `train()`-mode passes, so
+> BN normalized each batch by its OWN mean/var and **erased the covariate shift** before the
+> domain classifier — pinning domain accuracy at exactly 50% / loss 2·ln2 **even though the
+> covariate shift is real**. Fix (`training/trainer.py`): forward source+target as ONE
+> combined batch so BN sees the mixed distribution. **Verified**: on a fresh test (wk16→wk44,
+> wk16→wk52) domain-classifier accuracy jumped from 50% to **67–71%** (dann_loss 1.1 < 1.386).
+>
+> **Retractions:**
+> - The **"no global covariate gap"** conclusion is **WITHDRAWN** — it was this BN bug.
+>   Covariate shift exists; DANN trains normally once source+target share a BN batch.
+> - The **normalization-artifact** hypothesis and the norm/no-norm **contrast experiment**
+>   are **WITHDRAWN / moot** (no-norm also showed 50% because BN, not input normalization,
+>   caused it).
+> - The "Resolved: transductive `--val_week`" note below still holds for the *target-week*
+>   choice, but `--val_week` alone was **not sufficient** — the BN fix was the missing piece.
+>
+> The buggy sweep was preserved as `exps/cesnet_tls_dann_fwd_w16_v01_BUGGY_preBNfix`; a clean
+> 52-target re-run (BN fix + `num_workers=0`) is in flight (job 551646, convergence drain).
+> DANN accuracy numbers in the tables below are stale pending that re-run + diagonal inference.
+>
+> ### Findings (all independently verified against on-disk artifacts/code)
+>
+> 1. **🔴 DANN — adversarial training never happened (result invalid).** The old
+>    `run_dann_train.slurm` passed no `--val_week`, so `train_per_week_cesnet.py` defaulted
+>    the DANN **target domain to the source week's own test split** — a random 70/30 split
+>    of the *same* week (seed 42+week), i.e. no domain gap. The week-16 tensorboard
+>    (`exps/cesnet_tls_dann_grl01_v01/WEEK-2022-01/`) confirms it empirically:
+>    `Accuracy/domain_classifier` = **49.9–50.1%** and `Loss/dann` = **1.3877 ≈ 2·ln2**
+>    (random binary), flat for all 50 epochs. The reversed gradient into the feature
+>    extractor is ≈0, so DANN ≈ a source-only model with dead heads. The DANN row and the
+>    "global alignment doesn't generalize forward" narrative built on it are unsupported.
+>
+> 2. **🔴 CoTTA — saved predictions are augmentation-averaged, not clean.** In
+>    `run_inference.py` `_cotta_step`, when the confidence gate fires (`anchor_conf < ap`,
+>    `ap=0.9` — fires on ~every 180-class sample), the returned `class_preds` was
+>    `ema_logits` = mean of `n_aug` **noise-augmented** teacher passes. That augmented
+>    average is a self-training pseudo-LABEL, not the prediction; reporting it injected
+>    augmentation noise into every evaluated sample and dropped accuracy ~6.5 pts even on
+>    CoTTA's own source week, where adaptation is a no-op.
+>
+> 3. **🔴 CoTTA — episodic reset silently fails to restore BN buffers.** `_configure_cotta`
+>    sets `running_mean = running_var = None`, which *deregisters* those buffers; the next
+>    week's `load_state_dict(original_state, strict=False)` then silently skips the source
+>    running-stats keys. The **anchor** (`deepcopy(model)` for the confidence gate) was
+>    therefore built on test-batch stats, not source stats, on every week except the first
+>    per SLURM shard → results depended on shard position.
+>
+> 4. **🟠 Shared TTA harness — non-deterministic eval batching (TENT + CoTTA + AdaBN).**
+>    The eval loader (`temporal_generalization.py:create_week_loader`, multimodal branch)
+>    used `shuffle=True` with no generator + `drop_last=True`. `seed=42` fixed only *which
+>    rows* are sampled, not batch composition/order. Since these methods normalize on
+>    per-batch BN stats, each prediction depended on randomized batch-mates →
+>    (a) the protocol's "`true_labels[i]` is the same sample across methods" invariant was
+>    false for batch composition; (b) `drop_last` discarded a different tail per run/batch
+>    size, so **bs64 and bs256 rows weren't scored on the same population** — the
+>    bs64-vs-bs256 story was confounded with BN-stat noise.
+>
+> 5. **🟡 AdaBN / TENT method code is sound** (AdaBN: eval + no-grad; TENT: BN-affine-only
+>    optimizer). Their only problem is finding #4. But: AdaBN's headline deltas (wk16
+>    +0.007, QUIC +0.020) are **smaller than run-to-run noise** → not reproducible, sign
+>    could flip — a problem since AdaBN is the paper's "≈neutral control." TENT's bs64
+>    negative-transfer **magnitude** is inflated (noisy 64-sample BN stats over 180 classes
+>    replacing trained running stats); direction is defensible, magnitude is not.
+>
+> ### Fixes applied (working tree)
+>
+> - **Deterministic, full-population eval loader.** Added a `generator` param to
+>   `create_parquet_loader` (`data_utils/cesnet_dataloader.py`); `create_week_loader`
+>   (`scripts/analysis/temporal_generalization.py`) now passes a seeded
+>   `torch.Generator().manual_seed(seed)` and `drop_last=False`. Batch composition is now
+>   randomized (representative BN stats) **and** identical across methods and batch sizes;
+>   the full population is scored everywhere.
+> - **CoTTA clean prediction.** `_cotta_step` now saves `std_ema` (the clean un-augmented
+>   teacher forward, already computed) as `class_preds`; augmentation stays strictly in the
+>   pseudo-label/loss path.
+> - **CoTTA anchor reset.** New `_restore_bn_buffers()` re-registers the nulled BN buffers
+>   before the anchor's `load_state_dict`, so the confidence gate uses source stats on
+>   every week regardless of shard position.
+> - **Valid forward-transfer DANN — one-flag fix, no code change.** The cross-week DANN
+>   capability already existed and was already used (e.g. `cesnet_v11_dann_search_13_to_33`,
+>   dirs `WEEK-2022-13_val_WEEK-2022-33`, domain acc ~96% = real alignment). The benchmark
+>   row was broken *only* because `run_dann_train.slurm` omitted `--val_week`. New
+>   `slurm_files/run_dann_fwd_w16.slurm` simply passes `--week 16 --val_week N` (source
+>   week 16 aligned to week N via the existing, proven path), one model per target week
+>   (the DANN-row diagonal). No trainer changes. _(An earlier draft added a
+>   `--dann_target_week` arg for unsupervised selection + a disjoint train-split target;
+>   reverted as redundant — `--val_week` matches the prior methodology.)_
+>
+> ### Re-runs required before the tables are valid (NOT yet launched — pending review)
+>
+> - **All TTA rows** (AdaBN/TENT/CoTTA, both source weeks + QUIC + Allot): re-run
+>   `run_inference.py` with the fixed loader; CoTTA additionally needs the prediction +
+>   reset fixes. Then re-attribute the bs64-vs-bs256 framing on a clean, common population.
+> - **DANN:** `sbatch slurm_files/run_dann_fwd_w16.slurm`, then a per-week-model inference
+>   pass that loads `WEEK-2022-16_val_WEEK-2022-NN` and scores week NN (the diagonal).
+>   `run_inference.py` needs a small "per-target-week model" mode for this — **not yet
+>   built** (deferred until the retrain is underway).
+>
+> ### Resolved: DANN target = transductive `--val_week` (matches prior methodology)
+>
+> Decided to use the existing `--val_week` path: source week 16 aligned to week N's **test
+> split** (the same split scored downstream — transductive UDA, as in the prior
+> `13→33`/`33→40` runs), with model selection on that split. This is optimistic *in DANN's
+> favor* (it sees the target's unlabeled data and is selected on it), which only
+> strengthens a "DANN shows negative transfer anyway" claim. The alternative (disjoint
+> train-split target + source-only selection) was implemented then reverted as redundant.
 
 Mirrors the §V SOTA matrix (DANN / TENT / CoTTA + AdaBN control). **CORAL: cut** (out of
 scope, per decision). **Targeted adaptation (ours): not produced** (separate framing).
@@ -162,8 +279,14 @@ RLLS -0.932, BBSE -0.927 ≈ oracle -0.926, uncorrected -0.925 — but **SLD-EM 
 ρ=+0.62**: EM absorbs the covariate-shift entropy inflation into a hallucinated label
 shift and goes quiet exactly where the model is broken (invisible on the wk-1 ref where
 EM scored -0.991). Definitive: keep BBSE as "ours"; EM-family is disqualified as the
-residual's estimator. NOTE: Fig 8 & Fig 11/Table I use reference week 0 but their
-captions claim Week-1 — fix the captions, not the runs.
+residual's estimator. Forward-only wk16 mirror (figs/ref16/fig_mirror_effect_fwd.png,
+weeks 17-52): BBSE -0.988, RLLS -0.992 ≈ oracle -0.991 — and SLD-EM flat at +0.03, so
+EM fails even in the clean teleportation regime. Mirror under EXTREME injected shift
+(figs/ref16/fig_mirror_extreme_fwd_{10x,100x}.png, 1 draw/week, seed 42): correction
+value grows with severity — uncorrected -0.983→-0.938(10×)→-0.845(100×) vs BBSE
+-0.988→-0.951→-0.892 (≥ oracle at both severities); RLLS ties BBSE; EM far behind.
+NOTE: Fig 8 & Fig 11/Table I use reference week 0 but their captions claim Week-1 —
+fix the captions, not the runs.
 
 Script: `scripts/analysis/isolation_estimator_variants.py`; outputs in `figs/isolation/`
 (wk-1, reuses base ablation cache) and `figs/isolation_w16/` (wk-16, self-computed gt);
@@ -175,3 +298,41 @@ figure `panels/fig_isolation_A_roc_estimators.png` + `estimator_variants_metrics
 - Allot: `exps/allot_multimodal/{early,quarter}_eq/{inference,inference_bnstats,inference_tent,inference_cotta}/`
 - QUIC: `results/inference/quic_w44_*`
 - Recompute: load each `.npz` (`true_labels`,`pred_labels`), mean per-week acc + sklearn macro-F1, Δ on shared weeks.
+
+## Dataset label-frequency bias & the undo recipe (2026-06-11)
+
+CESNET-TLS-Year22 was recorded with **dynamic per-service sampling** that deliberately
+flattens the label distribution (Hynek et al. 2024, "Flow sampling"): services sorted by
+traffic volume — top 5% (9/180) kept 1:15, middle 35% (63) at 1:9→1:2 by prevalence,
+bottom 60% (108) unsampled; the final uniform 1:10 is proportion-neutral. Consequence:
+dataset label proportions UNDERSTATE real network label shift, so any axis derived from
+label priors (weekly shift magnitudes, Fig 7's "natural weekly range" band, synthetic
+shift magnitudes) is compressed.
+
+**Undo:** `reconstruct_sampling_weights()` in `archive/plot_paper_figures.py` rebuilds the
+per-service factors w from `stats-dataset.json` (rank → band factor; iterate rank↔factor
+to a fixed point since downsampling can reorder ranks at band boundaries; exact dynamic
+ratios are unpublished → approximation, footnote it in the paper). Then
+`p_network ∝ p_dataset ⊙ w`.
+
+**Recipe for any proportion-based graph:** map EVERY proportion vector (train prior,
+weekly priors, estimator outputs, realized synthetic priors) through the same
+`f(p)=p⊙w/Σ` BEFORE computing distances — never remap a dataset-space error. The static
+prior stays on the y=x diagonal in any space. It is a pure re-projection: no model
+reruns, only replots (Fig 7's `_vec` cache stores per-draw prior vectors for this).
+
+**Scope:** label-proportion quantities only. P(X|Y), per-class F1, confusion matrices and
+the teleportation analyses are unaffected by class-level subsampling. Network-mix
+aggregate F1 would instead need importance-weighted evaluation (`reweighted_macro_f1`).
+
+Same rework switched Fig 7's axes to **TV distance in % of traffic** (0.5·L1 — "share of
+traffic that changed application"), replacing the unintuitive per-class MAE.
+
+**Result (2026-06-12, both Fig 7 versions regenerated, per-draw vectors cached in
+`..._em_vec.npz` so further tweaks are free replots):** the conclusion is invariant to the
+correction. As recorded: natural range 5.3–30.4% TV, max induced 99.4% (3.3×); at s=4
+prior/naive/BBSE/RLLS/EM/BCTS = 87.2/14.2/8.2/5.2/3.7/2.3%. Debiased: natural 4.4–28.6%,
+max 99.3% (3.5×); s=4 = 85.2/17.1/7.5/6.3/2.5/1.7%. Identical method ordering in both
+spaces (~11× estimator-vs-prior gap) → the flattened-sampling objection is neutralized
+without changing any claim. Figures: `figs/fig_estimation_robustness_severity_ref16.png`
+and `..._debiased.png`.

@@ -106,7 +106,8 @@ def build_or_load_embedding(weeks, embs, labs, focal, cache_path,
 # Per-app rendering (from the shared embedding)
 # ---------------------------------------------------------------------------
 
-def render_app(xy, cls, week, c, name, xlim, ylim, out_path):
+def render_app(xy, cls, week, c, name, xlim, ylim, out_path, time_label='week',
+               bg_frac=1.0):
     BG = '#0f0f14'
     is_focal = cls == c
     fxy, fwk = xy[is_focal], week[is_focal]
@@ -116,8 +117,13 @@ def render_app(xy, cls, week, c, name, xlim, ylim, out_path):
     fig, ax = plt.subplots(figsize=(12, 8.5))
     fig.patch.set_facecolor(BG); ax.set_facecolor(BG)
 
-    # everything except this app -> grey context
-    ax.scatter(xy[~is_focal, 0], xy[~is_focal, 1], s=3, c='#c8c8d0', alpha=0.28,
+    # everything except this app -> grey context (optionally thinned out so a
+    # huge full-data background doesn't bury the focal track)
+    bgxy = xy[~is_focal]
+    if bg_frac < 1.0:
+        sel = np.random.default_rng(0).random(len(bgxy)) < bg_frac
+        bgxy = bgxy[sel]
+    ax.scatter(bgxy[:, 0], bgxy[:, 1], s=3, c='#c8c8d0', alpha=0.28,
                linewidths=0, zorder=1, rasterized=True)
 
     norm = plt.Normalize(uw.min(), uw.max())
@@ -133,12 +139,13 @@ def render_app(xy, cls, week, c, name, xlim, ylim, out_path):
     ax.set_xlim(*xlim); ax.set_ylim(*ylim)
     ax.set_xlabel('t-SNE 1', color='white'); ax.set_ylabel('t-SNE 2', color='white')
     ax.set_title(f'Latent space: {name} drift over time  (shared t-SNE over top apps)\n'
-                 f'grey = all other points  |  coloured = {name}, weeks {uw.min()}–{uw.max()}  |  '
-                 '○ first week  □ last week', color='white', fontsize=12)
+                 f'grey = all other points  |  coloured = {name}, {time_label}s '
+                 f'{uw.min()}–{uw.max()}  |  '
+                 f'○ first {time_label}  □ last {time_label}', color='white', fontsize=12)
     ax.tick_params(colors='white')
     for s in ax.spines.values():
         s.set_color('#444')
-    cbar = fig.colorbar(sc, ax=ax, pad=0.01); cbar.set_label('week', color='white')
+    cbar = fig.colorbar(sc, ax=ax, pad=0.01); cbar.set_label(time_label, color='white')
     cbar.ax.yaxis.set_tick_params(color='white')
     plt.setp(plt.getp(cbar.ax, 'yticklabels'), color='white')
     ax.legend(handles=[Line2D([0], [0], marker='o', color='none', markerfacecolor='#c8c8d0',
@@ -155,7 +162,8 @@ def render_app(xy, cls, week, c, name, xlim, ylim, out_path):
 # By-class "highlight week over the all-weeks background" map (same embedding)
 # ---------------------------------------------------------------------------
 
-def render_background(xy, cls, week, highlight_week, xlim, ylim, out_path):
+def render_background(xy, cls, week, highlight_week, xlim, ylim, out_path,
+                      time_label='week', bg_frac=1.0):
     BG = '#0f0f14'
     is_hi = week == highlight_week
     hi_cls = cls[is_hi]
@@ -166,8 +174,12 @@ def render_background(xy, cls, week, highlight_week, xlim, ylim, out_path):
     fig, ax = plt.subplots(figsize=(12, 8.5))
     fig.patch.set_facecolor(BG); ax.set_facecolor(BG)
 
-    # all other weeks -> grey context (drawn first, underneath)
-    ax.scatter(xy[~is_hi, 0], xy[~is_hi, 1], s=3, c='#c8c8d0', alpha=0.28,
+    # all other weeks -> grey context (drawn first, underneath; optionally thinned)
+    bgxy = xy[~is_hi]
+    if bg_frac < 1.0:
+        sel = np.random.default_rng(0).random(len(bgxy)) < bg_frac
+        bgxy = bgxy[sel]
+    ax.scatter(bgxy[:, 0], bgxy[:, 1], s=3, c='#c8c8d0', alpha=0.28,
                linewidths=0, zorder=1, rasterized=True)
 
     # highlight week -> one colour per class, on top of the grey
@@ -178,9 +190,9 @@ def render_background(xy, cls, week, highlight_week, xlim, ylim, out_path):
 
     ax.set_xlim(*xlim); ax.set_ylim(*ylim)
     ax.set_xlabel('t-SNE 1', color='white'); ax.set_ylabel('t-SNE 2', color='white')
-    ax.set_title(f'Latent space: week {highlight_week} classes over the all-weeks background  '
-                 '(shared t-SNE over top apps)\n'
-                 f'grey = all other weeks  |  coloured = week {highlight_week}, '
+    ax.set_title(f'Latent space: {time_label} {highlight_week} classes over the '
+                 f'all-{time_label}s background  (shared t-SNE over top apps)\n'
+                 f'grey = all other {time_label}s  |  coloured = {time_label} {highlight_week}, '
                  f'one colour per class ({len(uniq)} classes)', color='white', fontsize=12)
     ax.tick_params(colors='white')
     for s in ax.spines.values():

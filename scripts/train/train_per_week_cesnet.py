@@ -72,7 +72,7 @@ class MockDataset(Dataset):
             return flowpic, label
 
 
-def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False, val_week_dir=None, enable_profiler=False, use_multimodal=False, run_sanity_check=True):
+def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False, val_week_dir=None, enable_profiler=False, use_multimodal=False, run_sanity_check=True, disable_normalization=False):
     """
     Train a model on a single week's data.
 
@@ -224,7 +224,13 @@ def train_week(cfg, week_dir, label_indices_mapping, num_classes, override=False
     print(f"Loading data from {week_name}...")
     if use_multimodal:
         # Use CESNET parquet loader for multimodal model (PPI + flowstats)
-        normalization_stats_path = week_dir.parent / 'normalization_stats.npz'
+        # disable_normalization=True passes None so inputs are NOT z-scored with the
+        # shared stats — used only for the DANN no-normalization CONTRAST experiment
+        # (shows the domain classifier separates weeks via raw input-scale differences,
+        # a normalization artifact, not real covariate drift). NOT a valid benchmark.
+        normalization_stats_path = None if disable_normalization else week_dir.parent / 'normalization_stats.npz'
+        if disable_normalization:
+            print("  [no_normalization] shared input normalization DISABLED (contrast run)")
         train_loader = create_parquet_loader(
             parquet_files=[train_path],
             label_mapping=label_indices_mapping,
@@ -358,6 +364,21 @@ def main():
         help='Validate on this specific week number (e.g., 40 for WEEK-2022-40). If not specified, uses same week as training'
     )
     parser.add_argument(
+        '--num_workers',
+        type=int,
+        default=None,
+        help='Override config NUM_WORKERS for the data loaders. Use 0 to disable '
+             'DataLoader multiprocessing (avoids the intermittent /dev/shm "unable to '
+             'open shared memory object" crash under the SLURM cgroup).'
+    )
+    parser.add_argument(
+        '--no_normalization',
+        action='store_true',
+        help='Disable shared input normalization (normalization_stats.npz). Multimodal '
+             'only. For the DANN no-normalization CONTRAST experiment, NOT a valid '
+             'benchmark run.'
+    )
+    parser.add_argument(
         '--override',
         action='store_true',
         help='Override existing experiments and start from scratch'
@@ -457,6 +478,8 @@ def main():
     cfg.BATCH_SIZE = args.batch_size
     cfg.NUM_EPOCHS = args.num_epochs
     cfg.LEARNING_RATE = args.learning_rate
+    if args.num_workers is not None:
+        cfg.NUM_WORKERS = args.num_workers
 
     # Override experiment name if provided
     if args.exp_name is not None:
@@ -545,7 +568,8 @@ def main():
             val_week_dir=val_week_dir,
             enable_profiler=args.enable_profiler,
             use_multimodal=cfg.USE_MULTIMODAL,
-            run_sanity_check=cfg.RUN_SANITY_CHECK
+            run_sanity_check=cfg.RUN_SANITY_CHECK,
+            disable_normalization=args.no_normalization
         )
 
         if result is not None:

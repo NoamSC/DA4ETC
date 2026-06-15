@@ -29,8 +29,13 @@ exec 1>>"$OUTFILE"
 exec 2>>"$ERRFILE"
 
 # --- Table I / Fig 11 (Sec V-C primary result) with estimator variants.
-#     Defaults (ref week 0, seed 42) reproduce the published numbers exactly;
-#     the variant detectors are rng-neutral additions. ---
-$PYTHON scripts/analysis/auroc_anomaly_detection.py
+#     Reference week = WEEK-2022-01 (the trained source); week 0 is an
+#     untrustable warm-up week and is dropped from the test set.  Non-
+#     destructive: writes into figs/anomaly_ref1/ instead of the published
+#     figs/.  (Pass --reference_week 0 --output_dir figs/anomaly_ref0_legacy
+#     to reproduce the legacy biased numbers.) ---
+$PYTHON scripts/analysis/auroc_anomaly_detection.py \
+    --reference_week 1 --exclude_weeks 0 \
+    --output_dir figs/anomaly_ref1
 
 echo "Completed auroc_est"

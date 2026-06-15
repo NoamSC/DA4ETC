@@ -1,5 +1,15 @@
 {
   "worktree": {
     "bgIsolation": "none"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(squeue)",
+      "Bash(squeue *)",
+      "Bash(sacct)",
+      "Bash(sacct *)",
+      "Bash(sinfo)",
+      "Bash(sinfo *)"
+    ]
   }
 }

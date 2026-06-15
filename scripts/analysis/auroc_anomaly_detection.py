@@ -154,7 +154,15 @@ def viral_window(true, n_win, frac, cls, rng):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--inference_dir', default='results/inference/week_1_inference')
-    ap.add_argument('--reference_week', type=int, default=0)
+    # WEEK-2022-01 is the trained source week; week 0 is a documented "easy"
+    # warm-up week (not the source), so an unusually-high confusion matrix +
+    # entropy baseline there bias every later week toward looking degraded and
+    # make BBSE ~3x less accurate.  Default to the source week; pass
+    # --reference_week 0 only to reproduce the legacy (biased) numbers.
+    ap.add_argument('--reference_week', type=int, default=1)
+    ap.add_argument('--exclude_weeks', type=int, nargs='+', default=[],
+                    help='week numbers to drop from the test set entirely '
+                         '(e.g. untrustable warm-up weeks)')
     ap.add_argument('--f1_threshold', type=float, default=0.60)
     ap.add_argument('--n_win', type=int, default=8000)
     ap.add_argument('--clean_seeds', type=int, default=6)
@@ -198,7 +206,8 @@ def main():
     ref_sorted = np.sort(ref_soft[np.ix_(rsub, chan)], axis=0)
     m_mfwdd = ref_sorted.shape[0]
 
-    test_weeks = [w for w in weeks if w[0] != args.reference_week]
+    test_weeks = [w for w in weeks
+                  if w[0] != args.reference_week and w[0] not in args.exclude_weeks]
 
     # binary ground truth from each week's full-data clean Macro F1
     week_f1 = {wn: f1_score(t, p, labels=list(range(K)), average='macro', zero_division=0)

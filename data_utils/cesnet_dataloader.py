@@ -205,6 +205,7 @@ def create_parquet_loader(
     columns=None,
     normalization_stats=None,
     drop_last=True,
+    generator=None,
 ):
     assert batch_size > 0, "batch_size must be > 0"
     assert num_workers >= 0, "num_workers must be >= 0"
@@ -226,4 +227,5 @@ def create_parquet_loader(
         num_workers=num_workers,
         pin_memory=pin_memory,
         drop_last=drop_last,
+        generator=generator,
     )

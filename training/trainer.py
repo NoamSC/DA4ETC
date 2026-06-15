@@ -71,10 +71,14 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
         train_labels = train_labels.to(device).long()
         optimizer.zero_grad()
 
-        # Source domain forward pass
-        source_outputs = model(train_inputs)
-
-        # Target domain forward pass
+        # Forward passes. When a target batch is present (DANN/MMD/CORAL), source and
+        # target are forwarded TOGETHER as one combined batch so BatchNorm computes its
+        # statistics over the mixed source+target distribution. Forwarding them in two
+        # separate train()-mode passes (the previous behavior) made BN normalize each
+        # batch by its OWN mean/var, erasing the first/second-moment covariate shift the
+        # domain classifier relies on -> domain accuracy collapsed to ~50% even when a
+        # real shift exists. The combined forward preserves the relative shift; outputs
+        # are then split back into source / target halves.
         target_outputs = None
         if test_iter is not None:
             test_inputs, _ = next(test_iter)
@@ -82,8 +86,16 @@ def train_one_epoch(model, train_loader, criterion, optimizer, device, lambda_mm
                 test_inputs = [inp.to(device) for inp in test_inputs]
             else:
                 test_inputs = test_inputs.to(device)
-
-            target_outputs = model(test_inputs)
+            n_src = train_labels.size(0)
+            if type(train_inputs) is list:
+                combined = [torch.cat([s, t], dim=0) for s, t in zip(train_inputs, test_inputs)]
+            else:
+                combined = torch.cat([train_inputs, test_inputs], dim=0)
+            combined_outputs = model(combined)
+            source_outputs = {k: (v[:n_src] if v is not None else None) for k, v in combined_outputs.items()}
+            target_outputs = {k: (v[n_src:] if v is not None else None) for k, v in combined_outputs.items()}
+        else:
+            source_outputs = model(train_inputs)
 
         # Loss computation
         classification_loss = criterion(source_outputs['class_preds'], train_labels)
@@ -403,11 +415,17 @@ def train_model(model, train_loader, criterion, optimizer, num_epochs, device,
         if lambda_dann > 0:
             print(f"         Domain Classifier Accuracy={train_metrics['domain_acc']:.2f}%")
 
-        # Save epoch checkpoint
+        # Save epoch checkpoint (ROLLING: keep only the latest epoch file for resume,
+        # plus best_model.pth below). Per-epoch checkpoints otherwise accumulate to ~50
+        # files per model and exhaust the netapp disk quota — acutely for the 53-model
+        # DANN sweep. Prune all older epoch checkpoints right after writing the new one.
         save_start_time = time.time()
         with record_function("save_checkpoint"):
             model_save_path = weights_save_dir / f"model_weights_epoch_{epoch+1}.pth"
             torch.save(model.state_dict(), model_save_path)
+            for old_ckpt in weights_save_dir.glob("model_weights_epoch_*.pth"):
+                if old_ckpt != model_save_path:
+                    old_ckpt.unlink()
         save_time = time.time() - save_start_time
 
         # Save best model

@@ -132,6 +132,13 @@ def create_week_loader(week_dir, label_indices_mapping, batch_size=64, num_worke
 
     if use_multimodal:
         normalization_stats_path = week_dir.parent / 'normalization_stats.npz'
+        # Deterministic eval batching. `shuffle=True` randomises batch composition
+        # (so per-batch BN stats used by TENT/CoTTA/AdaBN are representative, not
+        # contiguous parquet chunks), but a SEEDED generator makes that permutation
+        # identical across methods and batch sizes. `drop_last=False` keeps the full
+        # population so every method/batch-size is scored on the same samples and
+        # true_labels[i] is the same sample everywhere (the protocol's invariant).
+        gen = torch.Generator().manual_seed(seed)
         return create_parquet_loader(
             parquet_files=[test_path],
             label_mapping=label_indices_mapping,
@@ -141,6 +148,8 @@ def create_week_loader(week_dir, label_indices_mapping, batch_size=64, num_worke
             data_sample_frac=data_sample_frac,
             seed=seed,
             normalization_stats=normalization_stats_path,
+            drop_last=False,
+            generator=gen,
         )
 
     return create_csv_flowpic_loader(

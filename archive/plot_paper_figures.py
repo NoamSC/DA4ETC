@@ -299,6 +299,9 @@ def main():
     parser.add_argument('--inference_dir',  default='figs/week_1_inference')
     parser.add_argument('--dataset_root',   default='/home/anatbr/dataset/CESNET-TLS-Year22_v2')
     parser.add_argument('--reference_week', type=int, default=0)
+    parser.add_argument('--min_week', type=int, default=None,
+                        help='Fig G: only plot test weeks >= this (e.g. 16 for a '
+                             'week-16-onward view); does not affect other figures')
     parser.add_argument('--grid_classes',   type=int, default=9,
                         help='Number of top classes for the app grid (4 or 9)')
     parser.add_argument('--output_dir',     default='figs')
@@ -318,6 +321,10 @@ def main():
     parser.add_argument('--debias', action='store_true',
                         help="Fig I: also emit a version with the dataset's per-service "
                              "sampling bias undone (network-space proportions)")
+    parser.add_argument('--exclude_weeks', type=int, nargs='+', default=[],
+                        help='Test week(s) to drop from every figure as untrustable '
+                             '(e.g. 0 for the week-0 sensor warm-up). Pure presentation '
+                             'filter applied after loading: the metrics cache stays complete.')
     args = parser.parse_args()
     skip = set(args.skip)
 
@@ -377,6 +384,12 @@ def main():
         l1_em_bcts_arr  = cache['l1_em_bcts_arr'] if 'l1_em_bcts_arr' in cache else None
         ent_gaps_reg    = cache['ent_gaps_reg'] if 'ent_gaps_reg' in cache else None
         ent_gaps_em     = cache['ent_gaps_em']  if 'ent_gaps_em'  in cache else None
+        vec_true        = cache['vec_true']    if 'vec_true'    in cache else None
+        vec_naive       = cache['vec_naive']   if 'vec_naive'   in cache else None
+        vec_bbse        = cache['vec_bbse']    if 'vec_bbse'    in cache else None
+        vec_reg         = cache['vec_reg']     if 'vec_reg'     in cache else None
+        vec_em          = cache['vec_em']      if 'vec_em'      in cache else None
+        vec_em_bcts     = cache['vec_em_bcts'] if 'vec_em_bcts' in cache else None
         corrected_f1s   = cache['corrected_f1s']
         synthetic_f1s   = cache['synthetic_f1s']
         baseline_f1     = float(cache['baseline_f1'])
@@ -409,6 +422,12 @@ def main():
         l1_prior_arr     = []
         l1_em_arr        = [] if args.em else None
         l1_em_bcts_arr   = [] if args.em else None
+        vec_true         = []
+        vec_naive        = []
+        vec_bbse         = []
+        vec_reg          = []
+        vec_em           = [] if args.em else None
+        vec_em_bcts      = [] if args.em else None
         ent_gaps_reg     = []
         ent_gaps_em      = [] if args.em else None
         cls_f1_w         = {c: [] for c in grid_classes}
@@ -431,12 +450,18 @@ def main():
             l1_naive_arr.append(float(np.mean(np.abs(q_hat   - p_true_week))))
             l1_prior_arr.append(float(np.mean(np.abs(p_train - p_true_week))))
             ent_gaps_reg.append(entropy_gap_from_p(softmax, p_reg, h_ref))
+            vec_true.append(p_true_week)
+            vec_naive.append(q_hat)
+            vec_bbse.append(p_bbse)
+            vec_reg.append(p_reg)
             if args.em:
                 p_em = sld_em_estimation(p_train, softmax)
                 l1_em_arr.append(float(np.mean(np.abs(p_em - p_true_week))))
                 ent_gaps_em.append(entropy_gap_from_p(softmax, p_em, h_ref))
+                vec_em.append(p_em)
                 p_em_bcts = sld_em_estimation(p_train, calibrate(softmax, bcts))
                 l1_em_bcts_arr.append(float(np.mean(np.abs(p_em_bcts - p_true_week))))
+                vec_em_bcts.append(p_em_bcts)
 
             macro_f1s.append(f1_score(true, pred, labels=list(range(num_classes)),
                                       average='macro', zero_division=0))
@@ -473,6 +498,12 @@ def main():
         l1_prior_arr    = np.array(l1_prior_arr)
         l1_em_arr       = np.array(l1_em_arr) if args.em else None
         l1_em_bcts_arr  = np.array(l1_em_bcts_arr) if args.em else None
+        vec_true        = np.array(vec_true,  dtype=np.float32)   # (n_weeks, num_classes)
+        vec_naive       = np.array(vec_naive, dtype=np.float32)
+        vec_bbse        = np.array(vec_bbse,  dtype=np.float32)
+        vec_reg         = np.array(vec_reg,   dtype=np.float32)
+        vec_em          = np.array(vec_em,      dtype=np.float32) if args.em else None
+        vec_em_bcts     = np.array(vec_em_bcts, dtype=np.float32) if args.em else None
         ent_gaps_reg    = np.array(ent_gaps_reg)
         ent_gaps_em     = np.array(ent_gaps_em) if args.em else None
         corrected_f1s   = np.array(corrected_f1s)
@@ -494,7 +525,10 @@ def main():
             l1_bbse_arr=l1_bbse_arr, l1_reg_arr=l1_reg_arr,
             l1_naive_arr=l1_naive_arr, l1_prior_arr=l1_prior_arr,
             **(dict(l1_em_arr=l1_em_arr, l1_em_bcts_arr=l1_em_bcts_arr,
-                    ent_gaps_em=ent_gaps_em) if args.em else {}),
+                    ent_gaps_em=ent_gaps_em,
+                    vec_em=vec_em, vec_em_bcts=vec_em_bcts) if args.em else {}),
+            vec_true=vec_true, vec_naive=vec_naive,
+            vec_bbse=vec_bbse, vec_reg=vec_reg,
             ent_gaps_reg=ent_gaps_reg,
             corrected_f1s=corrected_f1s, synthetic_f1s=synthetic_f1s,
             baseline_f1=np.array(baseline_f1),
@@ -505,6 +539,50 @@ def main():
         print(f"  Saved metrics cache → {cache_path}")
 
     print(f"  Baseline F1 (ref week, frozen C): {baseline_f1:.4f}")
+
+    # ── drop untrustable test weeks (e.g. week 0) from every per-week array ──────
+    # Pure presentation filter: the metrics cache on disk stays complete; we only
+    # hide these weeks so they neither appear on any axis nor affect y-ranges/corr.
+    if args.exclude_weeks:
+        keep = ~np.isin(week_nums, args.exclude_weeks)
+        if not keep.all():
+            print(f"  Dropping untrustable test week(s) "
+                  f"{week_nums[~keep].tolist()} from all figures.")
+            def _m1(a):   # length-L per-week 1D array (or None)
+                return None if a is None else np.asarray(a)[keep]
+            def _mv(a):   # (L, K) per-week vector array (or None), mask axis 0
+                return None if a is None else np.asarray(a)[keep]
+            def _md(d):   # {class: list-of-length-L}
+                return None if d is None else {c: list(np.asarray(v)[keep])
+                                               for c, v in d.items()}
+            macro_f1s        = _m1(macro_f1s)
+            ent_gaps         = _m1(ent_gaps)
+            ent_gaps_raw     = _m1(ent_gaps_raw)
+            ent_gaps_oracle  = _m1(ent_gaps_oracle)
+            conf_gaps        = _m1(conf_gaps)
+            conf_gaps_raw    = _m1(conf_gaps_raw)
+            conf_gaps_oracle = _m1(conf_gaps_oracle)
+            l1_bbse_arr      = _m1(l1_bbse_arr)
+            l1_reg_arr       = _m1(l1_reg_arr)
+            l1_naive_arr     = _m1(l1_naive_arr)
+            l1_prior_arr     = _m1(l1_prior_arr)
+            l1_em_arr        = _m1(l1_em_arr)
+            l1_em_bcts_arr   = _m1(l1_em_bcts_arr)
+            ent_gaps_reg     = _m1(ent_gaps_reg)
+            ent_gaps_em      = _m1(ent_gaps_em)
+            corrected_f1s    = _m1(corrected_f1s)
+            synthetic_f1s    = _m1(synthetic_f1s)
+            vec_true         = _mv(vec_true)
+            vec_naive        = _mv(vec_naive)
+            vec_bbse         = _mv(vec_bbse)
+            vec_reg          = _mv(vec_reg)
+            vec_em           = _mv(vec_em)
+            vec_em_bcts      = _mv(vec_em_bcts)
+            cls_f1_w         = _md(cls_f1_w)
+            cls_phat_w       = _md(cls_phat_w)
+            cls_ptrue_w      = _md(cls_ptrue_w)
+            cls_bbse_err_w   = _md(cls_bbse_err_w)
+            week_nums        = week_nums[keep]
 
     if args.confidence and conf_gaps is not None:
         gaps        = conf_gaps
@@ -534,7 +612,7 @@ def main():
     MKW = dict(marker='o', markersize=4, linewidth=1.8)
 
     ref_label = f'week {args.reference_week}'
-    n_test    = len(test_weeks)
+    n_test    = len(week_nums)
     span      = f'{week_nums[0]}–{week_nums[-1]}'
 
     n_grid     = args.grid_classes
@@ -549,37 +627,116 @@ def main():
         print("Skipping Fig A")
     else:
         print("Plotting Fig A — estimation accuracy...")
-        fig_a, ax = plt.subplots(figsize=(10, 4))
-        ax.plot(week_nums, l1_prior_arr, color='#999999', linewidth=1.4,
-                linestyle='--', marker='s', markersize=3.5,
-                label='Static prior (train distribution)')
-        ax.plot(week_nums, l1_naive_arr, color='#e07b39', **MKW,
-                label='Uncalibrated (raw predicted frequencies)')
-        ax.plot(week_nums, l1_bbse_arr,  color='#2c7bb6', **MKW,
-                label='BBSE (truncated pseudo-inverse)')
-        ax.plot(week_nums, l1_reg_arr,   color='#1a9641', **MKW,
-                label='Regularized BBSE (constrained least-squares)')
-        if l1_em_arr is not None:
-            ax.plot(week_nums, l1_em_arr, color='#9b59b6', **MKW,
-                    label='SLD-EM')
-        if l1_em_bcts_arr is not None:
-            ax.plot(week_nums, l1_em_bcts_arr, color='#c0392b', **MKW,
-                    linestyle='--', label='MLLS + BCTS calibration')
-        ax.set_xlabel('Week Number', fontsize=12)
-        ax.set_ylabel(r'$L_1$ Error (MAE)', fontsize=12)
-        ax.set_title(
-            f'Label Distribution Estimation Accuracy Over Time\n'
-            f'(reference: {ref_label},  {n_test} test weeks: {span})',
-            fontsize=12, fontweight='bold'
-        )
-        ax.set_xticks(week_nums[::max(1, len(week_nums) // 12)])
-        ax.legend(fontsize=10, framealpha=0.9)
-        ax.spines['right'].set_visible(False)
-        plt.tight_layout()
-        out_a = output_dir / 'fig_estimation_accuracy.png'
-        fig_a.savefig(out_a, dpi=200, bbox_inches='tight')
-        plt.close(fig_a)
-        print(f"  Saved → {out_a}")
+        if vec_true is not None:
+            # TV-distance view (% of traffic whose application label differs),
+            # optionally also in sampling-bias-corrected (network) proportions.
+            def tvpct_a(a, b):
+                return 50.0 * np.abs(a - b).sum(axis=-1)
+
+            debias_w_a = None
+            if args.debias:
+                debias_w_a = reconstruct_sampling_weights(
+                    args.dataset_root, class_names, num_classes)
+
+            spaces_a = [('', None, 'dataset proportions (as recorded)')]
+            if debias_w_a is not None:
+                spaces_a.append(('_debiased', debias_w_a,
+                                 'sampling bias undone → network proportions'))
+
+            for suffix, wvec, space_label in spaces_a:
+                if wvec is None:
+                    fmap = lambda p: np.asarray(p, dtype=float)
+                else:
+                    def fmap(p, _w=wvec):
+                        q = np.clip(np.asarray(p, dtype=float), 0, None) * _w
+                        return q / q.sum(axis=-1, keepdims=True)
+
+                Ftrue    = fmap(vec_true)
+                tv_prior = tvpct_a(fmap(p_train), Ftrue)
+                tv_naive = tvpct_a(fmap(vec_naive), Ftrue)
+                tv_bbse  = tvpct_a(fmap(vec_bbse),  Ftrue)
+                tv_reg   = tvpct_a(fmap(vec_reg),   Ftrue)
+                tv_em      = (tvpct_a(fmap(vec_em), Ftrue)
+                              if vec_em is not None else None)
+                tv_em_bcts = (tvpct_a(fmap(vec_em_bcts), Ftrue)
+                              if vec_em_bcts is not None else None)
+
+                fig_a, ax = plt.subplots(figsize=(10, 4))
+                ax.plot(week_nums, tv_prior, color='#999999', linewidth=1.4,
+                        linestyle='--', marker='s', markersize=3.5,
+                        label='Static prior (train distribution)')
+                ax.plot(week_nums, tv_naive, color='#e07b39', **MKW,
+                        label='Uncalibrated (raw predicted frequencies)')
+                ax.plot(week_nums, tv_bbse,  color='#2c7bb6', **MKW,
+                        label='BBSE (truncated pseudo-inverse)')
+                ax.plot(week_nums, tv_reg,   color='#1a9641', **MKW,
+                        label='Regularized BBSE (constrained least-squares)')
+                if tv_em is not None:
+                    ax.plot(week_nums, tv_em, color='#9b59b6', **MKW,
+                            label='SLD-EM')
+                if tv_em_bcts is not None:
+                    ax.plot(week_nums, tv_em_bcts, color='#c0392b', **MKW,
+                            linestyle='--', label='MLLS + BCTS calibration')
+                ax.set_xlabel('Week Number', fontsize=12)
+                ax.set_ylabel('Estimation error — TV distance to true weekly mix (%)',
+                              fontsize=12)
+                ax.set_title(
+                    f'Label Distribution Estimation Accuracy Over Time\n'
+                    f'(reference: {ref_label},  {n_test} test weeks: {span};  '
+                    f'{space_label})',
+                    fontsize=12, fontweight='bold'
+                )
+                ax.set_xticks(week_nums[::max(1, len(week_nums) // 12)])
+                ax.legend(fontsize=10, framealpha=0.9)
+                ax.spines['right'].set_visible(False)
+                plt.tight_layout()
+                out_a = output_dir / f'fig_estimation_accuracy{suffix}.png'
+                fig_a.savefig(out_a, dpi=200, bbox_inches='tight')
+                plt.close(fig_a)
+                print(f"  Saved → {out_a}")
+
+                parts = [f"prior TV={tv_prior.mean():.2f}%",
+                         f"naive TV={tv_naive.mean():.2f}%",
+                         f"bbse TV={tv_bbse.mean():.2f}%",
+                         f"reg TV={tv_reg.mean():.2f}%"]
+                if tv_em is not None:
+                    parts.append(f"em TV={tv_em.mean():.2f}%")
+                if tv_em_bcts is not None:
+                    parts.append(f"em_bcts TV={tv_em_bcts.mean():.2f}%")
+                print(f"  [Fig A{suffix}] mean over weeks: " + ", ".join(parts))
+        else:
+            # Old cache without per-week vectors — fall back to the L1 MAE plot.
+            fig_a, ax = plt.subplots(figsize=(10, 4))
+            ax.plot(week_nums, l1_prior_arr, color='#999999', linewidth=1.4,
+                    linestyle='--', marker='s', markersize=3.5,
+                    label='Static prior (train distribution)')
+            ax.plot(week_nums, l1_naive_arr, color='#e07b39', **MKW,
+                    label='Uncalibrated (raw predicted frequencies)')
+            ax.plot(week_nums, l1_bbse_arr,  color='#2c7bb6', **MKW,
+                    label='BBSE (truncated pseudo-inverse)')
+            ax.plot(week_nums, l1_reg_arr,   color='#1a9641', **MKW,
+                    label='Regularized BBSE (constrained least-squares)')
+            if l1_em_arr is not None:
+                ax.plot(week_nums, l1_em_arr, color='#9b59b6', **MKW,
+                        label='SLD-EM')
+            if l1_em_bcts_arr is not None:
+                ax.plot(week_nums, l1_em_bcts_arr, color='#c0392b', **MKW,
+                        linestyle='--', label='MLLS + BCTS calibration')
+            ax.set_xlabel('Week Number', fontsize=12)
+            ax.set_ylabel(r'$L_1$ Error (MAE)', fontsize=12)
+            ax.set_title(
+                f'Label Distribution Estimation Accuracy Over Time\n'
+                f'(reference: {ref_label},  {n_test} test weeks: {span})',
+                fontsize=12, fontweight='bold'
+            )
+            ax.set_xticks(week_nums[::max(1, len(week_nums) // 12)])
+            ax.legend(fontsize=10, framealpha=0.9)
+            ax.spines['right'].set_visible(False)
+            plt.tight_layout()
+            out_a = output_dir / 'fig_estimation_accuracy.png'
+            fig_a.savefig(out_a, dpi=200, bbox_inches='tight')
+            plt.close(fig_a)
+            print(f"  Saved → {out_a}")
 
     # ═══════════════════════════════════════════════════════════════════════════
     # Figure B — Mirror Effect
@@ -858,29 +1015,37 @@ def main():
         print("Skipping Fig G")
     else:
         print("Plotting Fig G — combined penalties...")
+        g_mask = (week_nums >= args.min_week) if args.min_week is not None \
+                 else np.ones(len(week_nums), dtype=bool)
+        g_weeks  = week_nums[g_mask]
+        g_macro  = macro_f1s[g_mask]
+        g_corr   = corrected_f1s[g_mask]
+        g_synth  = synthetic_f1s[g_mask]
+        g_span   = f'{g_weeks[0]}–{g_weeks[-1]}'
+        g_ntest  = len(g_weeks)
         with sns.axes_style("whitegrid"):
             fig_g, ax_g = plt.subplots(figsize=(11, 4.5))
             ax_g.axhline(baseline_f1, color='#7f8c8d', linewidth=1.5, linestyle=':',
                          label=f'Baseline F1 @ week {args.reference_week} ({baseline_f1:.3f})')
-            ax_g.plot(week_nums, macro_f1s,
+            ax_g.plot(g_weeks, g_macro,
                       color='#e74c3c', linewidth=2.0, marker='o', markersize=4,
                       label='Raw F1 (both shifts)')
-            ax_g.plot(week_nums, corrected_f1s,
+            ax_g.plot(g_weeks, g_corr,
                       color='#2980b9', linewidth=2.0, linestyle='--',
                       marker='s', markersize=4,
                       label='Corrected F1 (covariate shift only, label shift removed)')
-            ax_g.plot(week_nums, synthetic_f1s,
+            ax_g.plot(g_weeks, g_synth,
                       color='#27ae60', linewidth=2.0, linestyle='-.',
                       marker='^', markersize=4,
                       label='Synthetic F1 (label shift only, covariate shift frozen)')
-            y_min = min(macro_f1s.min(), corrected_f1s.min(), synthetic_f1s.min(), baseline_f1) - 0.05
+            y_min = min(g_macro.min(), g_corr.min(), g_synth.min(), baseline_f1) - 0.05
             ax_g.set_ylim(max(0, y_min), 1.02)
             ax_g.set_xlabel('Week Number', fontsize=13)
             ax_g.set_ylabel('Macro F1 Score', fontsize=13)
-            ax_g.set_xticks(week_nums[::max(1, len(week_nums) // 12)])
+            ax_g.set_xticks(g_weeks[::max(1, len(g_weeks) // 12)])
             ax_g.set_title(
                 'Decomposing Performance Degradation: Covariate vs Label Shift\n'
-                f'(reference: {ref_label},  {n_test} test weeks: {span})',
+                f'(reference: {ref_label},  {g_ntest} test weeks: {g_span})',
                 fontsize=12, fontweight='bold'
             )
             ax_g.legend(fontsize=11, framealpha=0.9)

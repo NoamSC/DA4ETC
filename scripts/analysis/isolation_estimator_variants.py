@@ -107,27 +107,51 @@ def build_estimators(ref_soft, ref_true, num_classes, seed):
         s = p.sum()
         return p / s if s > 0 else np.full(num_classes, 1.0 / num_classes)
 
+    # (adapter, valid_probs, calib, mask_support).  mask_support restricts the
+    # adapter to classes present in the fit subsample (p_src > 0).  abstention's
+    # EM divides the per-iteration posterior by the source prior when
+    # estimate_priors_from_valid_labels=True, so a class absent from the 100k
+    # subsample (p_src == 0; e.g. class 128 here) gives 0/0 -> all-NaN
+    # multipliers -> the silent uniform fallback below, collapsing em/em_bcts to
+    # a constant 1/num_classes for every window.  Those classes have no P(X|Y)
+    # reference and are unestimable anyway, so we drop them from the EM solve and
+    # scatter the result back.  RLLS is a regularized least-squares solve with no
+    # such division, so it keeps the full support unchanged.
+    keep = p_src > 0
     adapters = {
-        'rlls':      (RLLSImbalanceAdapter(),           v_soft,     None),
+        'rlls':      (RLLSImbalanceAdapter(),           v_soft,     None, False),
         'em':        (EMImbalanceAdapter(estimate_priors_from_valid_labels=True),
-                      v_soft,     None),
+                      v_soft,     None, True),
         'em_bcts':   (EMImbalanceAdapter(estimate_priors_from_valid_labels=True),
-                      v_soft_cal, bcts),
+                      v_soft_cal, bcts, True),
     }
 
-    def make_fn(adapter, valid_probs, calib):
+    def make_fn(adapter, valid_probs, calib, mask_support):
+        sup = keep if mask_support else np.ones(num_classes, dtype=bool)
+        vp = valid_probs[:, sup]
+        vp = vp / vp.sum(axis=1, keepdims=True)
+        v1h = v_1hot[:, sup]
+        psrc = p_src[sup]
+
         def fn(pred, soft):
             t = np.clip(soft.astype(np.float64), SOFT_CLIP, 1.0)
             t /= t.sum(axis=1, keepdims=True)
             if calib is not None:
                 t = calib(t)
-            f = adapter(valid_labels=v_1hot,
-                        tofit_initial_posterior_probs=t,
-                        valid_posterior_probs=valid_probs)
+            tk = t[:, sup]
+            tk = tk / tk.sum(axis=1, keepdims=True)
+            f = adapter(valid_labels=v1h,
+                        tofit_initial_posterior_probs=tk,
+                        valid_posterior_probs=vp)
             w = np.array(f.multipliers, dtype=np.float64).ravel()
-            p = np.clip(w * p_src, 0, None)
+            p = np.zeros(num_classes, dtype=np.float64)
+            p[sup] = np.clip(w * psrc, 0, None)
             s = p.sum()
-            return p / s if s > 0 else np.full(num_classes, 1.0 / num_classes)
+            if not np.isfinite(s) or s <= 0:
+                print(f"    WARNING: estimator returned non-finite/degenerate "
+                      f"multipliers; falling back to uniform")
+                return np.full(num_classes, 1.0 / num_classes)
+            return p / s
         return fn
 
     fns = {name: make_fn(*spec) for name, spec in adapters.items()}

@@ -356,13 +356,24 @@ def main():
     ap.add_argument('--reference_week', type=int, default=1)
     ap.add_argument('--output_dir', default='figs')
     ap.add_argument('--max_weeks', type=int, default=None, help='debug: limit #test weeks')
+    ap.add_argument('--forward', action='store_true',
+                    help='forward-only: evaluate only weeks AFTER the reference week '
+                         '(clean-regime story from the healthy source week)')
+    ap.add_argument('--clean_weeks', type=int, nargs=2, default=None,
+                    metavar=('LO', 'HI'),
+                    help='inclusive week range used to calibrate the label-shift '
+                         'robustness thresholds (default 2 9; use e.g. 17 20 for a '
+                         'forward-only week-16 run)')
+    ap.add_argument('--suffix', default='',
+                    help='appended to cache/json/figure filenames, e.g. _fwd for a '
+                         'forward-only variant (avoids clobbering the full-stream run)')
     ap.add_argument('--recompute', action='store_true')
     ap.add_argument('--seed', type=int, default=42)
     args = ap.parse_args()
 
     inference_dir = Path(args.inference_dir)
     out_dir = Path(args.output_dir); out_dir.mkdir(parents=True, exist_ok=True)
-    cache_path = out_dir / 'isolation_scores_cache.npz'
+    cache_path = out_dir / f'isolation_scores_cache{args.suffix}.npz'
 
     class_names = load_class_names(args.dataset_root)
 
@@ -382,18 +393,29 @@ def main():
     train_counts = np.bincount(ref_true, minlength=num_classes).astype(float)
     train_pct = train_counts / train_counts.sum() * 100
 
-    test_files = [p for p in files if wn_of(p) != args.reference_week]
+    if args.forward:
+        test_files = [p for p in files if wn_of(p) > args.reference_week]
+        print(f"Forward-only: evaluating {len(test_files)} weeks after week "
+              f"{args.reference_week}")
+    else:
+        test_files = [p for p in files if wn_of(p) != args.reference_week]
     if args.max_weeks:
         test_files = test_files[:args.max_weeks]
 
+    scores_loaded = False
     if cache_path.exists() and not args.recompute:
-        print(f"Loading cached scores from {cache_path}")
-        z = np.load(cache_path, allow_pickle=False)
-        week_nums = z['week_nums']
-        R_naive = z['R_naive']; R_corr = z['R_corr']; S_mfwdd = z['S_mfwdd']
-        F1_true = z['F1_true']; F1_corr = z['F1_corr']; Ntrue = z['Ntrue']
-        f1_ref = z['f1_ref']
-    else:
+        try:
+            print(f"Loading cached scores from {cache_path}")
+            z = np.load(cache_path, allow_pickle=False)
+            week_nums = z['week_nums']
+            R_naive = z['R_naive']; R_corr = z['R_corr']; S_mfwdd = z['S_mfwdd']
+            F1_true = z['F1_true']; F1_corr = z['F1_corr']; Ntrue = z['Ntrue']
+            f1_ref = z['f1_ref']
+            scores_loaded = True
+        except Exception as e:
+            # a crash mid-savez can leave a truncated/0-byte cache; recompute
+            print(f"  (scores cache unreadable: {e} -> recomputing)")
+    if not scores_loaded:
         week_nums = []
         R_naive, R_corr, S_mfwdd = [], [], []
         F1_true, F1_corr, Ntrue = [], [], []
@@ -469,13 +491,19 @@ def main():
     # ── DECISIVE: pure-label-shift robustness slice ──────────────────────────
     # Calibrate each detector to a 1% FPR alarm threshold on CLEAN weeks, then
     # inject synthetic pure label shift and count healthy-class false alarms.
-    clean_files = [p for p in test_files if 2 <= wn_of(p) <= 9]
-    rob_cache = out_dir / 'robustness_cache.npz'
+    clean_lo, clean_hi = args.clean_weeks if args.clean_weeks else (2, 9)
+    clean_files = [p for p in test_files if clean_lo <= wn_of(p) <= clean_hi]
+    rob_cache = out_dir / f'robustness_cache{args.suffix}.npz'
+    rob = None
     if rob_cache.exists() and not args.recompute:
-        print(f"\nLoading cached robustness from {rob_cache}")
-        z = np.load(rob_cache, allow_pickle=True)
-        rob = z['rob'].item()
-    else:
+        try:
+            print(f"\nLoading cached robustness from {rob_cache}")
+            z = np.load(rob_cache, allow_pickle=True)
+            rob = z['rob'].item()
+        except Exception as e:
+            # a crash mid-savez can leave a truncated/0-byte cache; recompute
+            print(f"  (robustness cache unreadable: {e} -> recomputing)")
+    if rob is None:
         print(f"\nLabel-shift robustness on clean weeks {[wn_of(p) for p in clean_files]} ...")
         rob = robustness_label_shift(clean_files, wn_of, ref, feat_imp, num_classes,
                                      f1_ref, severities=(10, 100, 1000),
@@ -675,10 +703,12 @@ def main():
              fig.add_subplot(gs[0, 2]), fig.add_subplot(gs[1, :2]),
              fig.add_subplot(gs[1, 2])], panels):
         fn(ax)
+    stream_desc = (f'forward-only, weeks >{args.reference_week}' if args.forward
+                   else '52-week stream')
     fig.suptitle('Precision-Diagnostics Isolation Ablation — CESNET-TLS-Year22 '
-                 '(reference week 1, 52-week stream)',
+                 f'(reference week {args.reference_week}, {stream_desc})',
                  fontsize=13, fontweight='bold', y=0.99)
-    out_fig = out_dir / 'fig_precision_isolation_ablation.png'
+    out_fig = out_dir / f'fig_precision_isolation_ablation{args.suffix}.png'
     fig.savefig(out_fig, dpi=180, bbox_inches='tight')
     plt.close(fig)
     print(f"\nSaved combined figure -> {out_fig}")
@@ -690,14 +720,15 @@ def main():
         sz = (10, 4.6) if slug.startswith('D') else (6.4, 5.2)
         f1, a1 = plt.subplots(figsize=sz)
         fn(a1)
-        p = panel_dir / f'fig_isolation_{slug}.png'
+        p = panel_dir / f'fig_isolation_{slug}{args.suffix}.png'
         f1.savefig(p, dpi=180, bbox_inches='tight')
         plt.close(f1)
         print(f"Saved panel -> {p}")
 
-    with open(out_dir / 'isolation_metrics.json', 'w') as f:
+    metrics_path = out_dir / f'isolation_metrics{args.suffix}.json'
+    with open(metrics_path, 'w') as f:
         json.dump(metrics, f, indent=2)
-    print(f"Saved metrics -> {out_dir / 'isolation_metrics.json'}")
+    print(f"Saved metrics -> {metrics_path}")
 
 
 if __name__ == '__main__':
