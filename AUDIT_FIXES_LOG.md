@@ -183,3 +183,60 @@ The closed-world (anonymized) negative-transfer benchmark, scoped "preliminary /
 ## Still needs a human / Overleaf check
 - **LaTeX compile:** `pdflatex` is not installed locally; the missing-figure fixes were verified by file-existence, not a compile. Run `pdflatex`/`latexmk` from the repo root (or `paper/`, now that `\graphicspath` is set) to confirm a clean build.
 - **M1 full scrub:** the 179-path "allot" rename must be done before any code/data release (deferred while SLURM jobs ran — now that they are done, this can proceed when convenient).
+
+================================================================================
+## Round 5 (2026-06-21): User comment pass — general + local [Todo:] resolution
+================================================================================
+Full reviewer pass on paper/main.tex (see paper/PAPER_REVISION_TODO.md for the
+itemized G1–G22 + local checklist). Highlights and validator findings:
+
+VALIDATOR OUTCOMES (subagents):
+- **eset-edtd anchor (G5) — WEAKENED, NEEDS HUMAN DECISION.** Web verification:
+  the ESET "Dynamic Threat Defense -> LiveGuard Advanced" rename was announced
+  **28 Mar 2022 (~ISO week 13)**, NOT "27 Apr 2022 / week 17" as the paper claimed.
+  The "backend, endpoint, and proxy-component changes" claim is CONTRADICTED —
+  ESET documents a product rename; the service hostnames (r./d.edtd.eset.com) were
+  unchanged through the rebrand; the only server-IP change on them is June 2025.
+  ACTION TAKEN: corrected the date, dropped the unsupported mechanism wording,
+  reframed the rebrand as temporally-adjacent context (not proven cause), moved the
+  SHAP attribution detail to an appendix. The internal evidence (week-17 recall
+  cliff + latent jump + AUC-0.92 domain classifier) is unchanged and still solid;
+  only the dated real-world attribution is now soft. DECIDE: keep softened, OR demote
+  eset-edtd to an unattributed example like docker, OR find a different anchored class.
+- **SLD-EM inversion (G9) — REAL, not a bug** (high conf). MLLS/Saerens EM maximizes
+  soft-posterior likelihood, so under covariate shift it absorbs the degradation
+  entropy into its prior; the residual collapses to rho~0. Converged fixed point,
+  worst estimator on L1 too. No code change.
+- **MFWDD 0.677 (G14) — FAIR, not a bug** (high conf). Same population/threshold/
+  metric as the others; AUROC 1.00 under stable volume, collapses only under benign
+  spikes — exactly the thesis. No change.
+- **Natural surge ratios (G19) — CORRECT as printed.** Within-class temporal ratios;
+  per-service sampling factor cancels (network-reprojected differ <2%). Footnote added.
+- **Citations (G21) — fixed.** Added the UDA/CTTA foil refs (were a [TODO]); aligned
+  the Regime-2 cite set to the named estimators; moved jiang2022fgnet to the per-class
+  sentence. No clearly-wrong citations found.
+- **Reference integrity (G22) — 9 bibitems fixed**, none fabricated. Most important:
+  cesnetdrift2025 had the WRONG title and a wrong corporate author (real arXiv:2512.23762
+  = Soukup, Plny, Vasata, Cejka, "Drift-Based Dataset Stability Benchmark").
+- **Real label-shift magnitude (G18 support):** dataset-space per-class proportion
+  max/min swings: median 5.3x, p90 33x, p95 114x, p99 1514x; and these are a LOWER
+  BOUND on network swings (CESNET re-tunes sampling every 5 min, compressing spikes).
+  Used to justify caring about robustness to 10–50x+ label shift.
+
+STRUCTURAL CHANGES:
+- Removed the continuous-vs-discrete schematic (Fig 1) entirely (G3).
+- Merged the 4 negative-transfer tables (+ multi-seed) into one tab:nt_merged (G6) —
+  this plus figure consolidation cut the paper 16pp -> 14pp and fixed the empty-space
+  formatting (G12).
+- Merged the two decomposition figures into one 5(a)/5(b) (G4).
+- Replaced Table VII with the Week-16 ROC figure (G15).
+- Replaced the isolation 3-panel (old Fig 17) in the body with the 5-detector
+  AUROC-vs-label-shift sweep figure (figs/isolation_w16/panels/
+  fig_isolation_auroc_vs_labelshift_fwd_ood.png); moved the A/B/C/D panels to an
+  appendix figure (G18/G20).
+- graphicspath now prefers the live ../figs/ (was resolving only the paper_figs/figs/
+  snapshot), so regenerated figures are picked up on recompile.
+
+IN FLIGHT (figure agent): regenerating fig_auroc_anomaly.png with reference_week=1
+(fixes the "ref Week 0" title; G13) and relabeling "ours" -> "BBSE-corrected residual"
+in figure legends (G17). Sync Table VI numbers if the ref-1 regen changes them.
