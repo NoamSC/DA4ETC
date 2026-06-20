@@ -187,7 +187,7 @@ Paper ID: XXXX}}
 
 %==============================================================================
 \begin{abstract}
-Deep learning models for Encrypted Traffic Classification (ETC) often achieve near-perfect performance in controlled settings but collapse during real-world deployment. Earlier works have tried to address this issue by using Domain Adaptation (UDA) and Continual Test-Time Adaptation (CTTA) methods. But, these methods assume the degradation is caused by continuous, gradual, and homogeneous drift. In this paper, we expose the continuous drift fallacy, demonstrating that structural degradation in ETC ecosystems actually consists of discrete, asynchronous per-class covariate shifts, or class "teleportations". As a result, global adaptation methods --- gradient test-time adaptation (TENT, CoTTA) and adversarial UDA (DANN) --- fail to help in this regime and often make matters worse. To address this, we reframe drift monitoring on a deployed, frozen model as inference-time open-set detection of known-but-drifted classes. We introduce a robust, label-free per-class monitor based on a Black Box Shift Estimation (BBSE)-corrected entropy residual. Our proposed monitor preserves accurate tracking of the true $F_1$ score ($\rho=-0.988$) while successfully isolating genuine structural degradation from benign viral volume spikes. At a 95\% detection rate, our approach cuts the false alarm rate to 4.6\%, representing a 5.4x to 14x improvement over uncorrected entropy (25.0\%) and existing global feature-based monitors (64.8\%). Because the monitor identifies \emph{which} class broke, it drives a targeted, label-free diagnose-and-repair loop: a per-class prototype recapture restores the broken class while leaving the stable majority untouched.
+Deep learning models for Encrypted Traffic Classification (ETC) often achieve near-perfect performance in controlled settings but collapse during real-world deployment. Earlier works have tried to address this issue by using Domain Adaptation (UDA) and Continual Test-Time Adaptation (CTTA) methods. These methods, however, assume the degradation is caused by continuous, gradual, and homogeneous drift. In this paper, we expose the continuous drift fallacy, demonstrating that structural degradation in ETC ecosystems actually consists of discrete, asynchronous per-class covariate shifts---class "teleportations". As a result, global adaptation methods---gradient test-time adaptation (TENT, CoTTA) and adversarial UDA (DANN)---fail to help and often induce negative transfer. To address this, we reframe drift monitoring on a deployed, frozen model as inference-time open-set detection of known-but-drifted classes. We introduce a robust, label-free per-class monitor based on a Black Box Shift Estimation (BBSE)-corrected entropy residual. The monitor preserves accurate tracking of the true $F_1$ score ($\rho=-0.988$) while isolating genuine structural degradation from benign viral volume spikes. At 95\% detection it cuts the false-alarm rate to 4.6\%---a 5.4$\times$ reduction versus uncorrected entropy (25.0\%) and 14$\times$ versus an MFWDD-style global monitor (64.8\%)---with the same ordering reproduced in a clean-regime replication that excludes the dataset's one sensor event. Because the monitor identifies \emph{which} class degraded, it enables a targeted, label-free diagnose-and-repair proof of concept: recomputing only the flagged class's prototype restores it while leaving the stable majority untouched.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -257,11 +257,12 @@ per-class steps. Individual applications hold their learned signature for many
 weeks and then \emph{teleport} across empty latent space at their own,
 vendor-driven moment (Fig.~\ref{fig:hero}, Fig.~\ref{fig:density})
 \cite{jancicka2024noms}, while the stable majority of classes do not move. This
-asymmetry is what breaks global adaptation: when only a handful of classes have
-actually moved, an update driven by the aggregate target distribution spends its
-capacity chasing those few while distorting the decision boundaries of the many
-that were never broken --- the mechanism behind the negative transfer we measure
-in Sec.~\ref{sec:negtransfer}.
+asymmetry predicts trouble for global adaptation: when only a handful of classes
+have moved, an update driven by the aggregate target distribution chases those few
+while distorting the many that were never broken. Consistent with this, we measure
+net-negative transfer from global test-time adaptation
+(Sec.~\ref{sec:negtransfer}), where an AdaBN control localizes the damage to the
+global parameter update itself.
 
 This observation lets us reframe the problem. If the deployed model is held
 \emph{frozen}, a class that teleports does not become a new class; it becomes a
@@ -324,16 +325,22 @@ test-time adaptation (TENT \cite{wang2020tent}), and its continual variant with
 consistency and stochastic restoration (CoTTA \cite{wang2022cotta}). What unites
 these methods is that they are \emph{global}: they update shared parameters (BN
 affine terms, all weights, or the feature extractor) to align the entire
-target distribution to the source. This is the right move when class boundaries
-drift together, but mis-specified when only a handful of classes have moved: the
-global update, driven by the aggregate target statistics, then distorts the
-stable majority and produces negative transfer rather than recovery. Compounding the problem, TTA
-and CTTA are rarely evaluated on encrypted traffic at all, so their behavior in
-this regime is largely undocumented. We supply that benchmark in
-Sec.~\ref{sec:negtransfer}.
+target distribution to the source \cite{liang2024ttasurvey}. This is appropriate
+when class boundaries drift together, but mis-specified when only a handful of
+classes have moved --- the negative-transfer mechanism we quantify in
+Sec.~\ref{sec:negtransfer}. Error accumulation and negative transfer under
+non-i.i.d.\ test streams are in fact documented failure modes of this family
+\cite{liang2024ttasurvey}. Compounding the problem, TTA and CTTA are rarely
+evaluated on encrypted traffic at all, so their behavior in this regime is largely
+undocumented; we supply that benchmark in Sec.~\ref{sec:negtransfer}.
 
 \subsection{Unsupervised Drift Monitoring Frameworks}
-The closest prior art is MFWDD \cite{mfwdd2024}, a model-based feature-weight
+Classical streaming concept-drift detectors --- error-rate monitors such as DDM
+\cite{gama2004ddm} and windowing detectors such as ADWIN \cite{bifet2007adwin} ---
+raise a single global alarm of \emph{when} a stream has changed, but are either
+label-dependent (they watch an error stream) or class-agnostic, so they cannot say
+\emph{which} class drifted. The closest prior art in our label-free, encrypted-traffic
+setting is MFWDD \cite{mfwdd2024}, a model-based feature-weight
 drift detector demonstrated on TLS and QUIC traffic, together with the recent
 CESNET dataset-stability benchmark \cite{cesnetdrift2025}. Two contrasts
 motivate our work. First, MFWDD's label-free mode is a \emph{global} trigger
@@ -345,7 +352,13 @@ loss of accuracy --- so a feature-distance trigger cannot tell a structural brea
 from a benign surge. Our signal is instead per-class, label-free,
 \emph{label-shift-corrected}, and calibrated against hidden $F_1$; we benchmark
 it head-to-head against an MFWDD-style global detector in
-Sec.~\ref{sec:robustness} and Sec.~\ref{sec:isolation}. The two answer different
+Sec.~\ref{sec:robustness} and Sec.~\ref{sec:isolation}.\footnote{Our MFWDD-style
+detector is a reimplementation in the \emph{spirit} of MFWDD --- a
+feature-importance-weighted global distance --- computed on the model's per-class
+output (softmax) distribution rather than on raw input features. We benchmark the
+global feature-distance \emph{idea}, not the original system; the softmax-space
+variant is, if anything, the more favorable one, since a raw input-feature
+distance fires at least as hard under a benign volume spike.} The two answer different
 questions: MFWDD identifies \emph{which feature drifted} (useful for dataset
 curation), whereas our monitor identifies \emph{which class degraded} (the input
 to a targeted repair). Adjacent encrypted-traffic work on website and mobile-app
@@ -363,7 +376,9 @@ Saerens \emph{et al.} (SLD-EM) \cite{saerens2002sld}, regularized learning under
 label shift (RLLS) \cite{azizzadenesheli2019rlls}, the unified
 maximum-likelihood view (MLLS) \cite{garg2020mlls}, its bias-corrected
 calibrated variant (MLLS+BCTS) \cite{alexandari2020mlls}, and Bayesian black-box
-quantification \cite{ziegler2023bayesian}. Crucially, every one of these
+quantification \cite{ziegler2023bayesian}. Estimating class prevalence from
+unlabeled data is the \emph{quantification-learning} task studied in its own right
+\cite{gonzalez2017quant}. Every one of these
 estimators rests on the same assumption that the class-conditional $P(X\mid Y)$
 is invariant between source and target. A covariate shift violates that
 assumption and breaks all of them \emph{together}. Where the label-shift
@@ -384,9 +399,10 @@ class that teleports falls outside the decision geometry the model learned for
 it, so at inference those flows behave like out-of-region or ``unknown''
 samples. Drift monitoring on a frozen model is therefore well described as
 inference-time open-set detection, with one important difference from standard
-OSR: these are \emph{known} classes whose signatures drifted, not novel classes
-appearing for the first time. We use this view as an interpretive frame, not as
-an algorithmic contribution. For the same reason we do not run an OSR baseline
+OSR \cite{geng2021osr}: these are \emph{known} classes whose signatures drifted,
+not novel classes appearing for the first time --- our setting is the
+covariate-shift cousin of OSR, not novel-class rejection. We use this view as an
+interpretive frame, not as an algorithmic contribution. For the same reason we do not run an OSR baseline
 battery in the main monitoring evaluation --- our detector is scored against
 hidden $F_1$ and compared against MFWDD-style and uncorrected-entropy detectors
 --- though we do report a per-class energy/MSP out-of-distribution comparison in
@@ -395,9 +411,12 @@ directly. The closest prior framing to ours is HOLMES
 \cite{deng2024holmes}, which already instantiates the per-class open-set view in
 encrypted traffic with spatial decision regions, out-of-region rejection, and
 even per-class region updates on drift. HOLMES, however, is supervised --- labels
-define its regions --- and is a website-fingerprinting \emph{attack}; our monitor
-is label-free, operates on a frozen ETC model, and additionally quantifies the
-harm of global adaptation.
+define its regions --- and is a website-fingerprinting \emph{attack}. What
+neither HOLMES nor any prior monitor addresses is what we target: separating
+covariate-driven degradation from \emph{benign label shift}, and calibrating the
+per-class signal against the model's hidden $F_1$. That, rather than per-class
+localization alone, is our contribution; our monitor is also label-free, operates
+on a frozen ETC model, and additionally quantifies the harm of global adaptation.
 
 %==============================================================================
 \section{The Nature of Discrete Drift in Encrypted Traffic}
@@ -533,9 +552,10 @@ embeddings from the Week-16 centroid is flat for several weeks and then steps up
 sharply --- a discrete move, not a gradual drift. The shift is internal to the
 encrypted signature: the week-17 jump is driven by the packet-size and direction
 sequence rather than by flow-volume statistics, and a domain classifier separates
-the pre- and post-cliff regimes almost perfectly (AUC~$0.92$), i.e.\ a discrete
-regime change rather than a change in volume (attribution details in
-Appendix~\ref{app:shap}). We searched for a documented external cause and did not
+the pre- and post-cliff regimes almost perfectly (AUC~$0.92$). This is a discrete
+change in the class's per-flow \emph{signature} (covariate shift), not a change in
+the class's \emph{prevalence} (which is what benign label shift would be);
+attribution details are in Appendix~\ref{app:shap}. We searched for a documented external cause and did not
 find one: the only nearby ESET event, the spring-2022 EDTD$\to$LiveGuard rebrand,
 left the underlying endpoints (edtd.eset.com) and certificates unchanged
 and predates the cliff, so we report eset-edtd as an unexplained but internally
@@ -597,21 +617,24 @@ what hurts is the global \emph{parameter} update, not adaptation in general. (Th
 $+0.007$ AdaBN ``gain'' sometimes quoted at Week-16 is backward transfer to the
 easy pre-source weeks and disappears forward-only.)
 
-DANN \cite{ganin2016dann} deserves separate treatment. It is a \emph{trained}
-UDA method: it learns a feature extractor adversarially so that source and target
+DANN \cite{ganin2016dann} differs from the test-time adapters above: it is a
+\emph{trained} UDA method that learns a feature extractor adversarially so that source and target
 become indistinguishable to a domain discriminator, which --- unlike the
 test-time adapters above --- means retraining the model on each target week rather
 than merely updating statistics at inference. We give it every advantage, scoring
 each week with its own dedicated source-16$\to$week-$N$ model (the transductive,
 most-favorable setting). Even so, DANN beats the frozen source by only $+0.006$ on
 average ($+0.001$ on the far weeks; Table~\ref{tab:nt_merged}, per-week in
-Fig.~\ref{fig:dann_curve}): global source--target alignment buys no forward
+Fig.~\ref{fig:dann_curve}): global source--target alignment yields no forward
 robustness and cannot recover per-class discrete drift, despite paying a full
-retraining cost every week. These effects hold under both TLS source weeks and on
-QUIC \cite{luxemburk2023quic}, and the gradient-method deltas are confirmed across
-five seeds, so they are neither seed noise nor an artifact of the Week-10 sensor
-event. As elsewhere, the 10\% sample makes these absolute accuracies
-non-comparable to the full-data monitor figures.
+retraining cost every week. The closed-world dataset shows the same neutral DANN
+result ($+0.011$). We report DANN here for the Week-16 and closed-world sources
+(its Week-1 and QUIC diagonals are still computing; the table marks those cells
+pending). The gradient-method effects, by contrast, hold under both TLS source
+weeks and on QUIC \cite{luxemburk2023quic} and are confirmed across five seeds, so
+they are neither seed noise nor an artifact of the Week-10 sensor event. As
+elsewhere, the 10\% sample makes these absolute accuracies non-comparable to the
+full-data monitor figures.
 
 \paragraph{External validation.} The same pattern reproduces on an independent,
 proprietary closed-world dataset (anonymized for review). Evaluated forward-only
@@ -801,13 +824,13 @@ without any labels. On clean forward data from the Week-16 source (weeks 17--52,
 Fig.~\ref{fig:mirror}), it does, and so does its uncorrected counterpart: the
 correlation between the entropy gap and the true Macro-$F_1$ is $\rho=-0.983$ for
 the uncorrected gap, $-0.988$ for the BBSE-corrected residual, $-0.992$ for RLLS,
-and $-0.991$ for an oracle that is handed the true proportions. We state plainly
-that BBSE correction does \emph{not} improve clean tracking --- nor is it meant to;
+and $-0.991$ for an oracle that is handed the true proportions. BBSE correction
+does \emph{not} improve clean tracking, nor is it meant to;
 its purpose is robustness, established in the next subsection. Two further points
 follow from this figure. First, the oracle line sits essentially on top of
 BBSE and RLLS, so a better estimator could not track meaningfully better; clean
-tracking is already near its ceiling. Second, SLD-EM \emph{inverts} on this data,
-reaching $\rho=+0.030$ --- a striking failure that doubles as the visual evidence
+tracking is already near its ceiling. Second, SLD-EM \emph{fails to track}
+entirely on this data ($\rho\approx0$) --- a striking failure that doubles as the visual evidence
 for the estimation/detection dissociation we argue in Sec.~\ref{sec:sweep}. The
 Week-1 mirror, which tracks the model \emph{through} the documented Week-10 event
 at $\rho=-0.997$ (uncorrected) and $-0.994$ (BBSE), is deferred to Appendix
@@ -822,7 +845,7 @@ proportions decouple from the true volume exactly when that class's $F_1$ drops}
 \caption{The Mirror Effect, forward from the Week-16 source (weeks 17--52). The
 label-free entropy gap tracks the true Macro-$F_1$ closely: uncorrected
 $\rho=-0.983$, BBSE $-0.988$, RLLS $-0.992$, and an oracle handed the true
-proportions $-0.991$. SLD-EM \emph{inverts} ($\rho=+0.030$) --- the visual evidence
+proportions $-0.991$. SLD-EM \emph{fails to track} ($\rho\approx0$) --- the visual evidence
 for the estimation/detection dissociation discussed in Sec.~\ref{sec:sweep}.}
 \label{fig:mirror}
 \end{figure}
@@ -966,8 +989,9 @@ MFWDD-style global             & 0.577 [0.541,\,0.618] \\
 \paragraph{Per-class OOD baselines, and why robustness is the right axis.} The
 open-set framing invites the obvious question: why not just use per-class
 out-of-distribution (OOD) scores? We add the two standard ones --- a per-class
-energy score $E=-\log\sum\exp(\text{logits})$ and maximum-softmax-probability
-(MSP) --- and score them, alongside naive entropy and our residual, as we sweep the
+energy score $E=-\log\sum\exp(\text{logits})$ \cite{liu2020energy} and the
+maximum-softmax-probability (MSP) baseline \cite{hendrycks2017msp} --- and score
+them, alongside naive entropy and our residual, as we sweep the
 amount of benign label shift present (Fig.~\ref{fig:oodsweep}). On perfectly clean
 data the uncorrected scores are the \emph{sharpest}: naive entropy (AUROC 0.967)
 and MSP (0.947) detect degraded classes best, ahead of the BBSE-corrected residual
@@ -988,7 +1012,7 @@ the residual still holds $\approx0.81$. The correction is what keeps the per-cla
 signal trustworthy under the label shift ETC deployments actually see.
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=\columnwidth]{figs/isolation_w16/panels/fig_isolation_auroc_vs_labelshift_fwd_ood.png}}
+\centerline{\includegraphics[width=\columnwidth]{figs/fig_isolation_auroc_vs_labelshift_fwd_ood.png}}
 \caption{Per-class degradation-detection AUROC vs.\ the amount of benign label
 shift (Week-16 forward; severity $s$, class weights $\sim$LogUniform$[1/s,s]$). On
 clean data ($s$ small) uncorrected entropy, MSP, and energy are the sharpest
@@ -1039,13 +1063,13 @@ Week-16 stream (Fig.~\ref{fig:sweep}). At the mildest injected severity $s{=}1$ 
 uncorrected detector indeed leads (0.921 vs 0.897 for BBSE), but its AUROC decays steeply, is overtaken by
 BBSE between $s{=}3$ and $s{=}5$, and collapses to $\approx0.70$ at $s{=}1000$; BBSE,
 soft-BBSE, and RLLS all hold near 0.80, while EM/MLLS decays faster. The
-uncorrected detector, in short, looks best only when there is nothing to be
+uncorrected detector looks best only when there is nothing to be
 robust to.
 
 This exposes a clean \emph{estimation/detection dissociation}. EM/MLLS is the
 \emph{most accurate} label-shift estimator in the robustness benchmark
 (Fig.~\ref{fig:regime1}), yet it is the \emph{least robust} detector here; SLD-EM
-even inverts to $\rho=+0.030$ on the Week-16 mirror (Fig.~\ref{fig:mirror}) and
+even fails to track ($\rho\approx0$) on the Week-16 mirror (Fig.~\ref{fig:mirror}) and
 ties the uncorrected false-alarm rate under a viral spike
 (Table~\ref{tab:auroc}). Estimation accuracy and detection robustness are
 therefore not the same objective in our experiments. In practice we keep plain
@@ -1092,14 +1116,16 @@ negative transfer of Sec.~\ref{sec:negtransfer}. A label-free flag that names
 a minimal proof of concept in the frozen feature space: for a flagged class we
 recompute \emph{only} that class's prototype from a handful of post-drift samples
 (nearest-class-mean), leaving every other class and the feature extractor
-untouched (Fig.~\ref{fig:repair}). With a few dozen shots the teleported classes
-recover from near-zero recall back into the high-$0.8$s, while the stable-majority
-Macro-$F_1$ does not move ($|\Delta|\le0.001$) --- in direct contrast to CoTTA,
-which loses $0.06$ over the same stream. The cost asymmetry is what makes this
-practical: the monitor is label-free, and the fix needs a few labels on a
-\emph{single} class. A
-full repair system is left to follow-up work; here it is enough to show that the
-diagnosis is actionable.
+untouched (Fig.~\ref{fig:repair}). With a few dozen shots the clean teleporters
+recover from near-zero recall to $\approx0.87$ (skype, the hardest case and
+already partly confused before drift, recovers only partially, $0.16\to0.43$).
+Because the update recomputes \emph{only} the flagged class's prototype, it cannot
+by construction perturb the others, so the stable-majority Macro-$F_1$ is
+unchanged ($|\Delta|\le0.001$) --- whereas CoTTA, which is free to move shared
+parameters, loses $0.06$ over the same stream. The cost asymmetry is what makes
+this practical: the monitor is label-free, and the fix needs a few labels on a
+\emph{single} class. We report this as a proof of concept on a handful of classes,
+not a full repair system, to show the diagnosis is actionable.
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=\columnwidth]{figs/fig_perclass_before_after_w16.png}}
@@ -1127,9 +1153,8 @@ benefit, while the no-gradient AdaBN control does no harm, pinning the damage on
 global parameter updates.
 
 The monitor's contribution is robustness. The BBSE-corrected
-entropy residual is a noise-canceling tripwire: it preserves accurate, label-free tracking of hidden
-$F_1$ (the clean-regime correlation reaches $\rho=-0.988$, which we present as
-evidence of preserved tracking rather than as the headline result) while sharply
+entropy residual is a two-sided instrument: it preserves accurate, label-free tracking of hidden
+$F_1$ (clean-regime correlation $\rho=-0.988$) while sharply
 cutting false alarms under benign viral volume spikes (from 25.0\% to 4.6\% at
 95\% detection on the Week-1 stream, with the ordering reproduced within the clean
 Week-16 regime). Its two-sided mechanism --- robust to label shift, responsive to
@@ -1180,6 +1205,7 @@ is a promising direction \cite{bai2022online,baby2023online}.
 \bibitem{wang2022cotta} Q. Wang, O. Fink, L. Van Gool, and D. Dai, ``Continual test-time domain adaptation,'' \textit{CVPR}, 2022.
 \bibitem{ganin2016dann} Y. Ganin, E. Ustinova, H. Ajakan, P. Germain, H. Larochelle, F. Laviolette, M. Marchand, and V. Lempitsky, ``Domain-adversarial training of neural networks,'' \textit{J. Mach. Learn. Res.}, vol.~17, art.~59, pp.~59:1--59:35, 2016.
 \bibitem{li2016adabn} Y. Li, N. Wang, J. Shi, J. Liu, and X. Hou, ``Revisiting batch normalization for practical domain adaptation (AdaBN),'' \textit{arXiv:1603.04779} / ICLR Workshop, 2017. % VERIFY (venue/year)
+\bibitem{liang2024ttasurvey} J. Liang, R. He, and T. Tan, ``A comprehensive survey on test-time adaptation under distribution shifts,'' \textit{Int. J. Computer Vision}, vol.~133, pp.~31--64, 2025.
 
 % --- Datasets: secondary (QUIC) ---------------------------------------------
 \bibitem{luxemburk2023quic} J. Luxemburk, K. Hynek, T. \v{C}ejka, A. Luka\v{c}ovi\v{c}, and P. \v{S}i\v{s}ka, ``CESNET-QUIC22: A large one-month QUIC network traffic dataset from backbone lines,'' \textit{Data in Brief}, art.~108888, 2023.
@@ -1187,6 +1213,8 @@ is a promising direction \cite{bai2022online,baby2023online}.
 % --- Unsupervised drift monitoring (closest prior art) ----------------------
 \bibitem{mfwdd2024} L. Jan\v{c}i\v{c}ka, D. Soukup, J. Koumar, F. N\v{e}mec, and T. \v{C}ejka, ``MFWDD: Model-based feature weight drift detection showcased on TLS and QUIC traffic,'' \textit{20th Int. Conf. Network and Service Management (CNSM)}, pp.~1--5, 2024.
 \bibitem{cesnetdrift2025} D. Soukup, R. Pln\'y, D. Va\v{s}ata, and T. \v{C}ejka, ``Drift-based dataset stability benchmark,'' \textit{arXiv:2512.23762}, 2025.
+\bibitem{gama2004ddm} J. Gama, P. Medas, G. Castillo, and P. Rodrigues, ``Learning with drift detection,'' in \textit{Advances in Artificial Intelligence (SBIA)}, 2004, pp.~286--295.
+\bibitem{bifet2007adwin} A. Bifet and R. Gavald\`a, ``Learning from time-changing data with adaptive windowing,'' in \textit{Proc. SIAM Int. Conf. Data Mining (SDM)}, 2007, pp.~443--448.
 
 % --- Adjacent encrypted-traffic analysis: drift & per-class handling --------
 %     (WF + mobile-app fingerprinting; added from the related literature.
@@ -1207,6 +1235,7 @@ is a promising direction \cite{bai2022online,baby2023online}.
 \bibitem{azizzadenesheli2019rlls} K. Azizzadenesheli, A. Liu, F. Yang, and A. Anandkumar, ``Regularized learning for domain adaptation under label shifts,'' \textit{ICLR}, 2019. % VERIFY
 \bibitem{garg2020mlls} S. Garg, Y. Wu, S. Balakrishnan, and Z. Lipton, ``A unified view of label shift estimation,'' \textit{NeurIPS}, 2020. % VERIFY
 \bibitem{ziegler2023bayesian} A. Ziegler and P. Czy\.{z}, ``Bayesian quantification with black-box estimators,'' \textit{Transactions on Machine Learning Research (TMLR)}, 2024.
+\bibitem{gonzalez2017quant} P. Gonz\'alez, A. Casta\~no, N. V. Chawla, and J. J. del Coz, ``A review on quantification learning,'' \textit{ACM Computing Surveys}, vol.~50, no.~5, art.~74, 2017.
 
 % --- Online label shift (CONTRAST + future work only) -----------------------
 \bibitem{bai2022online} Y. Bai, Y.-J. Zhang, P. Zhao, M. Sugiyama, and Z.-H. Zhou, ``Adapting to online label shift with provable guarantees,'' \textit{NeurIPS}, vol.~35, pp.~29960--29974, 2022.
@@ -1220,6 +1249,9 @@ is a promising direction \cite{bai2022online,baby2023online}.
 
 % --- Open-set + continual learning (operational paradigm) -------------------
 \bibitem{bendale2016openmax} A. Bendale and T. E. Boult, ``Towards open set deep networks,'' \textit{CVPR}, 2016. % VERIFY
+\bibitem{geng2021osr} C. Geng, S.-J. Huang, and S. Chen, ``Recent advances in open set recognition: A survey,'' \textit{IEEE Trans. Pattern Anal. Mach. Intell.}, vol.~43, no.~10, pp.~3614--3631, 2021.
+\bibitem{hendrycks2017msp} D. Hendrycks and K. Gimpel, ``A baseline for detecting misclassified and out-of-distribution examples in neural networks,'' \textit{ICLR}, 2017.
+\bibitem{liu2020energy} W. Liu, X. Wang, J. D. Owens, and Y. Li, ``Energy-based out-of-distribution detection,'' \textit{NeurIPS}, 2020.
 \bibitem{rebuffi2017icarl} S.-A. Rebuffi, A. Kolesnikov, G. Sperl, and C. H. Lampert, ``iCaRL: Incremental classifier and representation learning,'' \textit{CVPR}, 2017. % VERIFY
 \bibitem{kirkpatrick2017ewc} J. Kirkpatrick et al., ``Overcoming catastrophic forgetting in neural networks,'' \textit{PNAS}, vol.~114, no.~13, pp.~3521--3526, 2017. % VERIFY
 \bibitem{li2017lwf} Z. Li and D. Hoiem, ``Learning without forgetting,'' \textit{IEEE Trans. Pattern Anal. Mach. Intell.}, vol.~40, no.~12, pp.~2935--2947, 2018.
