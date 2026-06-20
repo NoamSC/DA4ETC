@@ -244,8 +244,8 @@ unsupervised domain adaptation (UDA) or continual test-time adaptation (CTTA)
 --- methods that assume the class boundaries move together, gradually, and in the
 same direction \cite{wang2020tent,wang2022cotta,ganin2016dann,li2016adabn}.
 
-We argue that this picture is wrong, and that getting it wrong is why adaptation
-makes performance worse rather than better. The literature documents at least
+We argue this picture is wrong, and that the misdiagnosis is precisely why
+adaptation degrades performance instead of restoring it. The literature documents at least
 three distinct failure modes --- slow accuracy decay \cite{malekghaini2022data},
 abrupt collapses triggered by backend or version updates \cite{chen2025drift},
 and outright generalization failures \cite{shamsimukhametov2024ech} --- but
@@ -604,26 +604,27 @@ to the adaptation mechanism. Because small batches inflate the BN-recalibration
 effect, we report TENT and CoTTA at both batch~64 and batch~256, treating the
 batch~256 (training-batch) figure as the fair operating point.
 
-The merged results (Table~\ref{tab:nt_merged}) tell a consistent story. The
+The merged results (Table~\ref{tab:nt_merged}) are consistent across datasets. The
 gradient methods, TENT and CoTTA, are net-negative on both TLS source weeks and
 on QUIC, and they fall furthest on the far, drifted weeks --- exactly where
-adaptation is supposed to help (batch~64 collapses worst, and even batch~256 stays
-negative). Because the failure spans both the entropy-based (TENT) and
-consistency-based (CoTTA) families, it points to the global \emph{scope} of the
-update rather than to any one algorithm. The AdaBN control makes the same point
-from the other side: recalibrating BN statistics with no gradient step does no
-harm forward-only ($|\Delta|\le0.011$ on TLS, and a small $+0.020$ on QUIC), so
-what hurts is the global \emph{parameter} update, not adaptation in general. (The
-$+0.007$ AdaBN ``gain'' sometimes quoted at Week-16 is backward transfer to the
-easy pre-source weeks and disappears forward-only.)
+adaptation is supposed to help. The magnitude depends on batch size: at batch~64
+the collapse is severe, while at the fair batch~256 operating point the TLS effect
+is mild ($-0.014$); the large deltas show up at small batch and, most sharply, on
+the closed-world dataset ($-0.11$ to $-0.21$). Because the failure spans both the
+entropy-based (TENT) and consistency-based (CoTTA) families, it points to the
+global \emph{scope} of the update rather than to any one algorithm. The AdaBN
+control makes the same point from the other side: recalibrating BN statistics with
+no gradient step does no harm forward-only ($|\Delta|\le0.011$ on TLS, and a small
+$+0.020$ on QUIC), so what hurts is the global \emph{parameter} update, not
+adaptation in general. (An apparent $+0.007$ AdaBN ``gain'' at Week-16 is backward
+transfer to the easy pre-source weeks and disappears forward-only.)
 
 DANN \cite{ganin2016dann} differs from the test-time adapters above: it is a
 \emph{trained} UDA method that learns a feature extractor adversarially so that source and target
 become indistinguishable to a domain discriminator, which --- unlike the
 test-time adapters above --- means retraining the model on each target week rather
-than merely updating statistics at inference. We give it every advantage, scoring
-each week with its own dedicated source-16$\to$week-$N$ model (the transductive,
-most-favorable setting). Even so, DANN beats the frozen source by only $+0.006$ on
+than merely updating statistics at inference. We grant DANN the most favorable setting, scoring
+each week with its own dedicated source-16$\to$week-$N$ model (transductive). Even so, DANN beats the frozen source by only $+0.006$ on
 average ($+0.001$ on the far weeks; Table~\ref{tab:nt_merged}, per-week in
 Fig.~\ref{fig:dann_curve}): global source--target alignment yields no forward
 robustness and cannot recover per-class discrete drift, despite paying a full
@@ -886,13 +887,15 @@ damaging stressor --- the one that drives a real wedge between corrected and
 uncorrected detectors --- is the asymmetric single-app spike, which is what the
 rest of this subsection uses.
 
-\paragraph{Results.} On the Week-1 stream, which carries the degraded-week
-positives needed for the healthy-vs-degraded split, the BBSE-corrected residual
-reaches AUROC 0.987 at a false-alarm rate of 4.6\% under 95\% matched detection,
-against 0.959 / 25.0\% for the uncorrected entropy gap and 0.677 / 64.8\% for the
-MFWDD-style global detector (Fig.~\ref{fig:auroc}(b), Table~\ref{tab:auroc}) --- a
-$5.4\times$ and $14\times$ reduction in false alarms; at 90\% detection the gap is
-2.8\% vs 12.0\% vs 59.3\%. The mechanism is score-level: a viral spike inflates the
+\paragraph{Results.} On the Week-1 stream --- the one with enough degraded weeks to
+form a healthy-vs-degraded split (43 degraded vs 9 healthy weeks) --- the
+BBSE-corrected residual reaches AUROC 0.987 at a 4.6\% false-alarm rate under 95\%
+matched detection, against 0.959 / 25.0\% for the uncorrected entropy gap and
+0.677 / 64.8\% for the MFWDD-style global detector (Fig.~\ref{fig:auroc}(b),
+Table~\ref{tab:auroc}). With only 9 healthy weeks these point false-alarm rates are
+coarse, so we treat the consistent \emph{ordering} --- reproduced in the Week-16
+replication and the block bootstrap below --- as the robust finding rather than the
+exact $5.4\times$/$14\times$ multipliers. The mechanism is score-level: a viral spike inflates the
 uncorrected entropy gap into the degradation band, whereas BBSE recognizes the
 over-represented application, raises the expected entropy accordingly, and pulls
 the residual back below threshold. The MFWDD-style detector trails the rest
@@ -987,8 +990,8 @@ MFWDD-style global             & 0.577 [0.541,\,0.618] \\
 \end{table}
 
 \paragraph{Per-class OOD baselines, and why robustness is the right axis.} The
-open-set framing invites the obvious question: why not just use per-class
-out-of-distribution (OOD) scores? We add the two standard ones --- a per-class
+open-set framing raises an obvious alternative --- per-class
+out-of-distribution (OOD) scores. We add the two standard ones --- a per-class
 energy score $E=-\log\sum\exp(\text{logits})$ \cite{liu2020energy} and the
 maximum-softmax-probability (MSP) baseline \cite{hendrycks2017msp} --- and score
 them, alongside naive entropy and our residual, as we sweep the
@@ -1142,15 +1145,16 @@ $-0.06$ negative transfer.}
 %==============================================================================
 \section{Conclusion and Future Work}
 \label{sec:conclusion}
-We have argued, and shown, that the smooth accuracy decay of an encrypted-traffic
+We have shown that the smooth accuracy decay of an encrypted-traffic
 classifier is an illusion. Drift in this setting is discrete and per-class: the
 macroscopic curve is a documented measurement-sensor step plus a long tail of
 asynchronous per-class teleportations, not a continuous global shift. Because the
 shift is local, the continuity assumption that UDA and CTTA rely on is
-mis-specified here, and global adaptation is actively harmful --- gradient methods
-induce negative transfer and even best-case adversarial alignment buys no forward
-benefit, while the no-gradient AdaBN control does no harm, pinning the damage on
-global parameter updates.
+mis-specified here, and global adaptation does not help: gradient methods induce
+negative transfer (severe at small batch, mild but still negative at the fair
+operating point) and even best-case adversarial alignment yields no forward
+benefit, while the no-gradient AdaBN control does no harm --- pinning the damage on
+global parameter updates rather than on adaptation per se.
 
 The monitor's contribution is robustness. The BBSE-corrected
 entropy residual is a two-sided instrument: it preserves accurate, label-free tracking of hidden
