@@ -61,18 +61,22 @@ def week_name(idx):
 
 
 BLOCKS = [
+    # Forward-only evaluation: a source model is scored only on its OWN week and
+    # later weeks (the drift-monitoring scenario). Evaluating a source model on
+    # EARLIER weeks ("predicting the past") is backward transfer and is dropped — it
+    # is not the deployment setting and it inflates means with easy pre-source weeks.
     {
         "tag": "week_1",
-        "title": "CESNET-TLS-Year22 — week-1 source (53 weeks, 180 classes)",
+        "title": "CESNET-TLS-Year22 — week-1 source (forward weeks 1–52, 180 classes)",
         "source_week": 1,
-        "eval_weeks": list(range(0, 53)),
+        "eval_weeks": list(range(1, 53)),
         "far_weeks": list(range(43, 53)),
     },
     {
         "tag": "week_16",
-        "title": "CESNET-TLS-Year22 — week-16 source (53 weeks, 180 classes)",
+        "title": "CESNET-TLS-Year22 — week-16 source (forward weeks 16–52, 180 classes)",
         "source_week": 16,
-        "eval_weeks": list(range(0, 53)),
+        "eval_weeks": list(range(16, 53)),
         "far_weeks": list(range(43, 53)),
     },
     {
@@ -240,14 +244,69 @@ def render_block(block):
     return "\n".join(lines)
 
 
+DANN_DIAG_DIR = os.path.join(REPO_ROOT, "results", "inference", "dann_fwd_w16_diagonal")
+
+
+def render_dann_diagonal():
+    """DANN forward-transfer DIAGONAL: each target week N (≥16) is scored by its OWN
+    source-16→week-N gradient-reversal-aligned model (52 separate models, transductive
+    UDA — the most favorable setting for DANN). Compared against the single frozen
+    week-16 source-only model on the SAME forward weeks, so Δ isolates what adversarial
+    domain alignment buys for forward drift."""
+    if not os.path.isdir(DANN_DIAG_DIR):
+        return ""
+    src = 16
+    fwd = list(range(src, 53))
+    diag = {}
+    for w in fwd:
+        p = os.path.join(DANN_DIAG_DIR, week_name(w))
+        if os.path.isfile(p):
+            try:
+                yt, yp = load_week(p)
+                diag[w] = (float(np.mean(yt == yp)),
+                           float(f1_score(yt, yp, average="macro", zero_division=0)))
+            except Exception:
+                pass
+    van_pw, _, _ = collect_group("week_16", "vanilla", 64, fwd)
+    if not diag or not van_pw:
+        return ""
+    shared = sorted(set(diag) & set(van_pw))
+    far = [w for w in shared if w >= 43]
+
+    def mean_acc(d, ws):
+        return float(np.mean([d[w][0] for w in ws])) if ws else None
+
+    lines = ["## DANN forward-transfer (diagonal) — week-16 source",
+             "",
+             "_Each week scored by its own source-16→week-N DANN-aligned model "
+             "(transductive, one model per week); forward weeks 16–52._",
+             "",
+             "| Method | Mean acc | Δ | Macro-F1 | Far ≥43 |",
+             "|---|--:|--:|--:|--:|"]
+    v_mean = mean_acc(van_pw, shared)
+    lines.append(f"| Source-only (week-16) | {fmt(v_mean)} | — | "
+                 f"{fmt(mean_or_none([van_pw[w][1] for w in shared]))} | "
+                 f"{fmt(mean_acc(van_pw, far))} |")
+    d_mean = mean_acc(diag, shared)
+    delta = float(d_mean - v_mean) if (d_mean is not None and v_mean is not None) else None
+    lines.append(f"| DANN (diagonal) | {fmt(d_mean)} | {fmt(delta, plus=True)} | "
+                 f"{fmt(mean_or_none([diag[w][1] for w in shared]))} | "
+                 f"{fmt(mean_acc(diag, far))} |")
+    lines.append("")
+    lines.append("_Even with a dedicated per-target-week aligned model, forward-transfer "
+                 "gain over the frozen source is negligible — global domain alignment does "
+                 "not recover the per-class discrete drift._")
+    return "\n".join(lines)
+
+
 def main():
     print("# UDA/TTA Benchmark — regenerated from results/inference_auditfix/")
     print()
     print(f"_Source dir: {INFER_DIR}_")
     print(
-        "_Mean acc / Macro-F1 over evaluated weeks; In-dist = source-week test "
-        "accuracy; Far ≥43 = mean acc weeks 43–52; Δ = mean-acc minus vanilla on "
-        "shared weeks. DANN omitted: not present in the audit-fixed outputs._"
+        "_Forward-only evaluation (source week and later). Mean acc / Macro-F1 over "
+        "evaluated weeks; In-dist = source-week test accuracy; Far ≥43 = mean acc weeks "
+        "43–52; Δ = mean-acc minus source-only (vanilla) on shared weeks._"
     )
     print()
     if not os.path.isdir(INFER_DIR):
@@ -255,6 +314,10 @@ def main():
         sys.exit(1)
     for block in BLOCKS:
         print(render_block(block))
+        print()
+    dann = render_dann_diagonal()
+    if dann:
+        print(dann)
         print()
 
 

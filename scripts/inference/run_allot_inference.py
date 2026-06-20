@@ -79,6 +79,10 @@ def load_allot_model(experiment_dir, num_classes, device):
     ).to(device)
     state = torch.load(ckpt_path, map_location=device, weights_only=False)
     state_dict = state["model_state_dict"] if isinstance(state, dict) and "model_state_dict" in state else state
+    # DANN-trained checkpoints carry a training-only GRL domain_classifier head that
+    # the frozen inference model does not build. Drop those keys so the label path
+    # (feature extractor + classifier) still loads strictly — any real mismatch errors.
+    state_dict = {k: v for k, v in state_dict.items() if not k.startswith("domain_classifier.")}
     model.load_state_dict(state_dict)
     model.eval()
     return model

@@ -195,6 +195,14 @@ def _configure_cotta(model):
         if isinstance(m, (nn.BatchNorm1d, nn.BatchNorm2d)):
             m.track_running_stats = False
             m.running_mean = m.running_var = None
+    # train() above turns dropout ON for the student. The saved CoTTA prediction is the
+    # eval-mode teacher's (clean), but the saved `features`/embeddings come from this
+    # student forward — with dropout active those embeddings are noise-corrupted (and
+    # non-reproducible). CoTTA's stochasticity comes from augmentation + stochastic
+    # restore, not dropout, so disable dropout here (same rationale as _configure_tent).
+    for m in model.modules():
+        if isinstance(m, nn.Dropout):
+            m.eval()
     return model
 
 
