@@ -380,8 +380,9 @@ quantification \cite{ziegler2023bayesian}. Estimating class prevalence from
 unlabeled data is the \emph{quantification-learning} task studied in its own right
 \cite{gonzalez2017quant}. Every one of these
 estimators rests on the same assumption that the class-conditional $P(X\mid Y)$
-is invariant between source and target. A covariate shift violates that
-assumption and breaks all of them \emph{together}. Where the label-shift
+is invariant between source and target. A covariate shift violates the assumption
+all of them depend on, biasing them simultaneously --- and, as we show empirically
+(Sec.~\ref{sec:breakdown}), their errors spike \emph{together}. Where the label-shift
 literature treats this as the failure case to avoid, we \emph{leverage} it: the
 shared breakdown is the signal that distinguishes a genuine structural
 break from a benign change in class proportions. The online-label-shift
@@ -714,10 +715,7 @@ inherently high-uncertainty application raises the mean entropy without any drop
 in accuracy}, and a naive entropy monitor would mistake it for degradation.
 Distinguishing the two requires a \emph{baseline} for how much entropy the current
 class mix should produce --- which motivates the residual of
-Sec.~\ref{sec:residual}. We flag one bridge caveat resolved there:
-Fig.~\ref{fig:entropy} is a per-sample distribution, whereas the residual is built
-from the \emph{aggregate} predicted marginal; Sec.~\ref{sec:residual} reconciles
-the two.
+Sec.~\ref{sec:residual}, built directly from these per-sample entropies.
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=\columnwidth]{figs/entropy_is_indicative.png}}
@@ -778,29 +776,36 @@ signal the residual fires on.}
 
 \subsection{The BBSE-Corrected Entropy Residual}
 \label{sec:residual}
-We define the monitor's signal as the residual
+Let $h_{\mathrm{ref}}(c)=\mathbb{E}_x[\,H(p(x))\mid y=c\,]$ be the mean predictive
+entropy of class $c$, estimated on the reference week, and let
+$\bar H_t=\tfrac1N\sum_i H(p(x_i))$ be the mean per-sample predictive entropy over
+window $t$ --- the same quantity whose error-proxy behavior Fig.~\ref{fig:entropy}
+shows. A window's entropy should be judged not against a constant but against what
+its \emph{current class mix} would produce. We therefore define the monitor's
+signal as the residual between the observed mean entropy and this class-mix
+baseline:
 \[
-  \Delta H_t \;=\; H\!\big(P(\hat Y_t)\big) \;-\; H_{\mathrm{BBSE}}(\mathrm{w}_t).
+  \Delta H_t \;=\; \bar H_t \;-\; \sum_{c}\mathrm{w}_t(c)\,h_{\mathrm{ref}}(c),
 \]
-The first term is the Shannon entropy of the \emph{aggregate} predicted-label
-marginal --- the mean softmax over the window, a class-balance quantity. The second
-is the entropy of the BBSE-estimated true proportions $\mathrm{w}_t$. This also
-reconciles the per-sample/aggregate caveat from Sec.~\ref{sec:method}: by Jensen's
-inequality $H(\mathbb{E}_x[p])\geq\mathbb{E}_x[H(p)]$, so the entropy of the
-aggregate marginal is not the mean per-sample entropy of Fig.~\ref{fig:entropy}
-but an upper envelope of it, and it is this envelope that the residual
-interrogates.
+where $\mathrm{w}_t$ are the BBSE-estimated current class proportions and the sum
+runs over the classes present in the reference week. The anomaly score is
+$\Delta H_t$ itself: larger values mean more degradation, hence its negative
+correlation with $F_1$. The \emph{only} thing the correction changes is the
+weights on a fixed per-class reference-entropy table --- the uncorrected baseline
+uses the static source prior $p_{\mathrm{src}}(c)$ in place of $\mathrm{w}_t(c)$,
+so it cannot adjust its expected entropy when the class mix shifts.
 
 The mechanism follows from the two regimes of Sec.~\ref{sec:breakdown}. Under a
-benign \emph{label} shift, the predicted marginal moves but BBSE explains the move,
-so $H(P(\hat Y_t))$ and $H_{\mathrm{BBSE}}(\mathrm{w}_t)$ rise together and
-\textbf{the residual stays near zero} (the Regime-1 branch,
-Fig.~\ref{fig:regime1}). Under a \emph{covariate} shift, the broken class's flows
-no longer match the signature the model learned, so its logits become low and
-spread across many classes; the aggregate predicted marginal flattens
-artificially, and $H(P(\hat Y_t))$ inflates beyond what the (now-corrupted)
-$\mathrm{w}_t$ can account for, so \textbf{the residual spikes} (the Regime-2
-branch, Fig.~\ref{fig:regime2}). The residual is thus a
+benign \emph{label} shift with $P(X\mid Y)$ intact, BBSE is consistent, so
+$\mathrm{w}_t$ tracks the true mixture and the baseline rises in step with
+$\bar H_t$; the two terms move together and \textbf{the residual stays near zero}
+(the Regime-1 branch, Fig.~\ref{fig:regime1}). Under a \emph{covariate} shift the
+broken class's flows no longer match the learned signature and produce diffuse,
+high-entropy softmax. Empirically (Fig.~\ref{fig:regime2}) the observed
+$\bar H_t$ then \emph{outruns} the reweighted baseline: the broken flows are more
+uncertain than the reference entropy of any class their mass is reattributed to,
+so however $\mathrm{w}_t$ is corrupted the baseline cannot absorb the rise, and
+\textbf{the residual spikes} (the Regime-2 branch). The residual is thus a
 two-sided instrument: deliberately blind to label shift, and sharply responsive
 to the covariate breaks that signal genuine degradation.
 
@@ -865,7 +870,11 @@ Correlation, as the previous subsection showed, is the wrong axis on which to
 compare detectors: on clean data every detector achieves AUROC$\approx1.000$
 (Fig.~\ref{fig:auroc}(a)). The discriminating axis is \emph{robustness} --- whether
 a monitor alarms on genuine degradation while staying silent under benign volume
-volatility. We frame this as binary anomaly detection. The monitor sees only the
+volatility. We are explicit about the trade this entails: on perfectly clean data
+the uncorrected entropy is in fact \emph{sharper} than our residual (Sec.~\ref{sec:sweep}),
+so the BBSE correction is an insurance policy with a measurable premium --- a few
+points of clean-data AUROC given up to stay reliable once benign label shift
+appears. The rest of this section quantifies both sides of that trade. We frame this as binary anomaly detection. The monitor sees only the
 frozen model's unlabelled predictions, and a week is labeled anomalous iff its
 true Macro-$F_1$ falls below 0.60. The ground truth is cause-agnostic: it includes
 the Week-10 sensor event, which an operator would legitimately want flagged. The

@@ -43,3 +43,37 @@ apply fixes → recompile → commit tex+pdf. This file logs findings + disposit
 - Vendor dates (TeamViewer/Skype/Opera) — already hedged as coincidence; verify before camera-ready.
 - 179-vs-180 class count; regime1 caption s∈[0,4] vs TV-% axis; fig:density weak (cut candidate).
 - bs256 effect is mild on TLS — consider foregrounding that the dramatic deltas are bs64/closed-world.
+
+## Iteration 2 (2026-06-21) — applied remaining writing/rigor findings
+- bs256-honesty foregrounding; Week-1 split sizes (43/9) + rest claim on ordering;
+  conclusion 'actively harmful' -> 'does not help' (batch-scoped); tics removed.
+
+## Iteration 3 (2026-06-21) — 2 critics: method/math correctness, adversarial-reject
+### MUST-FIX applied (math critic — HIGHEST VALUE)
+- **Residual equation now matches the implementation.** Old eq wrote term2 as
+  H(w_t) ("entropy of proportions") and term1 as H(aggregate marginal); the code
+  computes ΔH_t = mean per-sample entropy − Σ_c w_t(c)·h_ref(c) (BBSE-reweighted
+  per-class reference entropy). Rewrote Sec V-C with the correct equation, defined
+  h_ref(c)=E[H(p)|y=c], stated the score convention (larger=worse), noted the
+  reference-supported support set, and clarified the only change BBSE makes is the
+  weights on a fixed per-class entropy table (uncorrected uses the static source prior).
+- **Deleted the bogus Jensen 'upper envelope' paragraph** (no aggregate-vs-per-sample
+  gap exists; both figure and residual are per-sample means). Fixed the Sec V-A
+  forward-reference accordingly.
+- **Regime-2 spike** now stated as an empirical observation with the explicit
+  condition (broken flows more uncertain than any reattributed class's reference
+  entropy), not a deduction.
+- Softened RW 'breaks all of them together' -> 'violates the shared assumption,
+  biasing them simultaneously; errors spike together (shown empirically)'.
+### Adversarial-reject critic — top risks + dispositions
+- Risk1 (monitor wins only where injected): applied the honest robustness-vs-clean-
+  accuracy TRADE-OFF reframe (insurance with a measurable premium) in Sec VI-B. NOTE:
+  the critic's 'show a real spike' mitigation = the Natural Volume Surges analysis the
+  USER removed; honoring the user, we reframe rather than re-add it.
+- Risk2 (proprietary 2nd dataset undisclosed; single backbone): the closed-world set is
+  now an explicit column (user request) but remains anonymized/uncheckable — OPEN: a
+  second public backbone (QUIC teleportation / FlowPic) would strengthen external validity.
+- Risk3 (Week-1 sensor-inflated headline): caveated; ordering-not-multipliers framing
+  applied. OPEN consideration: lead abstract with Week-16 clean numbers.
+- Lesser (novelty oversold, neg-transfer bs256 mild, repair thin, open-set decorative):
+  partially addressed via scoping; flagged.
