@@ -137,3 +137,13 @@ gain cannot be fully separated from the benefit of retraining a weaker source. A
 same-recipe λ_dann=0 retrained control would settle alignment-vs-retraining. RECOMMEND
 the user decide whether to run that control before camera-ready. (Did NOT auto-launch
 it — already heavy SLURM usage this session.)
+
+## Labeling-cost claim (abstract) — defensible cost model
+Full retrain re-labels the weekly catalogue ~8.26M flows (~46k/class × 180; w16 train.parquet;
+w1=4.5M). Loop labels k≈10–50 flows/flagged class PLUS the monitor's real per-class
+false-alarm overhead (natural isolation bleed = 4.9%, figs/isolation_w16/isolation_metrics_fwd.json):
+labels_ours = k·(D + FAR·(180−D)) ≈ 100–530/event. Per-event ratio ~0.001–0.01% (measured FAR);
+cumulative/yr ~0.07–0.4% vs one annual retrain (false alarms dominate the yearly bill).
+Failure rate: ~49 distinct teleporting classes / ~79 onset events over 52 wk (~2.2/wk), w16 src.
+Abstract states ~0.01% PER EVENT (defensible; 'per year' would overclaim). "20% drop" trigger
+rejected as too loose (flags everything via benign decay); real trigger = per-class collapse.
