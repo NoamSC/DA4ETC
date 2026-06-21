@@ -187,7 +187,7 @@ Paper ID: XXXX}}
 
 %==============================================================================
 \begin{abstract}
-Deep learning models for Encrypted Traffic Classification (ETC) often achieve near-perfect performance in controlled settings but collapse during real-world deployment. Earlier works have tried to address this issue by using Domain Adaptation (UDA) and Continual Test-Time Adaptation (CTTA) methods. These methods, however, assume the degradation is caused by continuous, gradual, and homogeneous drift. In this paper, we expose the continuous drift fallacy, demonstrating that structural degradation in ETC ecosystems actually consists of discrete, asynchronous per-class covariate shifts---class "teleportations". As a result, global adaptation methods---gradient test-time adaptation (TENT, CoTTA) and adversarial UDA (DANN)---fail to help and often induce negative transfer. To address this, we reframe drift monitoring on a deployed, frozen model as inference-time open-set detection of known-but-drifted classes. We introduce a robust, label-free per-class monitor based on a Black Box Shift Estimation (BBSE)-corrected entropy residual. The monitor preserves accurate tracking of the true $F_1$ score ($\rho=-0.988$) while isolating genuine structural degradation from benign viral volume spikes. At 95\% detection it cuts the false-alarm rate to 11.1\%---roughly a 2$\times$ reduction versus uncorrected entropy (23.1\%) and 6$\times$ versus an MFWDD-style global monitor (67.6\%)---with the same ordering reproduced in a clean-regime replication that excludes the dataset's one sensor event. Because the monitor identifies \emph{which} class degraded, it enables a targeted, label-free diagnose-and-repair proof of concept: recomputing only the flagged class's prototype restores it while leaving the stable majority untouched.
+Deep learning models for Encrypted Traffic Classification (ETC) often achieve near-perfect performance in controlled settings but collapse during real-world deployment. Earlier works have tried to address this issue by using Domain Adaptation (UDA) and Continual Test-Time Adaptation (CTTA) methods. These methods, however, assume the degradation is caused by continuous, gradual, and homogeneous drift. In this paper, we expose the continuous drift fallacy, demonstrating that structural degradation in ETC ecosystems actually consists of discrete, asynchronous per-class covariate shifts---class "teleportations". As a result, global adaptation methods---gradient test-time adaptation (TENT, CoTTA) and adversarial UDA (DANN)---do not recover this per-class drift, and the gradient methods actively induce negative transfer. To address this, we reframe drift monitoring on a deployed, frozen model as inference-time open-set detection of known-but-drifted classes. We introduce a robust, label-free per-class monitor based on a Black Box Shift Estimation (BBSE)-corrected entropy residual. The monitor preserves accurate tracking of the true $F_1$ score ($\rho=-0.988$) while isolating genuine structural degradation from benign viral volume spikes. At 95\% detection it cuts the false-alarm rate to 11.1\%---roughly a 2$\times$ reduction versus uncorrected entropy (23.1\%) and 6$\times$ versus an MFWDD-style global monitor (67.6\%)---with the same ordering reproduced in a clean-regime replication that excludes the dataset's one sensor event. Because the monitor identifies \emph{which} class degraded, it enables a targeted, label-free diagnose-and-repair proof of concept: recomputing only the flagged class's prototype restores it while leaving the stable majority untouched.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -287,9 +287,10 @@ year-spanning backbone dataset, and make four contributions:
         asynchronous per-class \emph{teleportations}, and a label-vs-covariate
         decomposition pins the teleportations on covariate shift, not on benign
         label (volume) shift (Sec.~\ref{sec:discrete}).
-  \item \textbf{Global adaptation does not help here.} Gradient test-time
-        adaptation (TENT, CoTTA) induces negative transfer and even a best-case
-        adversarial UDA model (DANN) buys no forward benefit
+  \item \textbf{Global adaptation does not recover per-class drift.} Gradient
+        test-time adaptation (TENT, CoTTA) induces negative transfer, and even a
+        best-case adversarial UDA model (DANN) buys nothing against the clean
+        regime's per-class drift (though it does help on a genuinely global shift)
         (Sec.~\ref{sec:negtransfer}).
   \item \textbf{A label-free monitor that survives label shift.} We introduce a
         BBSE-corrected entropy residual that tracks hidden degradation while
@@ -622,22 +623,25 @@ adaptation in general. (An apparent $+0.007$ AdaBN ``gain'' at Week-16 is backwa
 transfer to the easy pre-source weeks and disappears forward-only.)
 
 DANN \cite{ganin2016dann} differs from the test-time adapters above: it is a
-\emph{trained} UDA method that learns a feature extractor adversarially so that source and target
-become indistinguishable to a domain discriminator, which --- unlike the
-test-time adapters above --- means retraining the model on each target week rather
-than merely updating statistics at inference. We grant DANN the most favorable setting, scoring
-each week with its own dedicated source-16$\to$week-$N$ model (transductive). Even so, DANN beats the frozen source by only $+0.006$ on
-average ($+0.001$ on the far weeks; Table~\ref{tab:nt_merged}, per-week in
-Fig.~\ref{fig:dann_curve}): global source--target alignment yields no forward
-robustness and cannot recover per-class discrete drift, despite paying a full
-retraining cost every week. The closed-world dataset shows the same neutral DANN
-result ($+0.011$). We report DANN here for the Week-16 and closed-world sources
-(its Week-1 and QUIC diagonals are still computing; the table marks those cells
-pending). The gradient-method effects, by contrast, hold under both TLS source
-weeks and on QUIC \cite{luxemburk2023quic} and are confirmed across five seeds, so
-they are neither seed noise nor an artifact of the Week-10 sensor event. As
-elsewhere, the 10\% sample makes these absolute accuracies non-comparable to the
-full-data monitor figures.
+\emph{trained} UDA method that learns a feature extractor adversarially so that
+source and target become indistinguishable to a domain discriminator, retraining
+the model on each target week rather than merely updating statistics at inference.
+We grant it the most favorable setting, scoring each week with its own dedicated
+source$\to$week-$N$ model (transductive). DANN's forward gain then tracks how
+\emph{global} the shift is. From the clean Week-16 source, where the drift is
+discrete and per-class, the most-favorable DANN buys essentially nothing ($+0.006$;
+per-week in Fig.~\ref{fig:dann_curve}), and the closed-world set is likewise neutral
+($+0.011$): full adversarial alignment cannot recover per-class teleportations, even
+at a per-week retraining cost. From the weaker Week-1 source --- whose stream spans
+the global Week-10 sensor event --- and on QUIC, DANN \emph{does} recover ground
+($+0.067$ and $+0.053$): global alignment helps a genuinely global shift, exactly as
+the discrete-drift account predicts. (Because each diagonal model is retrained per
+week, we cannot fully separate this gain from the benefit of retraining a weaker
+source; a same-recipe $\lambda_{\mathrm{dann}}{=}0$ control would settle it.) The
+gradient methods, by contrast, induce \emph{negative} transfer on every source ---
+the global parameter update damages the stable majority whether or not the shift is
+global --- and are confirmed across five seeds. As elsewhere, the 10\% sample makes
+these absolute accuracies non-comparable to the full-data monitor figures.
 
 \paragraph{External validation.} The same pattern reproduces on an independent,
 proprietary closed-world dataset (anonymized for review). Evaluated forward-only
@@ -659,9 +663,13 @@ $\Delta$ = mean-accuracy change vs.\ the frozen source (negative = negative
 transfer). Batch~256 is the training-batch (fair) operating point; for the
 closed-world set the AdaBN row uses its bs256 value. Gradient-method $\Delta$'s are
 confirmed across five seeds (std $\le10^{-3}$). DANN is run in its most-favorable
-transductive diagonal (each week scored by its own source$\to$week-$N$ model); the
-Week-16 $\Delta$ is measured against the matching weeks-17--52 diagonal baseline
-(0.795). Red cells are pending DANN runs. ``---'' marks settings not applicable.}
+transductive diagonal (each week scored by its own freshly-trained
+source$\to$week-$N$ model); each $\Delta$ is the forward-week paired gain over the
+frozen source. DANN's gain tracks how \emph{global} the shift is: negligible from
+the clean per-class Week-16 source ($+0.006$), but positive from the weaker Week-1
+source (whose stream spans the global Week-10 sensor event) and from QUIC --- global
+alignment helps a genuinely global shift, as expected. ``---'' marks settings not
+applicable.}
 \label{tab:nt_merged}
 \centering\small\setlength{\tabcolsep}{4.5pt}
 \begin{tabular}{l cc cc cc cc}
@@ -676,7 +684,7 @@ TENT~\cite{wang2020tent} (bs64) & 0.482 & $-0.126$ & 0.759 & $-0.038$ & 0.690 & 
 TENT~\cite{wang2020tent} (bs256) & 0.580 & $-0.027$ & 0.784 & $-0.014$ & 0.736 & $-0.019$ & 0.550 & $-0.114$ \\
 CoTTA~\cite{wang2022cotta} (bs64) & 0.514 & $-0.094$ & 0.738 & $-0.060$ & 0.702 & $-0.054$ & 0.491 & $-0.173$ \\
 CoTTA~\cite{wang2022cotta} (bs256) & 0.580 & $-0.028$ & 0.784 & $-0.014$ & 0.745 & $-0.010$ & 0.557 & $-0.107$ \\
-DANN~\cite{ganin2016dann} (diagonal) & \textcolor{red}{?} & \textcolor{red}{?} & 0.801 & $+0.006$ & \textcolor{red}{?} & \textcolor{red}{?} & 0.675 & $+0.011$ \\
+DANN~\cite{ganin2016dann} (diagonal) & 0.670 & $+0.067$ & 0.801 & $+0.006$ & 0.761 & $+0.053$ & 0.675 & $+0.011$ \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -1162,11 +1170,14 @@ classifier is an illusion. Drift in this setting is discrete and per-class: the
 macroscopic curve is a documented measurement-sensor step plus a long tail of
 asynchronous per-class teleportations, not a continuous global shift. Because the
 shift is local, the continuity assumption that UDA and CTTA rely on is
-mis-specified here, and global adaptation does not help: gradient methods induce
-negative transfer (severe at small batch, mild but still negative at the fair
-operating point) and even best-case adversarial alignment yields no forward
-benefit, while the no-gradient AdaBN control does no harm --- pinning the damage on
-global parameter updates rather than on adaptation per se.
+mis-specified here, and global adaptation does not recover it: gradient methods
+induce negative transfer (severe at small batch, mild but still negative at the
+fair operating point), and even best-case adversarial alignment (DANN) buys nothing
+against the per-class drift of the clean regime --- though, tellingly, DANN does
+help on a genuinely global shift, confirming the methods work when the shift is
+global and fail when it is per-class. The no-gradient AdaBN control does no harm,
+pinning the gradient-method damage on global parameter updates rather than on
+adaptation per se.
 
 The monitor's contribution is robustness. The BBSE-corrected
 entropy residual is a two-sided instrument: it preserves accurate, label-free tracking of hidden

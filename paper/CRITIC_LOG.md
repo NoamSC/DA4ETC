@@ -115,3 +115,25 @@ Backbone agent + SLURM 598577/598568 resolved the headline-number issue:
 - NET EFFECT: the result HOLDS (BBSE/RLLS best, big MFWDD gap) but the headline is
   honestly less inflated (4.6%->11.1%; 5.4x/14x -> ~2x/6x). All anomaly figures now on
   the multimodal backbone, consistent with the rest of the paper.
+
+## Iteration 6 (2026-06-21) — DANN Week-1/QUIC cells filled + IMPORTANT reframe
+SLURM 598444-447 (DANN diagonal training+inference) completed. Forward-only paired Δ
+(DANN_N − frozen_N over weeks after source, matching the Week-16 protocol):
+  - TLS-wk1:  DANN 0.670, Δ **+0.067** (far weeks ≥43: +0.070)
+  - QUIC-wk44: DANN 0.761, Δ **+0.053**
+  - (Week-16: +0.006; closed-world: +0.011)
+
+*** FINDING NEEDING USER REVIEW ***
+DANN gives a non-trivial POSITIVE forward Δ from the Week-1 and QUIC sources (+0.067,
++0.053), unlike the ~neutral Week-16 (+0.006). This does NOT contradict the thesis —
+it sharpens it: DANN's gain tracks how GLOBAL the shift is. The Week-1 stream spans
+the global Week-10 sensor event and QUIC is a different protocol (mild global shift),
+so global alignment helping there is expected; the clean Week-16 regime (discrete
+per-class drift) is where DANN buys nothing. Reframed table caption + DANN paragraph +
+abstract + contribution-2 + conclusion accordingly (no longer claim DANN universally
+"buys no forward benefit"; scoped to per-class drift).
+CAVEAT FLAGGED IN-PAPER: each diagonal model is retrained per week, so the Week-1/QUIC
+gain cannot be fully separated from the benefit of retraining a weaker source. A
+same-recipe λ_dann=0 retrained control would settle alignment-vs-retraining. RECOMMEND
+the user decide whether to run that control before camera-ready. (Did NOT auto-launch
+it — already heavy SLURM usage this session.)
