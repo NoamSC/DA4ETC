@@ -100,3 +100,18 @@ multipliers will likely change; do not treat 4.6% as final until 598577 lands.**
 This is the #1 thing for the user to review.
 
 ### DANN red cells: SLURM 598444-598447 still training (~hours); watcher bjlqw4ue2.
+
+## Iteration 5 (2026-06-21) — AUTHORITATIVE anomaly-number sync (backbone + ref-week resolved)
+Backbone agent + SLURM 598577/598568 resolved the headline-number issue:
+- Week-1 HEADLINE was already on the MULTIMODAL backbone (good), but on reference_week=0
+  (biased easy week). Re-ran reference_week=1 on the multimodal 10% set:
+  BBSE AUROC 0.982 / FAR@95 11.1% ; uncorrected 0.956 / 23.1% ; MFWDD 0.665 / 67.6%
+  (RLLS 0.985/10.2%, EM/MLLS 0.979/10.2%, soft-BBSE 0.983/13.0%, MLLS+BCTS 0.932/32.4%).
+  => Synced Table II, abstract (11.1%, ~2x/6x), Results prose, conclusion, Fig 14
+  (now 'ref Week 1', multimodal, no 'ours').
+- Week-16 replication figure/table was the lone CNN-backbone artifact; re-ran on
+  multimodal: BBSE 0.695/0.807, RLLS 0.695/0.799, uncorrected 0.626/0.867, MFWDD
+  0.586/0.814, SLD-EM 0.603. Honestly weaker margin; synced Fig 12 (now _mm) + prose.
+- NET EFFECT: the result HOLDS (BBSE/RLLS best, big MFWDD gap) but the headline is
+  honestly less inflated (4.6%->11.1%; 5.4x/14x -> ~2x/6x). All anomaly figures now on
+  the multimodal backbone, consistent with the rest of the paper.

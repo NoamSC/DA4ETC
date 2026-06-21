@@ -187,7 +187,7 @@ Paper ID: XXXX}}
 
 %==============================================================================
 \begin{abstract}
-Deep learning models for Encrypted Traffic Classification (ETC) often achieve near-perfect performance in controlled settings but collapse during real-world deployment. Earlier works have tried to address this issue by using Domain Adaptation (UDA) and Continual Test-Time Adaptation (CTTA) methods. These methods, however, assume the degradation is caused by continuous, gradual, and homogeneous drift. In this paper, we expose the continuous drift fallacy, demonstrating that structural degradation in ETC ecosystems actually consists of discrete, asynchronous per-class covariate shifts---class "teleportations". As a result, global adaptation methods---gradient test-time adaptation (TENT, CoTTA) and adversarial UDA (DANN)---fail to help and often induce negative transfer. To address this, we reframe drift monitoring on a deployed, frozen model as inference-time open-set detection of known-but-drifted classes. We introduce a robust, label-free per-class monitor based on a Black Box Shift Estimation (BBSE)-corrected entropy residual. The monitor preserves accurate tracking of the true $F_1$ score ($\rho=-0.988$) while isolating genuine structural degradation from benign viral volume spikes. At 95\% detection it cuts the false-alarm rate to 4.6\%---a 5.4$\times$ reduction versus uncorrected entropy (25.0\%) and 14$\times$ versus an MFWDD-style global monitor (64.8\%)---with the same ordering reproduced in a clean-regime replication that excludes the dataset's one sensor event. Because the monitor identifies \emph{which} class degraded, it enables a targeted, label-free diagnose-and-repair proof of concept: recomputing only the flagged class's prototype restores it while leaving the stable majority untouched.
+Deep learning models for Encrypted Traffic Classification (ETC) often achieve near-perfect performance in controlled settings but collapse during real-world deployment. Earlier works have tried to address this issue by using Domain Adaptation (UDA) and Continual Test-Time Adaptation (CTTA) methods. These methods, however, assume the degradation is caused by continuous, gradual, and homogeneous drift. In this paper, we expose the continuous drift fallacy, demonstrating that structural degradation in ETC ecosystems actually consists of discrete, asynchronous per-class covariate shifts---class "teleportations". As a result, global adaptation methods---gradient test-time adaptation (TENT, CoTTA) and adversarial UDA (DANN)---fail to help and often induce negative transfer. To address this, we reframe drift monitoring on a deployed, frozen model as inference-time open-set detection of known-but-drifted classes. We introduce a robust, label-free per-class monitor based on a Black Box Shift Estimation (BBSE)-corrected entropy residual. The monitor preserves accurate tracking of the true $F_1$ score ($\rho=-0.988$) while isolating genuine structural degradation from benign viral volume spikes. At 95\% detection it cuts the false-alarm rate to 11.1\%---roughly a 2$\times$ reduction versus uncorrected entropy (23.1\%) and 6$\times$ versus an MFWDD-style global monitor (67.6\%)---with the same ordering reproduced in a clean-regime replication that excludes the dataset's one sensor event. Because the monitor identifies \emph{which} class degraded, it enables a targeted, label-free diagnose-and-repair proof of concept: recomputing only the flagged class's prototype restores it while leaving the stable majority untouched.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -899,13 +899,13 @@ rest of this subsection uses.
 
 \paragraph{Results.} On the Week-1 stream --- the one with enough degraded weeks to
 form a healthy-vs-degraded split (43 degraded vs 9 healthy weeks) --- the
-BBSE-corrected residual reaches AUROC 0.987 at a 4.6\% false-alarm rate under 95\%
-matched detection, against 0.959 / 25.0\% for the uncorrected entropy gap and
-0.677 / 64.8\% for the MFWDD-style global detector (Fig.~\ref{fig:auroc}(b),
+BBSE-corrected residual reaches AUROC 0.982 at an 11.1\% false-alarm rate under 95\%
+matched detection, against 0.956 / 23.1\% for the uncorrected entropy gap and
+0.665 / 67.6\% for the MFWDD-style global detector (Fig.~\ref{fig:auroc}(b),
 Table~\ref{tab:auroc}). With only 9 healthy weeks these point false-alarm rates are
 coarse, so we treat the consistent \emph{ordering} --- reproduced in the Week-16
 replication and the block bootstrap below --- as the robust finding rather than the
-exact $5.4\times$/$14\times$ multipliers. The mechanism is score-level: a viral spike inflates the
+exact $\sim$2$\times$/6$\times$ multipliers. The mechanism is score-level: a viral spike inflates the
 uncorrected entropy gap into the degradation band, whereas BBSE recognizes the
 over-represented application, raises the expected entropy accordingly, and pulls
 the residual back below threshold. The MFWDD-style detector trails the rest
@@ -915,57 +915,59 @@ to close.
 
 \paragraph{Week-16 replication.} To confirm the advantage is not an artifact of
 the Week-10 sensor event, we repeat the experiment entirely within the clean
-Week-16 forward regime (5 seeds, Fig.~\ref{fig:auroc_w16}). Here the clean regime
-is trivial for every detector (AUROC$\approx1.000$, FAR$_{95}\approx0$), and under
-the viral spike the corrected estimators again separate from the rest: BBSE-corrected
-0.834, RLLS 0.849, MLLS+BCTS 0.827, all well above uncorrected 0.708 and MFWDD-style
-0.650 (SLD-EM 0.759). The absolute AUROCs are lower than
-on Week-1 because the Week-16 viral task is harder --- there is no large sensor
-break inflating the positives --- but the ordering is unchanged, so the
-correction's benefit is intrinsic to the asymmetric-spike stressor, not a
-by-product of the sensor event.
+Week-16 forward regime (5 seeds, Fig.~\ref{fig:auroc_w16}). The clean regime is
+near-perfect for the residual-based detectors (AUROC$\geq0.99$); MFWDD-style is a
+little lower (0.91), and SLD-EM/MLLS+BCTS are unstable at 180 classes. Under the
+viral spike the corrected estimators again lead, though by a smaller margin on this
+harder task: BBSE-corrected 0.695 and RLLS 0.695, above uncorrected 0.626 and
+MFWDD-style 0.586 (SLD-EM 0.603), with wide FAR@95 intervals. The absolute AUROCs
+are well below Week-1 because this clean-regime task carries no large sensor break
+in the positives, but the ordering --- corrected over uncorrected over MFWDD ---
+is unchanged, so the correction's benefit is intrinsic to the asymmetric-spike
+stressor, not a by-product of the sensor event.
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=\columnwidth]{figs/fig_auroc_anomaly.png}}
 \caption{Binary anomaly detection under viral spikes (Week-1 reference; dotted
 = 95\% matched detection). (a) On clean data every detector is near-perfect.
-(b) Under benign viral spikes the BBSE-corrected residual (AUROC 0.987) clearly
-separates from uncorrected entropy (0.959) and the MFWDD-style global detector
-(0.677).}
+(b) Under benign viral spikes the BBSE-corrected residual (AUROC 0.982) clearly
+separates from uncorrected entropy (0.956) and the MFWDD-style global detector
+(0.665).}
 \label{fig:auroc}
 \end{figure}
 
 \begin{table}[t]
-\caption{Binary anomaly detection under a viral single-app spike: AUROC and
-FAR@95\% matched detection. 
-Confusion-matrix estimators suppress false alarms; EM/MLLS gives little benefit
-(SLD-EM ties uncorrected); MFWDD-style fails.}
+\caption{Binary anomaly detection under a viral single-app spike (Week-1 source,
+multimodal backbone, reference week~1): AUROC and FAR@95\% matched detection. The
+corrected estimators (BBSE, soft-BBSE, RLLS, EM/MLLS) all suppress false alarms;
+the uncorrected gap and MLLS+BCTS are weaker, and the MFWDD-style global detector
+fails.}
 \label{tab:auroc}
 \centering
 \begin{tabular}{llcc}
 \toprule
 Regime & Detector & AUROC & FAR@95 \\
 \midrule
-Viral & \textbf{BBSE-corrected residual} & \textbf{0.987} & \textbf{4.6\%} \\
-Viral & Soft-confusion BBSE      & 0.988 & 6.5\% \\
-Viral & RLLS                     & 0.982 & 7.4\% \\
-Viral & Uncorrected entropy gap  & 0.959 & 25.0\% \\
-Viral & MLLS+BCTS                & 0.953 & 17.6\% \\
-Viral & SLD-EM / MLLS            & 0.946 & 25.0\% \\
-Viral & MFWDD-style global       & 0.677 & 64.8\% \\
+Viral & \textbf{BBSE-corrected residual} & \textbf{0.982} & \textbf{11.1\%} \\
+Viral & Soft-confusion BBSE      & 0.983 & 13.0\% \\
+Viral & RLLS                     & 0.985 & 10.2\% \\
+Viral & EM / MLLS                & 0.979 & 10.2\% \\
+Viral & Uncorrected entropy gap  & 0.956 & 23.1\% \\
+Viral & MLLS+BCTS                & 0.932 & 32.4\% \\
+Viral & MFWDD-style global       & 0.665 & 67.6\% \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=\columnwidth]{figs/fig_auroc_anomaly_ref16.png}}
-\caption{Week-16 forward replication of the viral anomaly experiment (mean ROC
-over 5 seeds; weeks 17--52, degraded = Macro-$F_1<0.6$). (a) the clean regime is
-trivial for every detector. (b) under the viral spike the corrected estimators
-(BBSE-corrected 0.834, RLLS 0.849, MLLS+BCTS 0.827) again separate from uncorrected
-entropy (0.708) and the MFWDD-style detector (0.650). Absolute AUROCs are lower than
-at Week-1 because this clean-regime task carries no sensor-break positives, but the
-ordering is unchanged.}
+\centerline{\includegraphics[width=\columnwidth]{figs/fig_auroc_anomaly_ref16_mm.png}}
+\caption{Week-16 forward replication of the viral anomaly experiment (multimodal
+backbone; mean ROC over 5 seeds; weeks 17--52, degraded = Macro-$F_1<0.6$). (a) the
+clean regime is near-perfect for the residual-based detectors. (b) under the viral
+spike the corrected estimators (BBSE-corrected 0.695, RLLS 0.695) again lead
+uncorrected entropy (0.626) and the MFWDD-style detector (0.586), by a smaller
+margin than at Week-1. Absolute AUROCs are lower than at Week-1 because this
+clean-regime task carries no sensor-break positives, but the ordering is unchanged.}
 \label{fig:auroc_w16}
 \end{figure}
 
@@ -1169,7 +1171,7 @@ global parameter updates rather than on adaptation per se.
 The monitor's contribution is robustness. The BBSE-corrected
 entropy residual is a two-sided instrument: it preserves accurate, label-free tracking of hidden
 $F_1$ (clean-regime correlation $\rho=-0.988$) while sharply
-cutting false alarms under benign viral volume spikes (from 25.0\% to 4.6\% at
+cutting false alarms under benign viral volume spikes (from 23.1\% to 11.1\% at
 95\% detection on the Week-1 stream, with the ordering reproduced within the clean
 Week-16 regime). Its two-sided mechanism --- robust to label shift, responsive to
 covariate shift --- lets it localize \emph{which} application broke without any
