@@ -222,12 +222,13 @@ Label Shift, Black Box Shift Estimation, Open-Set Recognition
     applications that each held a stable signature for months and then teleported
     across empty latent space at \emph{different} times (eset-edtd $\approx$Week 17;
     eset-edf $\approx$Week 34; docker-registry $\approx$Week 27), against the
-    pristine Week-16 topology (a). The stable majority never moves.}
+    pristine Week-16 topology (a; 179 of the 180 classes appear in this week's
+    snapshot). The stable majority never moves.}
     \label{fig:hero}
 \end{figure}
 
-Modern encrypted-traffic classification (ETC) must infer an application from how
-its traffic behaves, not from what it carries. As TLS~1.3 and the Encrypted
+Modern encrypted-traffic classification (ETC) must infer an application from its
+traffic behavior rather than its payload. As TLS~1.3 and the Encrypted
 ClientHello (ECH) extension close the last cleartext handshake fields that
 classic deep-packet inspection relied on, classifying encrypted traffic forces
 operators onto side-channel models that learn from packet timing, direction, and

@@ -77,3 +77,26 @@ apply fixes → recompile → commit tex+pdf. This file logs findings + disposit
   applied. OPEN consideration: lead abstract with Week-16 clean numbers.
 - Lesser (novelty oversold, neg-transfer bs256 mild, repair thin, open-set decorative):
   partially addressed via scoping; flagged.
+
+## Iteration 4 (2026-06-21) — consistency + figure relabels + HEADLINE-NUMBER issue
+- Applied: 179/180 class-count note in hero caption; intro "not X" tic; figure "ours"
+  labels removed across most monitor figures (figure agent edited 8 scripts, regen'd 6
+  PNGs from cache, numbers unchanged); refreshed the flat OOD-sweep copy.
+
+### *** CRITICAL OPEN ISSUE: anomaly-detection headline numbers ***
+The figure agent + rigor critic together established that the published Week-1 anomaly
+headline (AUROC 0.987 / FAR@95 4.6%; the abstract's "5.4x/14x") was computed with:
+  (a) reference_week = 0 (the documented BIASED "easy" week, not the Week-1 source), and
+  (b) on the FlowPic CNN backbone / a now-reorganized 10% inference dir.
+A quick ref-week-1 regen gave very different numbers (BBSE viral ~0.81 / 67% FAR) but was
+triply-confounded (ref week + backbone + full-flow vs 10% + 6 corrupted weeks), so NOT
+syncable. fig_auroc_anomaly.png was restored to the committed (consistent) version to
+avoid a table/figure mismatch.
+RESOLUTION IN PROGRESS: SLURM job 598577 (slurm_files/run_anomaly_mm.slurm) re-runs BOTH
+the Week-1 (reference_week=1) and Week-16 viral experiments on the MULTIMODAL
+inference_auditfix 10% set (the same set the rest of the paper uses). Watcher bzutxnfko
+will report the authoritative AUROC/FAR. **The headline FAR/AUROC and the abstract
+multipliers will likely change; do not treat 4.6% as final until 598577 lands.**
+This is the #1 thing for the user to review.
+
+### DANN red cells: SLURM 598444-598447 still training (~hours); watcher bjlqw4ue2.
