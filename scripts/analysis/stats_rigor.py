@@ -68,7 +68,7 @@ from label_shift_estimators import (fit_bcts_calibrator, calibrate,
 
 
 HEADLINE_DETECTORS = [
-    ('bbse',        'BBSE-corrected residual (ours)'),
+    ('bbse',        'BBSE-corrected residual'),
     ('uncorrected', 'Uncorrected entropy gap'),
     ('mfwdd',       'MFWDD-style global drift'),
 ]
@@ -366,7 +366,7 @@ def _headline_sentence(ci_table, args):
         f'[{("Week-%d" % args.reference_week)}, '
         f'{"forward-only" if args.forward else "full-stream"}, '
         f'{args.regime} regime, F1<{args.headline_f1}] '
-        f'BBSE residual (ours): AUROC {b["auroc"]:.3f} '
+        f'BBSE residual: AUROC {b["auroc"]:.3f} '
         f'[{b["auroc_ci"][0]:.3f},{b["auroc_ci"][1]:.3f}], '
         f'FAR@{args.tpr:.0%} {b["far95"]:.3f} '
         f'[{b["far95_ci"][0]:.3f},{b["far95_ci"][1]:.3f}].  '
@@ -384,7 +384,7 @@ def _plot_sensitivity(sweep, args, tag):
     thrs = sorted(sweep.keys(), key=float)
     x = [float(t) for t in thrs]
     col = {'bbse': '#d7191c', 'uncorrected': '#e08020', 'mfwdd': '#7b3fa0'}
-    lab = {'bbse': 'BBSE residual (ours)', 'uncorrected': 'Uncorrected gap',
+    lab = {'bbse': 'BBSE residual', 'uncorrected': 'Uncorrected gap',
            'mfwdd': 'MFWDD-style global'}
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
     for key in HEADLINE:

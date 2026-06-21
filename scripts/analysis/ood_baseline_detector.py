@@ -257,7 +257,7 @@ def main():
     print(f"\nGround truth: {gt_deg.sum()} degraded, {gt_healthy.sum()} healthy class-weeks "
           f"(over {len(week_nums)} forward weeks)")
 
-    DETS = [('ours', R_corr, 'Ours (BBSE-corrected residual)', '#2c7bb6'),
+    DETS = [('ours', R_corr, 'BBSE-corrected residual', '#2c7bb6'),
             ('naive', R_naive, 'Uncorrected entropy residual', '#e07b39'),
             ('mfwdd', S_mfwdd, 'MFWDD (feature-weighted drift)', '#7b3294'),
             ('energy', S_energy, 'Per-class energy (OOD)', '#1a9641'),

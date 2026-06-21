@@ -1,9 +1,12 @@
 {
   "config": {
     "reference_week": 16,
-    "inference_dir": "results/inference/week_16_inference",
+    "inference_dir": "results/inference/cesnet-tls-year22/cnn/train_week_16",
     "checkpoint": null,
     "clean_weeks": [
+      13,
+      14,
+      15,
       17,
       18,
       19,
@@ -22,11 +25,13 @@
       500.0,
       1000.0
     ],
-    "n_trials": 14,
+    "n_trials": 8,
     "n_resample": 12000,
     "n_emb_resample": 6000,
     "n_boot": 500,
-    "seed": 42
+    "seed": 42,
+    "ood_detectors": false,
+    "logit_recon_max_err": null
   },
   "results": {
     "ours": {

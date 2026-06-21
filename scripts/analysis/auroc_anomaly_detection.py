@@ -271,7 +271,7 @@ def main():
     detectors = [
         ('uncorrected', 'Uncorrected entropy gap',       '#e08020'),
         ('mfwdd',       'MFWDD-style global drift',       '#7b3fa0'),
-        ('bbse',        'BBSE-corrected residual (ours)', '#d7191c'),
+        ('bbse',        'BBSE-corrected residual',        '#d7191c'),
         ('bbse_soft',   'BBSE-soft-corrected residual',   '#74add1'),
         ('rlls',        'RLLS-corrected residual',        '#1a9641'),
         ('em',          'SLD-EM-corrected residual',      '#9b59b6'),
@@ -365,7 +365,7 @@ def main():
     fig2, axes2 = plt.subplots(1, 2, figsize=(12, 5),
                                gridspec_kw={'wspace': 0.25})
     for ax, key, label in zip(axes2, ['uncorrected', 'bbse'],
-                              ['Uncorrected entropy gap', 'BBSE-corrected residual (ours)']):
+                              ['Uncorrected entropy gap', 'BBSE-corrected residual']):
         data, colors, ticks = [], [], []
         for i, (g, regime, lab, color) in enumerate(groups):
             vals = [x[key] for x in records if x['regime'] == regime and x['label'] == lab]

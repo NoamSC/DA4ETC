@@ -1,7 +1,7 @@
 {
   "config": {
     "reference_week": 16,
-    "inference_dir": "results/inference/week_16_inference",
+    "inference_dir": "results/inference/cesnet-tls-year22/cnn/train_week_16",
     "n_valid_fit": 100000,
     "seed": 42,
     "n_test_weeks": 52

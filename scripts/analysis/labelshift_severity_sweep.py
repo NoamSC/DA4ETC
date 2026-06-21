@@ -48,6 +48,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from scipy.special import logsumexp
 from sklearn.metrics import roc_auc_score
 
 sys.path.insert(0, '.')
@@ -96,6 +97,67 @@ def load_ground_truth(out_dir):
     return out
 
 
+# ── per-class OOD (energy / MSP) machinery ──────────────────────────────────
+# Ported verbatim from scripts/analysis/ood_baseline_detector.py so the energy /
+# MSP residuals are computed identically (exact logits z = emb @ W.T + b from the
+# frozen Week-16 classifier head; energy = -logsumexp(z); MSP = max softmax;
+# per-predicted-region mean expressed as a RESIDUAL vs the reference-week region
+# mean so higher = more degraded, same orientation as ours/naive).
+
+def load_classifier_head(ckpt_path, num_classes, emb_dim):
+    """Return (W, b) of the linear classifier head -> exact logits from the
+    saved 600-d embeddings (energy needs the additive constant softmax discards)."""
+    import torch
+    sd = torch.load(ckpt_path, map_location='cpu', weights_only=False)
+    if isinstance(sd, dict) and 'model_state_dict' in sd:
+        sd = sd['model_state_dict']
+    if isinstance(sd, dict) and 'state_dict' in sd:
+        sd = sd['state_dict']
+    Wk = next(k for k in sd if k.endswith('classifier.weight')
+              and tuple(sd[k].shape) == (num_classes, emb_dim))
+    bk = Wk[:-len('weight')] + 'bias'
+    W = sd[Wk].detach().cpu().numpy().astype(np.float64)
+    b = sd[bk].detach().cpu().numpy().astype(np.float64)
+    print(f"  Loaded classifier head {W.shape} from {Path(ckpt_path).name}")
+    return W, b
+
+
+def logits_from_emb(emb, W, b):
+    return emb.astype(np.float64) @ W.T + b
+
+
+def build_ref_ood(ref_pred_emb, ref_logits, num_classes):
+    """Reference-week per-predicted-region mean energy and mean MSP."""
+    E = -logsumexp(ref_logits, axis=1)
+    MSP = np.exp(ref_logits - logsumexp(ref_logits, axis=1, keepdims=True)).max(axis=1)
+    ref_E = np.full(num_classes, np.nan)
+    ref_MSP = np.full(num_classes, np.nan)
+    for c in range(num_classes):
+        m = ref_pred_emb == c
+        if m.sum() >= N_MIN_EMB:
+            ref_E[c] = float(E[m].mean())
+            ref_MSP[c] = float(MSP[m].mean())
+    return ref_E, ref_MSP
+
+
+def ood_scores_per_class(pred_emb, logits, num_classes, ref_E, ref_MSP):
+    """Per-class energy / MSP RESIDUAL over predicted regions of the embedding
+    subsample.  Higher = more degraded.  NaN where region too small / no ref."""
+    E = -logsumexp(logits, axis=1)
+    MSP = np.exp(logits - logsumexp(logits, axis=1, keepdims=True)).max(axis=1)
+    s_energy = np.full(num_classes, np.nan)
+    s_msp = np.full(num_classes, np.nan)
+    for c in range(num_classes):
+        m = pred_emb == c
+        if int(m.sum()) < N_MIN_EMB:
+            continue
+        if not np.isnan(ref_E[c]):
+            s_energy[c] = float(E[m].mean()) - ref_E[c]
+        if not np.isnan(ref_MSP[c]):
+            s_msp[c] = ref_MSP[c] - float(MSP[m].mean())
+    return s_energy, s_msp
+
+
 def mfwdd_scores(emb, pred_emb, ref, feat_imp, num_classes):
     """Per-class MFWDD score — identical to the MFWDD block of
     score_arrays() in precision_isolation_ablation."""
@@ -141,6 +203,8 @@ def main():
     ap.add_argument('--n_resample', type=int, default=12000)
     ap.add_argument('--n_emb_resample', type=int, default=6000)
     ap.add_argument('--no_mfwdd', action='store_true')
+    ap.add_argument('--no_ood', action='store_true',
+                    help='disable the per-class energy / MSP OOD detectors')
     ap.add_argument('--variant_estimators', action='store_true',
                     help='also sweep the label-shift estimator variants '
                          '(bbse_soft/rlls/em/em_bcts) from '
@@ -161,6 +225,14 @@ def main():
     dets = ['ours', 'naive'] + ([] if args.no_mfwdd else ['mfwdd'])
     if args.variant_estimators:
         dets += EST_NAMES
+    # energy/MSP reuse the SAME embedding-resample (eix) that mfwdd draws, so
+    # they add NO new RNG draws and leave ours/naive/mfwdd bit-identical.  They
+    # therefore require the mfwdd embedding path to be active.
+    use_ood = (not args.no_ood) and (not args.no_mfwdd)
+    if (not args.no_ood) and args.no_mfwdd:
+        print("NOTE: --no_mfwdd disables the embedding path -> OOD detectors off")
+    if use_ood:
+        dets += ['energy', 'msp']
     ckpt = args.checkpoint or (f'exps/cesnet_multimodal_each_week_train_v01/'
                                f'week_{args.reference_week}/weights/best_model.pth')
 
@@ -203,6 +275,22 @@ def main():
                    if args.variant_estimators else None)
             _ctx.update(ref=ref, num_classes=nc, feat_imp=feat_imp,
                         estimators=est)
+            if use_ood:
+                # OOD reference: exact logits on the reference embedding subsample
+                W, b = load_classifier_head(ckpt, nc, ref_emb.shape[1])
+                ref_logits = logits_from_emb(ref_emb, W, b)
+                ref_pred_emb = ref_pred[ref_eidx]
+                recon = np.exp(ref_logits
+                               - logsumexp(ref_logits, axis=1, keepdims=True))
+                max_err = float(np.abs(recon - ref_soft[ref_eidx]).max())
+                print(f"  logit-reconstruction check: "
+                      f"max|softmax_recon - softmax_saved| = {max_err:.2e}")
+                if max_err > 1e-3:
+                    print("  WARNING: large logit reconstruction error; energy "
+                          "may be unreliable.")
+                ref_E, ref_MSP = build_ref_ood(ref_pred_emb, ref_logits, nc)
+                _ctx.update(W=W, b=b, ref_E=ref_E, ref_MSP=ref_MSP,
+                            logit_recon_max_err=max_err)
         return _ctx['ref'], _ctx['feat_imp'], _ctx['num_classes']
 
     # ── per-(class,week) scores on the REAL weeks (positives + clean AUROC) ──
@@ -232,6 +320,37 @@ def main():
                 np.savez_compressed(pos_cache, week_nums=week_nums,
                                     S_mfwdd=scores_clean['mfwdd'])
                 print(f"Saved MFWDD week scores -> {pos_cache}")
+
+    if use_ood:
+        # per-(class,week) energy / MSP residual positives + clean AUROC, computed
+        # on each forward week's embedding subsample (no RNG; like mfwdd positives)
+        ood_cache = out_dir / f'labelshift_sweep_ood_positives{args.suffix}.npz'
+        if ood_cache.exists() and not args.recompute:
+            zz = np.load(ood_cache)
+            assert np.array_equal(zz['week_nums'], week_nums)
+            scores_clean['energy'] = zz['S_energy']
+            scores_clean['msp'] = zz['S_msp']
+            print(f"OOD (energy/MSP) week scores from {ood_cache}")
+        else:
+            ref, feat_imp, num_classes = get_ctx()
+            W, b = _ctx['W'], _ctx['b']
+            ref_E, ref_MSP = _ctx['ref_E'], _ctx['ref_MSP']
+            print(f"Computing energy/MSP scores for {len(week_nums)} weeks ...")
+            SE, SP = [], []
+            for wn in week_nums:
+                true, pred, soft, emb, eidx = load_week(file_of[int(wn)])
+                logits = logits_from_emb(emb, W, b)
+                se, sp = ood_scores_per_class(pred[eidx], logits, num_classes,
+                                              ref_E, ref_MSP)
+                SE.append(se); SP.append(sp)
+                print(f"  week {int(wn):2d}: energy {np.isfinite(se).sum()}  "
+                      f"msp {np.isfinite(sp).sum()} classes", flush=True)
+            scores_clean['energy'] = np.array(SE)
+            scores_clean['msp'] = np.array(SP)
+            np.savez_compressed(ood_cache, week_nums=week_nums,
+                                S_energy=scores_clean['energy'],
+                                S_msp=scores_clean['msp'])
+            print(f"Saved OOD week scores -> {ood_cache}")
 
     if args.variant_estimators:
         var_cache = out_dir / 'estimator_variants_cache.npz'
@@ -284,6 +403,9 @@ def main():
         tv_mean = {s: float(v) for s, v in zip(severities, zz['tv_mean'])}
     else:
         ref, feat_imp, num_classes = get_ctx()
+        if use_ood:
+            W_ood, b_ood = _ctx['W'], _ctx['b']
+            ref_E_ood, ref_MSP_ood = _ctx['ref_E'], _ctx['ref_MSP']
         rng = np.random.default_rng(args.seed)
         rng_emb = np.random.default_rng(args.seed + EMB_RNG_OFFSET)
         cells = {d: {s: [] for s in severities} for d in dets}
@@ -325,6 +447,18 @@ def main():
                                                     ref, feat_imp, num_classes)
                                        if len(eix) else
                                        np.full(num_classes, np.nan))
+                        # energy/MSP reuse the SAME eix (no new RNG draw) so
+                        # ours/naive/mfwdd remain bit-identical.
+                        if use_ood:
+                            if len(eix):
+                                logits_e = logits_from_emb(emb[eix], W_ood, b_ood)
+                                se, sp = ood_scores_per_class(
+                                    pred_emb_all[eix], logits_e, num_classes,
+                                    ref_E_ood, ref_MSP_ood)
+                            else:
+                                se = sp = np.full(num_classes, np.nan)
+                            sc['energy'] = se
+                            sc['msp'] = sp
                     if args.variant_estimators:
                         soft_rs = soft[ix]
                         for name in EST_NAMES:
@@ -385,7 +519,10 @@ def main():
                                    n_trials=args.n_trials,
                                    n_resample=args.n_resample,
                                    n_emb_resample=args.n_emb_resample,
-                                   n_boot=N_BOOT, seed=args.seed),
+                                   n_boot=N_BOOT, seed=args.seed,
+                                   ood_detectors=use_ood,
+                                   logit_recon_max_err=_ctx.get(
+                                       'logit_recon_max_err')),
                        results=results), f, indent=2)
     print(f"Saved results -> "
           f"{out_dir / f'labelshift_sweep_results{args.suffix}.json'}")
@@ -394,18 +531,21 @@ def main():
     plt.rcParams.update({'font.size': 10, 'axes.grid': True, 'grid.alpha': 0.25,
                          'axes.spines.top': False, 'axes.spines.right': False})
     COL = dict(ours='#2c7bb6', naive='#e07b39', mfwdd='#1a9850',
+               energy='#762a83', msp='#d7191c',
                bbse_soft='#74add1', rlls='#41ab5d', em='#d73027',
                em_bcts='#a50026')
-    LAB = dict(ours='Ours: BBSE-corrected residual',
+    LAB = dict(ours='BBSE-corrected residual',
                naive='Naive (uncorrected)',
                mfwdd='MFWDD (feature-weighted embedding drift)',
+               energy='Per-class energy (OOD)',
+               msp='Per-class MSP (OOD)',
                bbse_soft='BBSE (soft confusion)',
                rlls='RLLS',
                em='SLD-EM / MLLS',
                em_bcts='MLLS + BCTS calibration')
-    MRK = dict(ours='o', naive='s', mfwdd='^', bbse_soft='D', rlls='v',
-               em='P', em_bcts='X')
-    STY = dict(bbse_soft='--', em_bcts='--')
+    MRK = dict(ours='o', naive='s', mfwdd='^', energy='*', msp='d',
+               bbse_soft='D', rlls='v', em='P', em_bcts='X')
+    STY = dict(bbse_soft='--', em_bcts='--', energy='-', msp='-')
 
     many = len(dets) > 3   # estimator panel: clean AUROC in legend, no anchors
     fig, ax = plt.subplots(figsize=(6.4, 4.6))

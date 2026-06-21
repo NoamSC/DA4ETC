@@ -589,7 +589,7 @@ def main():
     plt.rcParams.update({'font.size': 10, 'axes.grid': True, 'grid.alpha': 0.25,
                          'axes.spines.top': False, 'axes.spines.right': False})
     COL = dict(ours='#2c7bb6', naive='#e07b39', mfwdd='#7b3294')
-    LAB = dict(ours='Ours (BBSE-corrected)', naive='Naive (uncorrected)',
+    LAB = dict(ours='BBSE-corrected residual', naive='Naive (uncorrected)',
                mfwdd='MFWDD (feature-weighted drift)')
 
     names = ['ours', 'naive', 'mfwdd']
@@ -650,7 +650,7 @@ def main():
         ax.set_ylabel('AUROC (degraded vs negatives)')
         ax.set_ylim(0.3, 1.0)
         ax.set_title('C. Separability collapses under label shift\n'
-                     '(Ours retains it; baselines do not)',
+                     '(BBSE-corrected retains it; baselines do not)',
                      fontweight='bold', fontsize=10)
         ax.legend(fontsize=7, loc='lower left')
 
@@ -668,13 +668,13 @@ def main():
         ax.set_xticks(xr)
         ax.set_ylim(-0.02, 0.75)
         ax.set_title('D. Isolation at MATCHED detection power — at equal recall, '
-                     'Ours disturbs far fewer healthy classes',
+                     'BBSE-corrected disturbs far fewer healthy classes',
                      fontweight='bold', fontsize=10)
         ax.legend(fontsize=8.5, loc='upper left')
 
     def panel_E(ax):  # summary table
         ax.axis('off')
-        rows = [['', 'Ours', 'Naive', 'MFWDD']]
+        rows = [['', 'BBSE', 'Naive', 'MFWDD']]
         rows.append(['AUROC (clean)'] + [f"{results[n]['auroc']:.3f}" for n in names])
         rows.append(['AUROC (LS-contam.)'] +
                     [f"{contam[n]['auroc_contaminated']:.2f}" for n in names])

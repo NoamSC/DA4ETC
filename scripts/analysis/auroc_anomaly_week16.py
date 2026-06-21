@@ -59,7 +59,7 @@ from label_shift_estimators import (fit_bcts_calibrator, calibrate,
 DETECTORS = [
     ('uncorrected', 'Uncorrected entropy gap',       '#e08020'),
     ('mfwdd',       'MFWDD-style global drift',       '#7b3fa0'),
-    ('bbse',        'BBSE-corrected residual (ours)', '#d7191c'),
+    ('bbse',        'BBSE-corrected residual',        '#d7191c'),
     ('bbse_soft',   'BBSE-soft-corrected residual',   '#74add1'),
     ('rlls',        'RLLS-corrected residual',        '#1a9641'),
     ('em',          'SLD-EM-corrected residual',      '#9b59b6'),

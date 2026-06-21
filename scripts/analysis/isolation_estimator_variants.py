@@ -320,7 +320,7 @@ def main():
           f"class-weeks over {len(week_nums)} weeks")
 
     # ── pooled detection AUROC (same protocol as panel A) ────────────────────
-    curves = [('ours',  R_corr_base, 'Ours: BBSE, trunc. pinv'),
+    curves = [('ours',  R_corr_base, 'BBSE, trunc. pinv'),
               ('bbse_soft', R_est['bbse_soft'], 'BBSE (soft confusion, trunc. pinv)'),
               ('rlls',  R_est['rlls'],  'RLLS'),
               ('em',    R_est['em'],    'SLD-EM / MLLS'),
