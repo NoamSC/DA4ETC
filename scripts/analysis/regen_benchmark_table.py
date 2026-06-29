@@ -244,58 +244,79 @@ def render_block(block):
     return "\n".join(lines)
 
 
-DANN_DIAG_DIR = os.path.join(REPO_ROOT, "results", "inference", "dann_fwd_w16_diagonal")
+# Training-time UDA methods scored on the DIAGONAL: each target week N (≥16) is scored by
+# its OWN source-16→week-N aligned model (one model per week, transductive — the most
+# favorable setting), compared to the single frozen week-16 source-only model on the SAME
+# forward weeks. (label, results-dir-name) — skipped automatically if the dir is absent.
+DIAG_METHODS = [
+    ("DANN (diagonal)", "dann_fwd_w16_diagonal"),
+    ("CORAL (diagonal)", "coral_fwd_w16_diagonal"),
+    ("MMD (diagonal)", "mmd_fwd_w16_diagonal"),
+]
 
 
-def render_dann_diagonal():
-    """DANN forward-transfer DIAGONAL: each target week N (≥16) is scored by its OWN
-    source-16→week-N gradient-reversal-aligned model (52 separate models, transductive
-    UDA — the most favorable setting for DANN). Compared against the single frozen
-    week-16 source-only model on the SAME forward weeks, so Δ isolates what adversarial
-    domain alignment buys for forward drift."""
-    if not os.path.isdir(DANN_DIAG_DIR):
-        return ""
-    src = 16
-    fwd = list(range(src, 53))
-    diag = {}
-    for w in fwd:
-        p = os.path.join(DANN_DIAG_DIR, week_name(w))
+def _load_diag(dir_name, weeks):
+    d = os.path.join(REPO_ROOT, "results", "inference", dir_name)
+    if not os.path.isdir(d):
+        return {}
+    out = {}
+    for w in weeks:
+        p = os.path.join(d, week_name(w))
         if os.path.isfile(p):
             try:
                 yt, yp = load_week(p)
-                diag[w] = (float(np.mean(yt == yp)),
-                           float(f1_score(yt, yp, average="macro", zero_division=0)))
+                out[w] = (float(np.mean(yt == yp)),
+                          float(f1_score(yt, yp, average="macro", zero_division=0)))
             except Exception:
                 pass
+    return out
+
+
+def render_uda_diagonal():
+    """Combined diagonal table for the training-time UDA methods (DANN, CORAL) vs the
+    frozen week-16 source-only model, forward weeks 16–52."""
+    src = 16
+    fwd = list(range(src, 53))
     van_pw, _, _ = collect_group("week_16", "vanilla", 64, fwd)
-    if not diag or not van_pw:
+    if not van_pw:
         return ""
-    shared = sorted(set(diag) & set(van_pw))
-    far = [w for w in shared if w >= 43]
+    methods = [(lbl, _load_diag(dn, fwd)) for lbl, dn in DIAG_METHODS]
+    methods = [(lbl, d) for lbl, d in methods if d]
+    if not methods:
+        return ""
 
     def mean_acc(d, ws):
         return float(np.mean([d[w][0] for w in ws])) if ws else None
 
-    lines = ["## DANN forward-transfer (diagonal) — week-16 source",
+    def mean_f1(d, ws):
+        return float(np.mean([d[w][1] for w in ws])) if ws else None
+
+    lines = ["## UDA training-time alignment (diagonal) — week-16 source",
              "",
-             "_Each week scored by its own source-16→week-N DANN-aligned model "
-             "(transductive, one model per week); forward weeks 16–52._",
+             "_Each week scored by its own source-16→week-N aligned model (transductive, one "
+             "model per week — the most favorable setting for these methods); forward weeks "
+             "16–52. Δ vs the frozen week-16 source-only model on shared weeks._",
              "",
              "| Method | Mean acc | Δ | Macro-F1 | Far ≥43 |",
              "|---|--:|--:|--:|--:|"]
-    v_mean = mean_acc(van_pw, shared)
-    lines.append(f"| Source-only (week-16) | {fmt(v_mean)} | — | "
-                 f"{fmt(mean_or_none([van_pw[w][1] for w in shared]))} | "
-                 f"{fmt(mean_acc(van_pw, far))} |")
-    d_mean = mean_acc(diag, shared)
-    delta = float(d_mean - v_mean) if (d_mean is not None and v_mean is not None) else None
-    lines.append(f"| DANN (diagonal) | {fmt(d_mean)} | {fmt(delta, plus=True)} | "
-                 f"{fmt(mean_or_none([diag[w][1] for w in shared]))} | "
-                 f"{fmt(mean_acc(diag, far))} |")
+    # Source-only reference over the full forward range.
+    all_shared = sorted(set(van_pw))
+    far_v = [w for w in all_shared if w >= 43]
+    lines.append(f"| Source-only (week-16) | {fmt(mean_acc(van_pw, all_shared))} | — | "
+                 f"{fmt(mean_f1(van_pw, all_shared))} | {fmt(mean_acc(van_pw, far_v))} |")
+    for lbl, diag in methods:
+        shared = sorted(set(diag) & set(van_pw))
+        far = [w for w in shared if w >= 43]
+        m = mean_acc(diag, shared)
+        vm = mean_acc(van_pw, shared)  # vanilla on THIS method's shared weeks (fair Δ)
+        delta = float(m - vm) if (m is not None and vm is not None) else None
+        lines.append(f"| {lbl} | {fmt(m)} | {fmt(delta, plus=True)} | "
+                     f"{fmt(mean_f1(diag, shared))} | {fmt(mean_acc(diag, far))} |")
     lines.append("")
-    lines.append("_Even with a dedicated per-target-week aligned model, forward-transfer "
-                 "gain over the frozen source is negligible — global domain alignment does "
-                 "not recover the per-class discrete drift._")
+    lines.append("_Even with a dedicated per-target-week aligned model, the forward-transfer "
+                 "gain over the frozen source is negligible — global domain alignment "
+                 "(adversarial DANN or covariance-matching CORAL) does not recover the "
+                 "per-class discrete drift._")
     return "\n".join(lines)
 
 
@@ -315,9 +336,9 @@ def main():
     for block in BLOCKS:
         print(render_block(block))
         print()
-    dann = render_dann_diagonal()
-    if dann:
-        print(dann)
+    uda = render_uda_diagonal()
+    if uda:
+        print(uda)
         print()
 
 

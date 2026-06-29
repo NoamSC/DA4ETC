@@ -444,6 +444,12 @@ def main():
         help='Lambda CORAL for domain adaptation (default: use value from config.py)'
     )
     parser.add_argument(
+        '--lambda_mmd',
+        type=float,
+        default=None,
+        help='Lambda MMD for domain adaptation (default: use value from config.py)'
+    )
+    parser.add_argument(
         '--lambda_grl_gamma',
         type=float,
         default=None,
@@ -494,6 +500,9 @@ def main():
 
     if args.lambda_coral is not None:
         cfg.LAMBDA_CORAL = args.lambda_coral
+
+    if args.lambda_mmd is not None:
+        cfg.LAMBDA_MMD = args.lambda_mmd
 
     if args.lambda_grl_gamma is not None:
         cfg.MODEL_PARAMS['lambda_grl_gamma'] = args.lambda_grl_gamma

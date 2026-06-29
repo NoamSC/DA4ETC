@@ -60,11 +60,20 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-INF_DIR = os.path.join(ROOT, "results/inference_auditfix/week_16_vanilla_bs64")
-LABEL_MAP = "/home/anatbr/dataset/CESNET-TLS-Year22_v2/label_mapping.json"
-OUT_RES = os.path.join(ROOT, "results/repair/few_shot_repair_w16_v01")
-OUT_FIG = os.path.join(ROOT, "figs/repair")
-SOURCE_WEEK = 16
+# Config constants. All overridable via environment variables so the SAME harness
+# can drive a second dataset (e.g. CESNET-QUIC22, week-44 source) WITHOUT editing
+# the core logic. Unset env vars -> the original TLS Week-16 defaults (verbatim).
+INF_DIR = os.environ.get(
+    "REPAIR_INF_DIR",
+    os.path.join(ROOT, "results/inference_auditfix/week_16_vanilla_bs64"))
+LABEL_MAP = os.environ.get(
+    "REPAIR_LABEL_MAP",
+    "/home/anatbr/dataset/CESNET-TLS-Year22_v2/label_mapping.json")
+OUT_RES = os.environ.get(
+    "REPAIR_OUT_RES",
+    os.path.join(ROOT, "results/repair/few_shot_repair_w16_v01"))
+OUT_FIG = os.environ.get("REPAIR_OUT_FIG", os.path.join(ROOT, "figs/repair"))
+SOURCE_WEEK = int(os.environ.get("REPAIR_SOURCE_WEEK", "16"))
 
 # CoTTA forward negative transfer (week-16 source) for the contrast line.
 # UDA_BENCHMARK_STATUS.md: CoTTA(bs64) Macro-F1 delta vs source-only is the
@@ -74,12 +83,18 @@ COTTA_FWD_NEG_TRANSFER = -0.060
 # Teleported / anchored target classes (frozen Week-16 source, forward).
 # drift_week = first forward week where the cliff is in effect (post-drift).
 # eset-edtd REQUIRED. microsoft-defender kept as a NON-teleported control.
-TARGETS = {
-    57:  dict(name="eset-edtd",          drift_week=18, teleported=True),
-    49:  dict(name="docker-registry",    drift_week=28, teleported=True),
-    140: dict(name="skype",              drift_week=28, teleported=True),
-    98:  dict(name="microsoft-defender", drift_week=22, teleported=False),
-}
+_TARGETS_JSON = os.environ.get("REPAIR_TARGETS_JSON", "")
+if _TARGETS_JSON:
+    # JSON: {"<class_idx>": {"name": str, "drift_week": int, "teleported": bool}}
+    with open(_TARGETS_JSON) as _fh:
+        TARGETS = {int(k): v for k, v in json.load(_fh).items()}
+else:
+    TARGETS = {
+        57:  dict(name="eset-edtd",          drift_week=18, teleported=True),
+        49:  dict(name="docker-registry",    drift_week=28, teleported=True),
+        140: dict(name="skype",              drift_week=28, teleported=True),
+        98:  dict(name="microsoft-defender", drift_week=22, teleported=False),
+    }
 K_LIST = [1, 5, 10, 50]
 SEEDS = [1, 2, 3, 4, 42]
 

@@ -187,8 +187,10 @@ Paper ID: XXXX}}
 
 %==============================================================================
 \begin{abstract}
-Deep learning models for Encrypted Traffic Classification (ETC) often achieve near-perfect performance in controlled settings but collapse during real-world deployment. Earlier works have tried to address this issue by using Domain Adaptation (UDA) and Continual Test-Time Adaptation (CTTA) methods. These methods, however, assume the degradation is caused by continuous, gradual, and homogeneous drift. In this paper, we expose the continuous drift fallacy, demonstrating that structural degradation in ETC ecosystems actually consists of discrete, asynchronous per-class covariate shifts---class "teleportations". As a result, global adaptation methods---gradient test-time adaptation (TENT, CoTTA) and adversarial UDA (DANN)---do not recover this per-class drift, and the gradient methods actively induce negative transfer. To address this, we reframe drift monitoring on a deployed, frozen model as inference-time open-set detection of known-but-drifted classes. We introduce a robust, label-free per-class monitor based on a Black Box Shift Estimation (BBSE)-corrected entropy residual. The monitor preserves accurate tracking of the true $F_1$ score ($\rho=-0.988$) while isolating genuine structural degradation from benign viral volume spikes. At 90\% detection it cuts the false-alarm rate to 2.8\%---a 4.6$\times$ reduction versus uncorrected entropy (13.0\%) and 22$\times$ versus an MFWDD-style global monitor (61.1\%)---with the same ordering reproduced in a clean-regime replication that excludes the dataset's one sensor event. Because the monitor identifies \emph{which} class degraded, it enables a targeted, label-free diagnose-and-repair proof of concept: recomputing only the flagged class's prototype restores it while leaving the stable majority untouched, at roughly 0.01\% of the labels a full catalogue retrain would require per degradation event (hundreds of flows---even after paying for the monitor's false alarms---versus millions).
+Deep learning models for Encrypted Traffic Classification (ETC) reach high accuracy at deployment but degrade as live traffic evolves. To recover, prior work treats this as a slow, global drift and applies unsupervised domain adaptation (UDA), correcting the model as a whole. We show it is neither slow nor global. On a year-spanning backbone dataset (CESNET-TLS-Year22; 180 services across 52 weekly snapshots), the smooth year-long decay of a frozen model's accuracy is not a gradual drift --- it is the accumulation of abrupt, per-class jumps. Each application holds its learned signature for weeks, then jumps across the model's feature space at its own time --- its packet sizes and timings change abruptly --- while most others stay put. Because only a few classes move at once, a single update tuned to the whole model chases them while damaging the many stable ones (negative transfer); even a best-case UDA model nets no significant gain, and adaptation helps only when the drift is itself global.
+Deployments lack ground-truth labels, so operators cannot tell whether the model has degraded, by how much, or which application is responsible. Existing algorithms raise one global ``retrain now'' alarm; they cannot name the broken application, nor separate real degradation from a mere change in traffic volume, so they trigger costly, indiscriminate retraining. A useful algorithm must tell apart two kinds of change: a shift in an application's traffic signature (a \emph{feature shift}) breaks the classifier and must be caught; a shift in its volume (a \emph{label shift}) is harmless and must be ignored. We build one, per-class and label-free: a Black-Box Shift Estimation (BBSE)-corrected entropy residual. It tracks the model's hidden $F_1$ ($\rho = -0.988$) while staying silent under volume swings, cutting the false-alarm rate to 2.8\% at 90\% detection --- a 22$\times$ reduction over a global feature-distance detector (61.1\%). Because it names the broken application, repair becomes surgical: we recompute the prototype of \emph{only} the flagged classes from a few dozen labeled samples each, restoring them to near-original accuracy at under 0.01\% of a full retrain's labeling budget while leaving the stable majority untouched. Diagnosis and targeted repair together replace indiscriminate global retraining with a label-free, per-class procedure that acts only where the model has actually broken.
 \end{abstract}
+
 
 \begin{IEEEkeywords}
 Encrypted Traffic Classification, Concept Drift, Unsupervised Monitoring,
@@ -218,7 +220,7 @@ Label Shift, Black Box Shift Estimation, Open-Set Recognition
         \includegraphics[width=\linewidth]{figs/tsne_temporal_w16_16to52_057_eset-edtd.png}
         \caption*{(d) eset-edtd (teleportation $\approx$ Week 17)}
     \end{minipage}
-    \caption{\textbf{The Continuous Drift Fallacy} (Week-16 reference). Three
+    \caption{\textbf{Discrete per-class drift} (Week-16 reference). Three
     applications that each held a stable signature for months and then teleported
     across empty latent space at \emph{different} times (eset-edtd $\approx$Week 17;
     eset-edf $\approx$Week 34; docker-registry $\approx$Week 27), against the
@@ -227,83 +229,78 @@ Label Shift, Black Box Shift Estimation, Open-Set Recognition
     \label{fig:hero}
 \end{figure}
 
-Modern encrypted-traffic classification (ETC) must infer an application from its
-traffic behavior rather than its payload. As TLS~1.3 and the Encrypted
-ClientHello (ECH) extension close the last cleartext handshake fields that
-classic deep-packet inspection relied on, classifying encrypted traffic forces
-operators onto side-channel models that learn from packet timing, direction, and
-size sequences rather than from payload content
-\cite{shamsimukhametov2024ech,lin2022etbert,luxemburk2023tls,seddigh2019framework}. These models
-report near-perfect accuracy in the lab, yet a well-documented lab-to-production
-rift degrades that performance once they are deployed against live, evolving
-traffic --- the same temporal-bias and realism gap (concept drift,
-network-condition variation, label scarcity) flagged across
-malware and encrypted-traffic analysis more broadly
-\cite{pendlebury2019tesseract,bahramali2023netclr}. The prevailing response
-treats this erosion as a slow, global concept drift and counters it with
-unsupervised domain adaptation (UDA) or continual test-time adaptation (CTTA)
---- methods that assume the class boundaries move together, gradually, and in the
-same direction \cite{wang2020tent,wang2022cotta,ganin2016dann,li2016adabn}.
+Encrypted Traffic Classification (ETC) --- inferring which application or service a
+flow belongs to without decrypting its contents --- underpins modern network
+management, from quality-of-service routing to security analytics. TLS~1.3 and the
+Encrypted ClientHello (ECH) extension close the last cleartext handshake fields that
+deep-packet inspection once read, leaving operators with side-channel models that
+classify a flow from the timing, direction, and size of its packets alone
+\cite{shamsimukhametov2024ech,lin2022etbert,luxemburk2023tls,seddigh2019framework}.
+These models are near-perfect in the lab and decay in deployment as live traffic
+evolves \cite{pendlebury2019tesseract,bahramali2023netclr}. The standard explanation
+attributes this decay to a slow, global drift, and the standard fix follows from it:
+unsupervised domain adaptation (UDA), which realigns a source-trained model to the
+unlabeled target distribution and should restore accuracy whenever that distribution
+shifts coherently enough for one global correction to track it
+\cite{wang2020tent,wang2022cotta,ganin2016dann,li2016adabn}.
 
-We argue this picture is wrong, and that the misdiagnosis is precisely why
-adaptation degrades performance instead of restoring it. The literature documents at least
-three distinct failure modes --- slow accuracy decay \cite{malekghaini2022data},
-abrupt collapses triggered by backend or version updates \cite{chen2025drift},
-and outright generalization failures \cite{shamsimukhametov2024ech} --- but
-treats them as points on a single continuous-drift spectrum. We call this the
-\emph{Continuous Drift Fallacy}: the smooth macroscopic
-accuracy decay that motivates global adaptation is not a coherent drift of the
-whole feature space but a \emph{superposition} of discrete, asynchronous,
-per-class steps. Individual applications hold their learned signature for many
-weeks and then \emph{teleport} across empty latent space at their own,
-vendor-driven moment (Fig.~\ref{fig:hero}, Fig.~\ref{fig:density})
-\cite{jancicka2024noms}, while the stable majority of classes do not move. This
-asymmetry predicts trouble for global adaptation: when only a handful of classes
-have moved, an update driven by the aggregate target distribution chases those few
-while distorting the many that were never broken. Consistent with this, we measure
-net-negative transfer from global test-time adaptation
-(Sec.~\ref{sec:negtransfer}), where an AdaBN control localizes the damage to the
-global parameter update itself.
+We show this account is incomplete in a way that determines how an operator should
+respond, and that the mismatch is what makes global adaptation hurt more often than
+it helps. The smooth, year-long accuracy curve is an aggregate that conceals many
+small, separate changes. Each application keeps its learned signature for weeks or
+months, then shifts its packet sizes and timings in a single step and lands
+somewhere new in the model's feature space
+(Fig.~\ref{fig:hero},~Fig.~\ref{fig:density}) \cite{jancicka2024noms}. These jumps
+coincide with vendor-side changes and are therefore spread across the year, while
+the large majority of applications hold steady. The aggregate resembles one
+continuous global drift, but it is in fact the superposition of discrete,
+asynchronous, per-class shifts --- a regime we call \emph{discrete per-class drift}.
 
-This observation lets us reframe the problem. If the deployed model is held
-\emph{frozen}, a class that teleports does not become a new class; it becomes a
-\emph{known} class whose flows now fall outside the model's learned decision
-region. Monitoring drift on a frozen model is therefore closer to inference-time
-open-set detection of known-but-drifted classes than to domain adaptation
-\cite{bendale2016openmax}. The operational stakes favor this view: as ECH
-deployment broadens and the per-class breaks keep arriving asynchronously, a
-full supervised retrain at every event is prohibitive --- it pays a fresh
-labeling campaign across the whole service catalogue and risks re-incurring the
-negative transfer above. The pragmatic loop is to identify \emph{which} classes
-jumped, recapture samples for only those classes, and apply a targeted update.
-A label-free per-class monitor is exactly what makes that loop actionable.
+This asynchrony is what global adaptation cannot accommodate. When only a few
+applications have moved, an update aligned to the whole target distribution chases
+those few while distorting the many that remain stable. The result is \emph{negative
+transfer}: adaptation degrades the model rather than restoring it. We measure this
+directly (Sec.~\ref{sec:negtransfer}), where a no-gradient control localizes the
+damage to the global update itself.
 
-We study these effects on CESNET-TLS-Year22 \cite{hynek2024cesnet}, a
-year-spanning backbone dataset, and make four contributions:
+The same structure points to a more economical response. With the deployed model
+held frozen, an application that jumps remains a \emph{known} class whose traffic has
+simply fallen outside the region the model learned for it. Catching that condition
+resembles inference-time open-set detection far more than domain adaptation
+\cite{bendale2016openmax}, and it makes the fix affordable. Relabeling and
+retraining across the entire service catalogue every time one application changes is
+costly in labeling effort and risks the negative transfer above; instead, an
+operator need only relabel and update the handful of classes that actually moved ---
+a few dozen labeled flows each rather than a full supervised campaign. Realizing this
+requires an algorithm that works without labels, reports per application, and
+accommodates new classes as they appear.
+
+We make four contributions:
 \begin{enumerate}[leftmargin=1.4em]
-  \item \textbf{The continuous-drift fallacy.} We give direct empirical evidence
-        that the smooth accuracy decay of a frozen ETC model is an illusion: it
-        decomposes into one documented sensor step plus a long tail of discrete,
-        asynchronous per-class \emph{teleportations}, and a label-vs-covariate
-        decomposition pins the teleportations on covariate shift, not on benign
-        label (volume) shift (Sec.~\ref{sec:discrete}).
-  \item \textbf{Global adaptation does not recover per-class drift.} Gradient
-        test-time adaptation (TENT, CoTTA) induces negative transfer, and even a
-        best-case adversarial UDA model (DANN) buys nothing against the clean
-        regime's per-class drift (though it does help on a genuinely global shift)
+  \item \textbf{Discrete per-class drift.} We show empirically that the smooth decay
+        of a frozen ETC model is not a single continuous process: it resolves into
+        one documented sensor step plus a long tail of separate, unsynchronized
+        per-class jumps. A label-versus-feature decomposition ties these jumps to
+        genuine per-class signature changes (feature shift) rather than to benign
+        swings in traffic volume (Sec.~\ref{sec:discrete}).
+  \item \textbf{Global adaptation does not recover per-class drift.} Test-time
+        adaptation (TENT, CoTTA) causes negative transfer, and even a best-case
+        adversarial method (DANN) gains nothing against per-class drift, while
+        helping when the shift is genuinely global, exactly as our account predicts
         (Sec.~\ref{sec:negtransfer}).
-  \item \textbf{A label-free monitor that survives label shift.} We introduce a
-        BBSE-corrected entropy residual that tracks hidden degradation while
-        ignoring benign volume swings, and pinpoints \emph{which} class broke
+  \item \textbf{A label-free algorithm that survives label shift.} A BBSE-corrected
+        entropy residual tracks the model's hidden $F_1$, stays
+        silent under benign volume swings, and names \emph{which} class broke
         (Sec.~\ref{sec:method}--\ref{sec:eval}).
-  \item \textbf{A diagnose-and-repair loop.} The monitor's per-class flag drives a
-        targeted, label-free repair that restores broken classes without
-        disturbing the stable majority (Sec.~\ref{sec:operational}).
+  \item \textbf{A targeted, label-efficient repair.} That per-class flag drives a
+        targeted repair that restores broken classes from a few labeled samples
+        while leaving the stable majority untouched (Sec.~\ref{sec:operational}).
 \end{enumerate}
+
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=\columnwidth]{figs/density_drift_multi_conc_w16_16to52_10apps.png}}
-\caption{The continuous-drift fallacy across ten applications, tracked forward from
+\caption{Discrete per-class drift across ten applications, tracked forward from
 Week-16. Each application holds its position for weeks and then jumps at its own
 time (asynchronous, class-isolated), rather than all drifting together; line
 thickness encodes confidence (thick = low-entropy, well-centered predictions).}
@@ -362,17 +359,17 @@ global feature-distance \emph{idea}, not the original system; the softmax-space
 variant is, if anything, the more favorable one, since a raw input-feature
 distance fires at least as hard under a benign volume spike.} The two answer different
 questions: MFWDD identifies \emph{which feature drifted} (useful for dataset
-curation), whereas our monitor identifies \emph{which class degraded} (the input
+curation), whereas our algorithm identifies \emph{which class degraded} (the input
 to a targeted repair). Adjacent encrypted-traffic work on website and mobile-app
 fingerprinting has also met drift, but frames it as a training problem to be made
 robust: learning drift-invariant representations \cite{jiang2022fgnet},
 augmenting traces for realism-robust training \cite{bahramali2023netclr}, or
 updating a single per-website classifier instead of retraining the whole model
-\cite{deng2023ares}. None of them offers a label-free monitor that says which
+\cite{deng2023ares}. None of them offers a label-free algorithm that says which
 class has degraded --- the gap this paper fills.
 
 \subsection{Label-Shift Quantification}
-Our monitor builds on the label-shift estimation literature: Black Box Shift
+Our algorithm builds on the label-shift estimation literature: Black Box Shift
 Estimation (BBSE) \cite{lipton2018bbse}, the EM-style prior-adjustment of
 Saerens \emph{et al.} (SLD-EM) \cite{saerens2002sld}, regularized learning under
 label shift (RLLS) \cite{azizzadenesheli2019rlls}, the unified
@@ -382,7 +379,7 @@ quantification \cite{ziegler2023bayesian}. Estimating class prevalence from
 unlabeled data is the \emph{quantification-learning} task studied in its own right
 \cite{gonzalez2017quant}. Every one of these
 estimators rests on the same assumption that the class-conditional $P(X\mid Y)$
-is invariant between source and target. A covariate shift violates the assumption
+is invariant between source and target. A feature shift violates the assumption
 all of them depend on, biasing them simultaneously --- and, as we show empirically
 (Sec.~\ref{sec:breakdown}), their errors spike \emph{together}. Where the label-shift
 literature treats this as the failure case to avoid, we \emph{leverage} it: the
@@ -390,7 +387,7 @@ shared breakdown is the signal that distinguishes a genuine structural
 break from a benign change in class proportions. The online-label-shift
 setting --- where $P(y)$ drifts over time while $P(x\mid y)$ stays fixed --- is the
 mirror image of ours, and we use it only as a contrast and as future work
-(Sec.~\ref{sec:conclusion}); in our setting it is the covariate shift that breaks
+(Sec.~\ref{sec:conclusion}); in our setting it is the feature shift that breaks
 the model and must be detected (Sec.~\ref{sec:decompose}).
 
 \subsection{Open-Set Recognition as a Monitoring Lens}
@@ -404,7 +401,7 @@ samples. Drift monitoring on a frozen model is therefore well described as
 inference-time open-set detection, with one important difference from standard
 OSR \cite{geng2021osr}: these are \emph{known} classes whose signatures drifted,
 not novel classes appearing for the first time --- our setting is the
-covariate-shift cousin of OSR, not novel-class rejection. We use this view as an
+feature-shift cousin of OSR, not novel-class rejection. We use this view as an
 interpretive frame, not as an algorithmic contribution. For the same reason we do not run an OSR baseline
 battery in the main monitoring evaluation --- our detector is scored against
 hidden $F_1$ and compared against MFWDD-style and uncorrected-entropy detectors
@@ -415,10 +412,10 @@ directly. The closest prior framing to ours is HOLMES
 encrypted traffic with spatial decision regions, out-of-region rejection, and
 even per-class region updates on drift. HOLMES, however, is supervised --- labels
 define its regions --- and is a website-fingerprinting \emph{attack}. What
-neither HOLMES nor any prior monitor addresses is what we target: separating
-covariate-driven degradation from \emph{benign label shift}, and calibrating the
+neither HOLMES nor any prior method addresses is what we target: separating
+feature-driven degradation from \emph{benign label shift}, and calibrating the
 per-class signal against the model's hidden $F_1$. That, rather than per-class
-localization alone, is our contribution; our monitor is also label-free, operates
+localization alone, is our contribution; our algorithm is also label-free, operates
 on a frozen ETC model, and additionally quantifies the harm of global adaptation.
 
 %==============================================================================
@@ -446,7 +443,7 @@ modalities. \textbf{Modality~1} is a single documented measurement-infrastructur
 event at Week~10: a 9~March~2022 ipfixprobe exporter upgrade that began skipping
 retransmitted packets, coinciding with post-invasion DDoS conditions
 \cite{hynek2024cesnet}. This is not application drift but a sensor change, and we
-repurpose it as a \emph{ground-truth} covariate event; the MFWDD detector, run on
+repurpose it as a \emph{ground-truth} feature-shift event; the MFWDD detector, run on
 the same dataset, also flagged this period, triggering two of its retrainings and
 attributing them to the monitoring change \cite{mfwdd2024}. \textbf{Modality~2} is
 the asynchronous application \emph{teleportation} that accounts for the remaining
@@ -504,44 +501,45 @@ the per-application signature of asynchronous teleportation, not a uniform decay
 Two very different things can move an application's traffic. A \emph{label shift}
 is a change in how \emph{much} of each class we see --- a benign swing in volume
 (a viral spike, a weekday/weekend cycle, a marketing campaign) that leaves each
-class's traffic looking exactly as before. A \emph{covariate shift} is a change in
+class's traffic looking exactly as before. A \emph{feature shift} is a change in
 what the traffic \emph{looks like} for a fixed class --- a backend migration or
 app-version update that alters its packet-size and timing signature. Only the
 second kind actually breaks a frozen classifier, and it is the kind we want to
-monitor; the first is benign noise the monitor must \emph{not} alarm on.
+monitor; the first is benign noise the algorithm must \emph{not} alarm on.
 
 To separate the two we run a synthetic ablation
 \cite{lipton2018bbse,saerens2002sld}. A \emph{label-only} curve keeps the
 reference week's features but re-weights them to each later week's class
 proportions, so it isolates the damage caused by label shift alone. A
-\emph{covariate-only} curve does the opposite: it uses each week's real features
-but holds the class proportions fixed, isolating the damage caused by covariate
+\emph{feature-only} curve does the opposite: it uses each week's real features
+but holds the class proportions fixed, isolating the damage caused by feature
 shift alone. We run the ablation against both references
 (Fig.~\ref{fig:decomp}). Under Week-1 (Fig.~\ref{fig:decomp}a) the Week-10 crash
-is almost entirely covariate, with the label-only curve staying benign ---
+is almost entirely a feature shift, with the label-only curve staying benign ---
 confirming the documented sensor cause of Modality~1. Under Week-16
 (Fig.~\ref{fig:decomp}b) the clean-regime teleportation degradation is
-\emph{also} covariate-driven, while the label-only curve stays flat. The bottom
-line: the degradation that matters is covariate, not label --- so a useful monitor
-must track covariate breaks while deliberately ignoring benign label shift.
+\emph{also} driven by feature shift, while the label-only curve stays flat. The
+bottom line: the degradation that matters is a feature shift, not a label shift ---
+so a useful algorithm must track feature breaks while deliberately ignoring benign
+label shift.
 
 \begin{figure}[htbp]
     \centering
     \begin{minipage}{\columnwidth}\centering
         \includegraphics[width=0.84\columnwidth]{figs/fig_combined_penalties (1).png}
-        \caption*{\small (a) Week-1 reference: the Week-10 sensor crash is covariate-driven; label shift stays benign.}
+        \caption*{\small (a) Week-1 reference: the Week-10 sensor crash is a feature shift; label shift stays benign.}
     \end{minipage}
     \vspace{0.15cm}
     \begin{minipage}{\columnwidth}\centering
         \includegraphics[width=0.84\columnwidth]{figs/fig_combined_penalties_ref16.png}
-        \caption*{\small (b) Week-16 reference (weeks 17--52): teleportation degradation is also covariate-driven; label-only stays flat.}
+        \caption*{\small (b) Week-16 reference (weeks 17--52): teleportation degradation is also driven by feature shift; label-only stays flat.}
     \end{minipage}
-    \caption{\textbf{Degradation is covariate shift, not label shift.} The
+    \caption{\textbf{Degradation is feature shift, not label shift.} The
     frozen-model degradation is decomposed into a pure-label component and a
-    pure-covariate component, under both reference weeks. In each case the
-    covariate-only curve tracks the true degradation while the label-only curve
-    stays benign --- the signal a monitor should respond to is covariate, and
-    benign label shift should be ignored.}
+    pure-feature component, under both reference weeks. In each case the
+    feature-only curve tracks the true degradation while the label-only curve
+    stays benign --- the signal an algorithm should respond to is the feature
+    shift, and benign label shift should be ignored.}
     \label{fig:decomp}
 \end{figure}
 
@@ -556,7 +554,7 @@ sharply --- a discrete move, not a gradual drift. The shift is internal to the
 encrypted signature: the week-17 jump is driven by the packet-size and direction
 sequence rather than by flow-volume statistics, and a domain classifier separates
 the pre- and post-cliff regimes almost perfectly (AUC~$0.92$). This is a discrete
-change in the class's per-flow \emph{signature} (covariate shift), not a change in
+change in the class's per-flow \emph{signature} (feature shift), not a change in
 the class's \emph{prevalence} (which is what benign label shift would be);
 attribution details are in Appendix~\ref{app:shap}. We searched for a documented external cause and did not
 find one: the only nearby ESET event, the spring-2022 EDTD$\to$LiveGuard rebrand,
@@ -641,7 +639,7 @@ source; a same-recipe $\lambda_{\mathrm{dann}}{=}0$ control would settle it.) Th
 gradient methods, by contrast, induce \emph{negative} transfer on every source ---
 the global parameter update damages the stable majority whether or not the shift is
 global --- and are confirmed across five seeds. As elsewhere, the 10\% sample makes
-these absolute accuracies non-comparable to the full-data monitor figures.
+these absolute accuracies non-comparable to the full-data figures reported for our algorithm.
 
 \paragraph{External validation.} The same pattern reproduces on an independent,
 proprietary closed-world dataset (anonymized for review). Evaluated forward-only
@@ -721,7 +719,7 @@ confirms this on our data, with the entropy of incorrect predictions clearly
 shifted above that of correct ones. Entropy alone, however, cannot separate a
 benign volume spike from a structural break: \textbf{a viral surge of an
 inherently high-uncertainty application raises the mean entropy without any drop
-in accuracy}, and a naive entropy monitor would mistake it for degradation.
+in accuracy}, and a naive entropy detector would mistake it for degradation.
 Distinguishing the two requires a \emph{baseline} for how much entropy the current
 class mix should produce --- which motivates the residual of
 Sec.~\ref{sec:residual}, built directly from these per-sample entropies.
@@ -734,7 +732,7 @@ correct ones (mean $1.54$ vs $0.35$ nats).}
 \label{fig:entropy}
 \end{figure}
 
-\subsection{BBSE: Robust to Label Shift, Broken by Covariate Shift}
+\subsection{BBSE: Robust to Label Shift, Broken by Feature Shift}
 \label{sec:breakdown}
 BBSE recovers the target label proportions from a frozen classifier's
 predictions under the assumption that $P(X\mid Y)$ is invariant
@@ -754,12 +752,12 @@ label proportions, so the dataset-space shift understates the true network-space
 shift; we therefore also re-project to approximate network proportions (the exact
 ratios are unpublished). The same $\approx11\times$ gap and identical estimator
 ordering hold in both spaces, so this sampling artifact does not affect the
-covariate, per-class-$F_1$, or teleportation conclusions \cite{hynek2024cesnet}.}
+feature-shift, per-class-$F_1$, or teleportation conclusions \cite{hynek2024cesnet}.}
 In \textbf{Regime~2} (Fig.~\ref{fig:regime2}, Week-1), at the documented Week-10
-covariate shift, the $L_1$ error of BBSE, RLLS, and SLD-EM \emph{spikes together}
+feature shift, the $L_1$ error of BBSE, RLLS, and SLD-EM \emph{spikes together}
 \cite{lipton2018bbse,azizzadenesheli2019rlls,saerens2002sld} --- the premise for the
-$\Delta H_t\gg0$ anomaly branch. The monitor itself uses a single estimator
-(BBSE); that all of these estimators break \emph{together} at a covariate shift,
+$\Delta H_t\gg0$ anomaly branch. The algorithm itself uses a single estimator
+(BBSE); that all of these estimators break \emph{together} at a feature shift,
 rather than any one breaking idiosyncratically, is what makes the breakdown a
 trustworthy detector and not a noisy one.
 
@@ -776,7 +774,7 @@ benign volume swings.}
 
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=\columnwidth]{figs/fig_estimation_accuracy (1).png}}
-\caption{Regime~2 (Week-1): at the documented Week-10 \emph{covariate} shift,
+\caption{Regime~2 (Week-1): at the documented Week-10 \emph{feature} shift,
 every label-shift estimator's error spikes at once --- the assumption they all
 share ($P(X\mid Y)$ invariant) is violated together. This shared breakdown is the
 signal the residual fires on.}
@@ -790,7 +788,7 @@ entropy of class $c$, estimated on the reference week, and let
 $\bar H_t=\tfrac1N\sum_i H(p(x_i))$ be the mean per-sample predictive entropy over
 window $t$ --- the same quantity whose error-proxy behavior Fig.~\ref{fig:entropy}
 shows. A window's entropy should be judged not against a constant but against what
-its \emph{current class mix} would produce. We therefore define the monitor's
+its \emph{current class mix} would produce. We therefore define the algorithm's
 signal as the residual between the observed mean entropy and this class-mix
 baseline:
 \[
@@ -808,7 +806,7 @@ The mechanism follows from the two regimes of Sec.~\ref{sec:breakdown}. Under a
 benign \emph{label} shift with $P(X\mid Y)$ intact, BBSE is consistent, so
 $\mathrm{w}_t$ tracks the true mixture and the baseline rises in step with
 $\bar H_t$; the two terms move together and \textbf{the residual stays near zero}
-(the Regime-1 branch, Fig.~\ref{fig:regime1}). Under a \emph{covariate} shift the
+(the Regime-1 branch, Fig.~\ref{fig:regime1}). Under a \emph{feature} shift the
 broken class's flows no longer match the learned signature and produce diffuse,
 high-entropy softmax. Empirically (Fig.~\ref{fig:regime2}) the observed
 $\bar H_t$ then \emph{outruns} the reweighted baseline: the broken flows are more
@@ -816,14 +814,14 @@ uncertain than the reference entropy of any class their mass is reattributed to,
 so however $\mathrm{w}_t$ is corrupted the baseline cannot absorb the rise, and
 \textbf{the residual spikes} (the Regime-2 branch). The residual is thus a
 two-sided instrument: deliberately blind to label shift, and sharply responsive
-to the covariate breaks that signal genuine degradation.
+to the feature breaks that signal genuine degradation.
 
 %==============================================================================
-\section{Experimental Evaluation of the Monitor}
+\section{Experimental Evaluation of the Algorithm}
 \label{sec:eval}
 %  CONSOLIDATED: mirror -> primary viral-spike -> isolation -> estimator sweep.
 
-This section evaluates the monitor in four steps. We first check that the residual
+This section evaluates the algorithm in four steps. We first check that the residual
 \emph{tracks} the model's hidden accuracy with no labels
 (Sec.~\ref{sec:mirror}). We then test the property that actually matters ---
 \emph{robustness}: staying silent under benign volume swings while still catching
@@ -878,12 +876,12 @@ true volume at that same moment --- the per-class basis for the residual.}
 Correlation, as the previous subsection showed, is the wrong axis on which to
 compare detectors: on clean data every detector achieves AUROC$\approx1.000$
 (Fig.~\ref{fig:auroc}(a)). The discriminating axis is \emph{robustness} --- whether
-a monitor alarms on genuine degradation while staying silent under benign volume
+an algorithm alarms on genuine degradation while staying silent under benign volume
 volatility. We are explicit about the trade this entails: on perfectly clean data
 the uncorrected entropy is in fact \emph{sharper} than our residual (Sec.~\ref{sec:sweep}),
 so the BBSE correction is an insurance policy with a measurable premium --- a few
 points of clean-data AUROC given up to stay reliable once benign label shift
-appears. The rest of this section quantifies both sides of that trade. We frame this as binary anomaly detection. The monitor sees only the
+appears. The rest of this section quantifies both sides of that trade. We frame this as binary anomaly detection. The algorithm sees only the
 frozen model's unlabelled predictions, and a week is labeled anomalous iff its
 true Macro-$F_1$ falls below 0.60. The ground truth is cause-agnostic: it includes
 the Week-10 sensor event, which an operator would legitimately want flagged. The
@@ -1063,7 +1061,7 @@ motivates correction appears only under the \emph{asymmetric} viral spike
 
 \subsection{Per-Class Isolation}
 \label{sec:isolation}
-A monitor is only useful if it fires on the \emph{genuinely degraded} classes and
+An algorithm is only useful if it fires on the \emph{genuinely degraded} classes and
 not on healthy classes that merely changed volume. We test this isolation property
 on the Week-16 stream, and the pattern mirrors the sweep above. The uncorrected
 entropy gap is sharper on clean data, but under injected benign label shift it
@@ -1113,7 +1111,7 @@ $s{=}5$ and reaches $\approx0.70$ at $s{=}1000$; corrected estimators stay near 
 \section{Operational Paradigm: The Open-Set Monitoring View}
 \label{sec:operational}
 %  LIGHTENED (few-shot deferred). Ties isolation -> open-set lens -> next paper.
-The monitor's per-class flag suggests a natural operational paradigm. Rather than
+The algorithm's per-class flag suggests a natural operational paradigm. Rather than
 treat drift as a domain-adaptation problem, we recast it as targeted
 class-incremental repair: when a class is flagged, we isolate its decision region
 and treat it as an open-set region whose flows have fallen out of place
@@ -1125,7 +1123,7 @@ than a global labeling campaign
 prior encrypted-traffic work already shows that such per-class or per-classifier
 updates beat holistic retraining \cite{deng2023ares,deng2024holmes}.
 
-This is also why a monitor that only says \emph{when} to retrain is not enough.
+This is also why an algorithm that only says \emph{when} to retrain is not enough.
 Knowing the moment of degradation still leaves the operator with one expensive
 option --- a full supervised retrain across the entire service catalogue --- and
 under ECH that option only gets worse: as ECH closes the remaining cleartext
@@ -1146,7 +1144,7 @@ Because the update recomputes \emph{only} the flagged class's prototype, it cann
 by construction perturb the others, so the stable-majority Macro-$F_1$ is
 unchanged ($|\Delta|\le0.001$) --- whereas CoTTA, which is free to move shared
 parameters, loses $0.06$ over the same stream. The cost asymmetry is what makes
-this practical: the monitor is label-free, and the fix needs a few labels on a
+this practical: the algorithm is label-free, and the fix needs a few labels on a
 \emph{single} class. We report this as a proof of concept on a handful of classes,
 not a full repair system, to show the diagnosis is actionable.
 
@@ -1161,6 +1159,62 @@ stable-majority Macro-$F_1$ stays flat ($|\Delta|\leq0.001$), unlike CoTTA's
 $-0.06$ negative transfer.}
 \label{fig:repair}
 \end{figure}
+
+\paragraph{What a year of maintenance costs.} Table~\ref{tab:labelcost} puts the
+three paradigms on a single operational axis: the labels each spends over one year
+of the 180-class catalogue (Week-16 reference, forward weeks normalised to 52)
+against the mean macro-$F_1$ it delivers. Blind adaptation spends nothing and moves
+accuracy $\le0$ (Sec.~\ref{sec:negtransfer}). A global drift detector such as MFWDD
+fires often but cannot name the broken class, so each alarm it acts on forces a full
+catalogue retrain (millions of labels). Our monitor-plus-repair loop spends a few
+dozen labels on each flagged class --- $5$--$25$k labels per year, $0.06$--$0.30\%$
+of a \emph{single} retrain, false alarms included --- to lift global macro-$F_1$ and
+restore the broken classes' per-class recall from ${\sim}0$ to $0.86$--$0.88$. The
+global lift is deliberately modest (the loop fixes only the discrete breaks, not
+benign decay), but it is the only sub-million-label operating point that is positive
+rather than harmful.
+
+\begin{table}[t]
+\centering
+\caption{One year of catalogue maintenance: \emph{labeled flows spent} vs.\
+\emph{mean macro-$F_1$ delivered} (CESNET-TLS-Year22, 180 classes, Week-16 reference,
+normalised to 52 weeks). Blind adaptation is free but moves accuracy $\le 0$; global
+retraining recovers accuracy but at millions of labels and cannot say which class
+broke; our monitor spends a few dozen labels per flagged class, lifting global
+macro-$F_1$ (and restoring broken-class recall from ${\sim}0$ to $0.86$--$0.88$) at
+$0.06$--$0.30\%$ of a single retrain.}
+\label{tab:labelcost}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lrr@{}}
+\hline
+\textbf{Strategy} & \textbf{Labeled flows/yr} & \textbf{Mean macro-$F_1$} \\
+\hline
+Do nothing (frozen source)            & $0$      & $0.686$ \\
+UDA/TTA (DANN, TENT, CoTTA)            & $0$      & $\le 0.686^{\,a}$ \\
+\textbf{Ours} (monitor\,+\,few-shot, $K{=}10$) & $\mathbf{4.9}$\textbf{k} & $\mathbf{0.694}^{\,b}$ \\
+\textbf{Ours} (monitor\,+\,few-shot, $K{=}50$) & $\mathbf{25}$\textbf{k}  & $\mathbf{0.694}^{\,b}$ \\
+MFWDD $\rightarrow$ retrain (${\sim}6\times$/yr)$^{\,c}$ & $50$M & $0.785^{\,d}$ \\
+Periodic full retrain (monthly)       & $99$M    & $0.800^{\,d}$ \\
+Full-recovery ceiling (retrain weekly)$^{\,d}$ & ---     & $0.829$ \\
+\hline
+\end{tabular}
+\\[2pt]
+\footnotesize{Ground truth: $1847$ degraded class-weeks / $266$ degradation episodes
+($136/180$ classes). Our $25$k/yr ($K{=}50$) already \emph{includes} acting on the
+monitor's $4.9\%$ false alarms (${\sim}191$/yr); the budget is robust to modelling
+choices (label-shift false alarms $\to0.82\%$ of a retrain; worst case, $K$ per
+degraded class-week, $\to1.73\%$). The accuracy column is conservative for us in
+\emph{both} directions: the $+0.009$ global lift credits only the \emph{measured}
+repair of the detected teleporters, while the label budget counts the \emph{full}
+monitor cost.
+$^{a}$DANN forward $\Delta\text{acc}{=}{+}0.006$; TENT/CoTTA negative (Table~\ref{tab:nt_merged}).
+$^{b}$$K{=}10$ shares the $K{=}50$ lift (measured at $K{=}50$); the label cost differs, the $F_1$ estimate does not.
+$^{c}$MFWDD cannot isolate \emph{which} class broke (per-class AUROC $0.72$ vs ours $0.88$;
+recall caps at $0.62$), so each alarm forces a full retrain; its global-detector cadence
+is threshold-dependent (order $5$--$10\times$/yr).
+$^{d}$Retrain accuracies are \emph{idealised} (each retrain recovers to ${\sim}$peak and
+re-decays along the Week-16 drift shape) --- an optimistic upper bound for retraining.}
+\end{table}
 
 %==============================================================================
 \section{Conclusion and Future Work}
@@ -1179,13 +1233,13 @@ global and fail when it is per-class. The no-gradient AdaBN control does no harm
 pinning the gradient-method damage on global parameter updates rather than on
 adaptation per se.
 
-The monitor's contribution is robustness. The BBSE-corrected
+The algorithm's contribution is robustness. The BBSE-corrected
 entropy residual is a two-sided instrument: it preserves accurate, label-free tracking of hidden
 $F_1$ (clean-regime correlation $\rho=-0.988$) while sharply
 cutting false alarms under benign viral volume spikes (from 23.1\% to 11.1\% at
 95\% detection on the Week-1 stream, with the ordering reproduced within the clean
 Week-16 regime). Its two-sided mechanism --- robust to label shift, responsive to
-covariate shift --- lets it localize \emph{which} application broke without any
+feature shift --- lets it localize \emph{which} application broke without any
 labels, and our diagnose-and-repair demonstration shows that flag is actionable:
 a per-class prototype recapture restores broken classes without disturbing the
 stable majority.
@@ -1196,7 +1250,7 @@ widen the robustness margin further
 Second, a full per-class few-shot class-incremental repair system, beyond the
 frozen-feature proof of concept reported here, is the natural follow-up
 \cite{rebuffi2017icarl,kirkpatrick2017ewc,li2017lwf,tao2020fscil}. Third, an online
-version of the monitor remains open: our setting is the mirror image of online
+version of the algorithm remains open: our setting is the mirror image of online
 label shift --- those methods correct a drifting $P(y)$ under a fixed
 $P(x\mid y)$, whereas we cancel $P(y)$ in order to act precisely when $P(x\mid y)$
 breaks --- and turning our per-window detector into a streaming, regret-bounded one
@@ -1338,7 +1392,7 @@ clearance), and assets superseded by their Week-16 equivalents in the body.
 \caption{Week-1 Mirror Effect (supplementary): clean tracking
 $\rho=-0.997$ (uncorr.) / $-0.994$ (BBSE), spanning the documented Week-10 event.
 Superseded as primary by the Week-16 forward mirror (Fig.~\ref{fig:mirror});
-retained here because it shows tracking THROUGH the Week-10 covariate event.}
+retained here because it shows tracking THROUGH the Week-10 feature-shift event.}
 \label{fig:app_mirror_w1}
 \end{figure}
 

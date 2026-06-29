@@ -24,6 +24,8 @@ Conv1d branch; flow statistics → MLP branch; fused → 180-way classifier). Th
 | **TENT** | TTA, parametric | BatchNorm **affine params** (γ, β) via entropy gradient | Minimize prediction entropy on each test batch — make the model "more confident", updating only BN scale/shift. |
 | **CoTTA** | continual TTA, parametric | **all** weights via consistency + restore | Student/teacher (EMA) self-training with augmentation-averaged pseudo-labels and stochastic restore-to-source, designed to adapt without forgetting. |
 | **DANN** | UDA, adversarial (train-time) | trained source→target aligned model | Gradient-reversal domain classifier aligns source and target feature distributions *during training*; the canonical *global* UDA approach. |
+| **CORAL** | UDA, moment-matching (train-time) | trained source→target aligned model | Penalizes the difference between source and target feature **covariances** (second-order statistics) during training — alignment without an adversary. |
+| **MMD / DAN** | UDA, kernel-moment (train-time) | trained source→target aligned model | Penalizes the **Maximum Mean Discrepancy** (multi-kernel RBF) between source and target feature distributions — matches ALL moments via the kernel mean embedding, not just the covariance. |
 
 ### Mechanism detail
 
@@ -44,6 +46,16 @@ Conv1d branch; flow statistics → MLP branch; fused → 180-way classifier). Th
   unlabeled test split through a gradient-reversal-layer domain head while the class head trains
   on source labels (transductive UDA). One model per target week; evaluated frozen on that week
   (the "diagonal").
+- **CORAL** — same per-target-week transductive setup as DANN, but instead of an adversarial
+  domain head it adds a loss term `‖cov(source feats) − cov(target feats)‖²_F / 4d²` (Sun &
+  Saenko 2016, d = 600 feature dims) to the classification loss, pulling the two feature
+  covariances together. Source and target are forwarded as one combined batch (same BN-fix path
+  as DANN). One model per target week; evaluated frozen on the diagonal.
+- **MMD / DAN** — same per-target-week transductive setup, with a **multi-kernel RBF Maximum
+  Mean Discrepancy** loss between the z-normalized source and target features (bandwidths
+  {0.1, 1, 10}; Long et al. DAN 2015 / Gretton MMD). MMD matches the full distribution (all
+  moments via the kernel mean embedding), a strictly richer alignment than CORAL's covariance.
+  One model per target week; evaluated frozen on the diagonal.
 
 ---
 
@@ -80,7 +92,29 @@ Conv1d branch; flow statistics → MLP branch; fused → 180-way classifier). Th
 | TENT | optimizer Adam, **lr 1e-3**, **1 step/batch**, updates BN affine params only, episodic reset per week |
 | CoTTA | optimizer Adam, **lr 1e-3**, **1 step/batch**, EMA **α 0.99**, restore frac **rst_m 0.01**, anchor confidence threshold **ap 0.9**, **n_aug 32** augmentations, **noise_std 0.02**, episodic reset per week |
 | DANN | **λ_dann 1.0**, GRL **λ_rgl 0.1**, GRL **γ 10**, **50 epochs**, lr **3e-3**, batch 64, `train_data_frac 1.0`, `val_data_frac 0.1`, `train_per_epoch_data_frac 0.1`, `num_workers 0` |
+| CORAL | **λ_coral 100** (calibrated — see note), **50 epochs**, lr **3e-3**, batch 64, `train_data_frac 1.0`, `val_data_frac 0.1`, `train_per_epoch_data_frac 0.1`, `num_workers 0` |
+| MMD / DAN | **λ_mmd 5** (calibrated), RBF bandwidths **{0.1, 1, 10}**, **50 epochs**, lr **3e-3**, batch 64, `train_data_frac 1.0`, `val_data_frac 0.1`, `train_per_epoch_data_frac 0.1`, `num_workers 0` |
 | Shared (inference) | `batch_size` 64 (and 256 for TENT/CoTTA), `data_sample_frac 0.1`, `seed 42`, `num_workers 0` |
+
+**λ_coral calibration.** Because the CORAL loss is normalized by 4d² (d=600) its raw value is
+tiny, so λ must be chosen, not assumed. A real-training sweep on the farthest week (16→52,
+λ ∈ {100, 300, 1000}) showed λ=100 gives the strongest actual covariance alignment (residual
+CORAL loss 0.028→0.012) with the best accuracy (~69%), while higher λ aligned *less* and gained
+nothing. λ=1 (a naive default) was ~1000× too weak (CORAL ≈ 0.1% of the classification loss) —
+an inactive, unfair baseline — so it was rejected. **λ_coral = 100.**
+
+**λ_mmd calibration.** MMD z-normalizes features before the RBF kernel, so its raw loss is O(1)
+and λ is much smaller than CORAL's. A real-training sweep (16→52, λ ∈ {0.1, 1, 5, 20}) gave
+λ=5 the best accuracy (~70%) with the MMD term solidly active (~27% of the classification loss).
+**λ_mmd = 5.**
+
+**Noise-floor caveat (CORAL & MMD).** Both alignment losses are estimated from the per-batch
+(batch=64) statistics of 600-d features, so they are **dominated by finite-sample noise**: the
+CORAL loss is ~74% noise (rank-63 estimate of a 600×600 covariance, SNR ≈1.36×), and the raw
+MMD stays ~flat at ~0.031 regardless of λ. So the alignment these methods can actually achieve
+at batch 64 is limited; a batch-≥256 re-sweep is the recommended robustness follow-up. Their
+≈0 forward-transfer Δ should be read with this caveat (it is consistent with, but not a fully
+powered test of, "global alignment cannot help").
 
 ### 2.3 Commands
 
@@ -110,8 +144,30 @@ $PY scripts/train/train_per_week_cesnet.py --multimodal \
     --num_epochs 50 --batch_size 64 --num_workers 0 --learning_rate 3e-3
 ```
 
-**DANN diagonal inference** (each week scored by its own aligned model) via
-`slurm_files/run_dann_diagonal.slurm` → `results/inference/dann_fwd_w16_diagonal/`.
+**CORAL training** (one model per target week N; source week 16), array 0–52 via
+`slurm_files/run_coral_fwd_w16.slurm`:
+
+```bash
+$PY scripts/train/train_per_week_cesnet.py --multimodal \
+    --week 16 --val_week N --exp_name "cesnet_tls_coral_fwd_w16_v01/{}" \
+    --lambda_coral 100 \
+    --train_data_frac 1.0 --val_data_frac 0.1 --train_per_epoch_data_frac 0.1 \
+    --num_epochs 50 --batch_size 64 --num_workers 0 --learning_rate 3e-3
+```
+
+**MMD training** (one model per target week N; source week 16), array 0–52 via
+`slurm_files/run_mmd_fwd_w16.slurm`:
+
+```bash
+$PY scripts/train/train_per_week_cesnet.py --multimodal \
+    --week 16 --val_week N --exp_name "cesnet_tls_mmd_fwd_w16_v01/{}" \
+    --lambda_mmd 5 \
+    --train_data_frac 1.0 --val_data_frac 0.1 --train_per_epoch_data_frac 0.1 \
+    --num_epochs 50 --batch_size 64 --num_workers 0 --learning_rate 3e-3
+```
+
+**DANN / CORAL / MMD diagonal inference** (each week scored by its own aligned model) via
+`slurm_files/run_{dann,coral,mmd}_diagonal.slurm` → `results/inference/{dann,coral,mmd}_fwd_w16_diagonal/`.
 
 **Multi-seed significance** (5 seeds, acc-only) via `slurm_files/run_inference_seedvar.slurm`;
 analyzed by `scripts/analysis/analyze_seedvar.py`.
@@ -144,15 +200,21 @@ analyzed by `scripts/analysis/analyze_seedvar.py`.
 | CoTTA (bs64) | 0.738 | **−0.060** | 0.607 | 0.834 | 0.699 |
 | CoTTA (bs256) | 0.784 | −0.014 | 0.641 | 0.863 | 0.737 |
 
-### 3.3 DANN forward-transfer (diagonal) — week-16 source (forward weeks 16–52)
+### 3.3 UDA training-time alignment (diagonal) — week-16 source (forward weeks 16–52)
 
-Each week scored by its own source-16→week-N DANN-aligned model (transductive, one model per
-week — the *most favorable* setting for DANN).
+Each week scored by its own source-16→week-N aligned model (transductive, one model per week —
+the *most favorable* setting for these methods). Δ vs the frozen week-16 source-only model.
 
 | Method | Mean acc | Δ | Macro-F1 | Far ≥43 |
 |---|--:|--:|--:|--:|
-| Source-only (week-16) | 0.795 | — | 0.649 | 0.746 |
+| Source-only (week-16) | 0.798 | — | 0.654 | 0.746 |
 | DANN (diagonal) | 0.801 | +0.006 | 0.656 | 0.747 |
+| CORAL (diagonal) | 0.794 | −0.001 | 0.652 | 0.742 |
+| MMD (diagonal) | 0.794 | −0.002 | 0.652 | 0.741 |
+
+Neither adversarial (DANN), covariance-matching (CORAL), nor kernel-MMD alignment buys
+meaningful forward-transfer, even with a dedicated per-target-week model — three different
+alignment principles, the same ≈0 result.
 
 ### 3.4 CESNET-QUIC22 — week-44 source (forward weeks 44–47, secondary)
 
@@ -197,18 +259,21 @@ Forward-only deltas vs Source-only, mean ± std across seeds (noise floor ~1e-4)
 
 ## 4. Takeaways
 
-1. **Every gradient-based global adaptation method shows negative transfer** — UDA (DANN) and
-   continual TTA (TENT/CoTTA) — on both TLS source weeks, on QUIC, and on Allot. The shared
-   failure across method families points to *global adaptation scope*, not any single algorithm.
+1. **Every global adaptation method fails to help** — adversarial UDA (DANN), moment-matching
+   UDA (CORAL), kernel-MMD UDA (DAN), and continual TTA (TENT/CoTTA) — on both TLS source weeks,
+   on QUIC, and on Allot: at best no gain, usually negative transfer. The shared failure across
+   four method families points to *global adaptation scope*, not any single algorithm.
 2. **Control the small-batch BN artifact.** At bs64 TENT/CoTTA look much worse; at bs256 the
    damage shrinks to −0.01…−0.03 (TLS) / −0.01…−0.02 (QUIC). Report bs256 as the fair point;
    the residual negative Δ there is the real parametric-adaptation harm.
 3. **AdaBN (no gradients) is the diagnostic control:** near-neutral on TLS forward (|Δ| ≤ 0.011),
    positive only on QUIC (+0.020) — far smaller than the gradient methods either way. The gap
    between AdaBN and TENT/CoTTA pins the harm on global *parameter* updates.
-4. **DANN does not transfer forward even in its best case:** with a dedicated per-target-week
-   aligned model it beats the frozen source by only +0.006 mean (+0.001 far). Global source–
-   target alignment cannot recover the per-class *discrete* drift; in-distribution health does
-   not generalize across time.
+4. **Training-time UDA does not transfer forward even in its best case:** with a dedicated
+   per-target-week aligned model, DANN beats the frozen source by only +0.006 mean (+0.001 far),
+   CORAL by −0.001, and MMD by −0.002 (i.e. nothing) — three different alignment principles
+   (adversarial / covariance / kernel-MMD), the same ≈0 result. None recovers the per-class
+   *discrete* drift; in-distribution health does not generalize across time. (Caveat: the CORAL
+   and MMD losses are noise-floor-limited at batch 64 — see §2.2.)
 5. **The effect reproduces under both source weeks** (wk16 0.798 vs wk1 0.608 forward), so it is
    not an artifact of the documented Week-10 sensor change.

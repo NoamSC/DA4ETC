@@ -1,0 +1,7 @@
+{
+  "62": {"name": "google-www",      "drift_week": 46, "teleported": true},
+  "19": {"name": "dns-doh",         "drift_week": 46, "teleported": true},
+  "49": {"name": "google-fonts",    "drift_week": 46, "teleported": true},
+  "50": {"name": "google-gstatic",  "drift_week": 46, "teleported": true},
+  "17": {"name": "discord",         "drift_week": 45, "teleported": false}
+}
