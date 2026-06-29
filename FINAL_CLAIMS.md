@@ -141,7 +141,7 @@ Our system answers the two questions an operator actually has. **"Am I silently 
 - **(f) DANN diagonal on QUIC + Allot** ✅ — already in tab:nt_merged (QUIC 0.761/+0.053; Allot 0.675/+0.011).
 - **(g) Labeling-cost-per-year "big table"** ✅ — tab:labelcost: ours 5-25k labels/yr (0.06-0.30% of one retrain) vs UDA 0 (≤0 acc) vs MFWDD→retrain. `scripts/analysis/labeling_cost_per_year.py`, [[labeling-cost-per-year]].
 
-**In flight (2026-06-29):** DANN λ=0 alignment-confound control (job 621277, isolates alignment vs retraining in the +0.067 forward gain); all-flagged TLS joint repair (job 621388, full-loop global ΔF1 for the labeling-cost table); QUIC k-NN repair variant.
+- **(h) DANN λ=0 alignment-confound control** ✅ — settles the Week-1 +0.067 confound: with the adversarial objective removed but identical per-week training kept, the gain over the frozen source collapses to **+0.007**; the alignment objective itself contributes **+0.058** (positive in 42/44 forward weeks). So DANN's Week-1 gain is genuine alignment (responding to the global Week-10 sensor event), NOT a retraining artifact — confirms the discrete-drift reading. `scripts/analysis/dann_alignment_confound.py`, `results/inference/dann_alignment_confound.json`. (45/52 control models trained; weeks 36-42 timed out — 44 common forward weeks compared.)
 
 **Still open:** CORAL/MMD only on TLS-wk16 (not QUIC/Allot — explicitly de-scoped 2026-06-29); UDA/TTA under the extreme label-shift sweep; the batch-≥256 UDA robustness re-sweep.
 

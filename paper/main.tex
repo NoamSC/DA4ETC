@@ -645,9 +645,11 @@ per-week in Fig.~\ref{fig:dann_curve}), and the closed-world set is likewise neu
 at a per-week retraining cost. From the weaker Week-1 source --- whose stream spans
 the global Week-10 sensor event --- and on QUIC, DANN \emph{does} recover ground
 ($+0.067$ and $+0.053$): global alignment helps a genuinely global shift, exactly as
-the discrete-drift account predicts. (Because each diagonal model is retrained per
-week, we cannot fully separate this gain from the benefit of retraining a weaker
-source; a same-recipe $\lambda_{\mathrm{dann}}{=}0$ control would settle it.) The
+the discrete-drift account predicts. A same-recipe $\lambda_{\mathrm{dann}}{=}0$
+control settles that this is alignment, not a retraining artifact: with the
+adversarial objective removed but the identical per-week training kept, the gain
+over the frozen source collapses to $+0.007$, so the alignment objective itself
+contributes the remaining $+0.058$ (positive in 42 of 44 forward weeks). The
 gradient methods, by contrast, induce \emph{negative} transfer on every source ---
 the global parameter update damages the stable majority whether or not the shift is
 global --- and are confirmed across five seeds. As elsewhere, the 10\% sample makes
