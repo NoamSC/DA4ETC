@@ -118,8 +118,8 @@ Our system answers the two questions an operator actually has. **"Am I silently 
 
 **Method × dataset cells not yet measured:**
 - **DANN / CORAL / MMD**: run **only** on CESNET-TLS-Year22 (wk1 / wk16). **Not run on QUIC, Allot, or the extreme label-shift sweep.**
-- **Our BBSE monitor**: run on CESNET-TLS-Year22 (viral spike + extreme label-shift sweep) **and now on Allot** (viral AUROC 0.890/0.879). **Not run on QUIC.**
-- **Our few-shot repair**: run **only** on CESNET-TLS (wk1 / wk16). **Not run on QUIC, Allot, or the extreme sweep.**
+- **Our BBSE monitor**: run on CESNET-TLS-Year22 (viral spike + extreme label-shift sweep), Allot (viral AUROC 0.890/0.879), **and now QUIC** (viral AUROC BBSE 0.736 / RLLS 0.774 / EM 0.792 vs uncorrected 0.566, MFWDD 0.458 — same pattern, but small-sample: 3 eval weeks, `results/quic_monitor/`).
+- **Our few-shot repair**: run on CESNET-TLS (wk1 / wk16), **and now QUIC + Allot** (K=50 NCM: QUIC dns-doh 0.41→0.90, google-www 0.05→0.69, google-fonts 0.12→0.67, google-gstatic 0.30→0.75, control discord flat; Allot cls25 0.03→0.45, cls109 0.05→0.58, cls33 0.19→0.53, control cls17 flat — `results/repair/few_shot_repair_{quic,allot}_v01/`). **Not run on the extreme sweep.**
 - **UDA/TTA under extreme label shift**: **not run at all** — that regime currently has only the detector.
 
 **Methodological caveats:**
@@ -135,7 +135,15 @@ Our system answers the two questions an operator actually has. **"Am I silently 
 - **(b) BBSE monitor on Allot** ✅ — viral AUROC 0.890/0.879 vs uncorrected 0.710/0.793, MFWDD 0.586/0.633. Closes the coverage asymmetry. `results/allot_monitor_v01/`, `figs/fig_allot_monitor_auroc.png`.
 - **(c) Labels-matched baseline** ✅ — logistic K-shot fit is competitive with (and on skype beats) the prototype/k-NN repair, so the repair's claim is reframed to "fit-free, monitor-integrated" rather than "best corrector." `results/repair/labelmatched_baseline_v01/`.
 
-**Still open:** DANN/CORAL/MMD only on TLS-wk16 (not QUIC/Allot); BBSE monitor not on QUIC; few-shot repair not on QUIC/Allot; the batch-≥256 UDA robustness re-sweep.
+**Referee-recommended experiments — DONE (2026-06-29):**
+- **(d) BBSE monitor on QUIC** ✅ — viral AUROC BBSE 0.736 / RLLS 0.774 / EM 0.792 vs uncorrected 0.566, MFWDD 0.458 (same corrected-beats-uncorrected pattern as TLS/Allot). Caveat: only 3 eval weeks (45-47), so the viral protocol is small-sample. `results/quic_monitor/`.
+- **(e) Few-shot repair on QUIC + Allot** ✅ — teleporters recover (QUIC to 0.67-0.90, Allot to 0.38-0.58), controls flat (no negative transfer). Generalizes the diagnose-and-repair loop beyond TLS. `results/repair/few_shot_repair_{quic,allot}_v01/`.
+- **(f) DANN diagonal on QUIC + Allot** ✅ — already in tab:nt_merged (QUIC 0.761/+0.053; Allot 0.675/+0.011).
+- **(g) Labeling-cost-per-year "big table"** ✅ — tab:labelcost: ours 5-25k labels/yr (0.06-0.30% of one retrain) vs UDA 0 (≤0 acc) vs MFWDD→retrain. `scripts/analysis/labeling_cost_per_year.py`, [[labeling-cost-per-year]].
+
+**In flight (2026-06-29):** DANN λ=0 alignment-confound control (job 621277, isolates alignment vs retraining in the +0.067 forward gain); all-flagged TLS joint repair (job 621388, full-loop global ΔF1 for the labeling-cost table); QUIC k-NN repair variant.
+
+**Still open:** CORAL/MMD only on TLS-wk16 (not QUIC/Allot — explicitly de-scoped 2026-06-29); UDA/TTA under the extreme label-shift sweep; the batch-≥256 UDA robustness re-sweep.
 
 ## Sources (verified)
 - `UDA_METHODS.md` §3.2–3.5 — all UDA/TTA Δacc/ΔF1 (TLS wk16, QUIC wk44, Allot, DANN/CORAL/MMD diagonal).

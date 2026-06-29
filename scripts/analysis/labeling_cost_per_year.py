@@ -48,14 +48,17 @@ DELTA_DEG   = 0.15
 EPS_HEALTHY = 0.05
 N_MIN       = 30
 WEEKS_YEAR  = 52
-# Measured per-class F1 AFTER few-shot repair of the detected teleported classes
-# (joint few-shot repair, K=50; FINAL_CLAIMS / results/repair/joint_repair_v01):
-# docker-registry(49) 0.86, eset-edtd(57) 0.88, skype(140) 0.43 (NCM, conservative).
-# We compute ours' mean-F1 by substituting these INTO THE SAME softmax isolation
-# panel the other strategies use (not by adding the NCM-180-space +0.019 lift, which
-# lives on a different metric scale). This credits only the measured teleporters -> a
-# LOWER BOUND, while the labeling budget counts the FULL monitor+false-alarm cost.
-REPAIRED_F1 = {49: 0.86, 57: 0.88, 140: 0.43}
+# Ours' mean-F1 is computed by substituting the MEASURED per-class post-repair F1 of
+# every monitor-flagged-and-degraded class INTO THE SAME softmax isolation panel the
+# other strategies use (operational hybrid: softmax head for healthy classes, NCM
+# few-shot repair for the broken ones). The per-(class,week) repair F1 comes from the
+# all-flagged joint-repair run (results/repair/joint_repair_allflagged_v01: 124 classes
+# repaired, ~48/week, stable classes +0.011 -> no cumulative poaching). NOT the
+# NCM-180-space +0.0405 lift, which lives on a different (lower) base than the panel.
+ALLFLAGGED_METRICS = 'results/repair/joint_repair_allflagged_v01/metrics.json'
+DATASET_ROOT = '/home/anatbr/dataset/CESNET-TLS-Year22_v2'
+# Fallback (if the all-flagged run is absent): the 3 measured teleporters.
+REPAIRED_F1_FALLBACK = {49: 0.86, 57: 0.88, 140: 0.43}
 # Full-catalogue retrain label budget (Week-16 train.parquet, ~46k/class x 180).
 PER_CLASS_RETRAIN = 46_000
 N_CLASSES         = 180
@@ -106,16 +109,58 @@ def mean_f1_at_cadence(ages, macro, period_wk, horizon):
                           for w in range(horizon)]))
 
 
-def ours_panel_meanf1(F1_true, drop, present, repaired):
-    """ours' mean macro-F1 in the SAME softmax panel space: substitute the measured
-    post-repair F1 for each flagged class at its degraded weeks, then re-average."""
+def _panel_mean(F, present):
+    wk = [np.nanmean(F[t][present[t]]) for t in range(F.shape[0]) if present[t].sum() > 0]
+    return float(np.mean(wk))
+
+
+def load_allflagged_repair():
+    """{(class_idx, week): post-repair NCM F1} for every flagged, non-false-alarm class
+    from the all-flagged joint-repair run. None if unavailable."""
+    if not Path(ALLFLAGGED_METRICS).exists():
+        return None
+    try:
+        sys.path.insert(0, '.')
+        from data_utils.cesnet_labels import load_label_mapping
+        name2idx, _ = load_label_mapping(Path(DATASET_ROOT))   # name -> idx
+    except Exception:
+        return None
+    H = json.load(open(ALLFLAGGED_METRICS)).get('repaired_class_history', {})
+    rep = {}
+    for name, entries in H.items():
+        idx = name2idx.get(name)
+        if idx is None:
+            continue
+        for e in entries:
+            if e.get('is_false_alarm'):
+                continue
+            f1 = e['after_ncm_f1']['mean'] if isinstance(e['after_ncm_f1'], dict) else e['after_ncm_f1']
+            rep[(int(idx), int(e['week']))] = f1
+    return rep or None
+
+
+def ours_panel_meanf1(F1_true, drop, present, week_nums_fwd, deploy_if_helps=True):
+    """ours' mean macro-F1 in the SAME softmax panel space: the deployed hybrid serves
+    healthy classes with the softmax head and every flagged-and-degraded class with its
+    MEASURED few-shot repair F1 (all-flagged joint-repair run). deploy_if_helps=True
+    keeps a repair only where it beats the current model (the K labels let the operator
+    verify); False deploys every repair (conservative floor). Falls back to the 3
+    measured teleporters if the all-flagged run is absent."""
+    rep = load_allflagged_repair()
     F = F1_true.copy()
-    for c, rf in repaired.items():
+    if rep is not None:
+        for t, w in enumerate(week_nums_fwd):
+            for c in range(F.shape[1]):
+                if present[t, c] and np.isfinite(drop[t, c]) and drop[t, c] > DELTA_DEG \
+                   and (c, int(w)) in rep:
+                    v = rep[(c, int(w))]
+                    F[t, c] = max(F[t, c], v) if deploy_if_helps else v
+        return _panel_mean(F, present), 'all-flagged'
+    for c, rf in REPAIRED_F1_FALLBACK.items():
         for t in range(F.shape[0]):
             if present[t, c] and np.isfinite(drop[t, c]) and drop[t, c] > DELTA_DEG:
                 F[t, c] = max(F[t, c], rf)
-    wk = [np.nanmean(F[t][present[t]]) for t in range(F.shape[0]) if present[t].sum() > 0]
-    return float(np.mean(wk))
+    return _panel_mean(F, present), '3-teleporter-fallback'
 
 
 def mfwdd_retrain_cadence(S_mfwdd, present, yr, n_sigmas=(0.5, 1.0, 1.5, 2.0)):
@@ -227,7 +272,8 @@ def main():
     # ── mean macro-F1 over the year delivered by each strategy (softmax panel) ─
     ages, macro = decay_curve(F1t, f1ref, present)
     f1_frozen = mean_f1_at_cadence(ages, macro, period_wk=n_fwd + 1, horizon=n_fwd)
-    f1_ours   = ours_panel_meanf1(F1t, drop, present, REPAIRED_F1)   # same-space substitution
+    f1_ours, ours_src   = ours_panel_meanf1(F1t, drop, present, wnf, deploy_if_helps=True)
+    f1_ours_floor, _    = ours_panel_meanf1(F1t, drop, present, wnf, deploy_if_helps=False)
     f1_mfwdd  = mean_f1_at_cadence(ages, macro, mf_period_wk, n_fwd)
     f1_periodic = {r: mean_f1_at_cadence(ages, macro, max(1, round(WEEKS_YEAR / r)), n_fwd)
                    for r in args.periodic}
@@ -255,7 +301,9 @@ def main():
                            'cadence is threshold-dependent (order 5-10x/yr)'),
         'mean_macro_f1_year': dict(
             uda_tta=round(f1_frozen, 3),          # <=0 gain; TENT/CoTTA lower
-            ours=round(f1_ours, 3),               # same-panel substitution of repaired teleporters
+            ours=round(f1_ours, 3),               # all-flagged repair, deploy-if-helps
+            ours_floor=round(f1_ours_floor, 3),   # deploy every repair (conservative)
+            ours_source=ours_src,
             ours_lift=round(f1_ours - f1_frozen, 4),
             mfwdd_retrain_idealised=round(f1_mfwdd, 3),
             periodic_idealised={r: round(v, 3) for r, v in f1_periodic.items()},
@@ -297,7 +345,8 @@ def main():
     print(f"MFWDD recall caps at {recall_mf:.2f} (bleed {bleed_mf:.3f}); global drift "
           f"detector triggers {rng} retrains/yr at n_sigma=0.5/1/1.5/2 (order 5-10x/yr)")
     print(f"Mean macro-F1/yr (panel): frozen/UDA {f1_frozen:.3f} | ours {f1_ours:.3f} "
-          f"(+{f1_ours-f1_frozen:.3f}) | MFWDD-retrain~{f1_mfwdd:.3f}(ideal) | ceiling {macro[0]:.3f}")
+          f"(+{f1_ours-f1_frozen:.3f}; floor {f1_ours_floor:.3f}, src={ours_src}) | "
+          f"MFWDD-retrain~{f1_mfwdd:.3f}(ideal) | ceiling {macro[0]:.3f}")
     print(f"\nFull retrain = {FULL_RETRAIN:,} labels (180 x {PER_CLASS_RETRAIN:,})\n")
     hdr = f"{'strategy':34s}{'labels/yr':>16s}{'x retrain':>12s}{'meanF1':>9s}"
     print(hdr); print('-' * len(hdr))

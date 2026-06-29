@@ -187,8 +187,10 @@ Paper ID: XXXX}}
 
 %==============================================================================
 \begin{abstract}
-Deep learning models for Encrypted Traffic Classification (ETC) reach high accuracy at deployment but degrade as live traffic evolves. To recover, prior work treats this as a slow, global drift and applies unsupervised domain adaptation (UDA), correcting the model as a whole. We show it is neither slow nor global. On a year-spanning backbone dataset (CESNET-TLS-Year22; 180 services across 52 weekly snapshots), the smooth year-long decay of a frozen model's accuracy is not a gradual drift --- it is the accumulation of abrupt, per-class jumps. Each application holds its learned signature for weeks, then jumps across the model's feature space at its own time --- its packet sizes and timings change abruptly --- while most others stay put. Because only a few classes move at once, a single update tuned to the whole model chases them while damaging the many stable ones (negative transfer); even a best-case UDA model nets no significant gain, and adaptation helps only when the drift is itself global.
-Deployments lack ground-truth labels, so operators cannot tell whether the model has degraded, by how much, or which application is responsible. Existing algorithms raise one global ``retrain now'' alarm; they cannot name the broken application, nor separate real degradation from a mere change in traffic volume, so they trigger costly, indiscriminate retraining. A useful algorithm must tell apart two kinds of change: a shift in an application's traffic signature (a \emph{feature shift}) breaks the classifier and must be caught; a shift in its volume (a \emph{label shift}) is harmless and must be ignored. We build one, per-class and label-free: a Black-Box Shift Estimation (BBSE)-corrected entropy residual. It tracks the model's hidden $F_1$ ($\rho = -0.988$) while staying silent under volume swings, cutting the false-alarm rate to 2.8\% at 90\% detection --- a 22$\times$ reduction over a global feature-distance detector (61.1\%). Because it names the broken application, repair becomes surgical: we recompute the prototype of \emph{only} the flagged classes from a few dozen labeled samples each, restoring them to near-original accuracy at under 0.01\% of a full retrain's labeling budget while leaving the stable majority untouched. Diagnosis and targeted repair together replace indiscriminate global retraining with a label-free, per-class procedure that acts only where the model has actually broken.
+Deep learning models for Encrypted Traffic Classification (ETC) reach high accuracy at deployment but degrade as live traffic evolves. To recover, prior work treats this as a slow, global drift and applies unsupervised domain adaptation (UDA), correcting the model as a whole. We show it is neither slow nor global. On a year-spanning backbone dataset (CESNET-TLS-Year22; 180 services across 52 weekly snapshots), the smooth year-long decay of a frozen model's accuracy is not a gradual drift --- it is the accumulation of abrupt, per-class jumps. Each application holds its learned signature for weeks, then jumps across the model's latent space at its own time --- its packet sizes and timings change abruptly --- while most others stay put. Because only a few classes move at once, a single update aligned to the whole target distribution chases them while damaging the many stable classes (negative transfer); even a best-case global UDA method (adversarial alignment) nets no significant gain, and a global correction helps only when the drift is itself global.
+Deployments lack ground-truth labels, so operators cannot tell whether the model has degraded, by how much, or which application is responsible. Existing algorithms raise one global ``retrain now'' alarm; they cannot name the broken application, nor separate real degradation from a mere change in traffic volume, so they trigger costly, indiscriminate retraining. A useful algorithm must tell apart two kinds of change: a shift in an application's traffic signature (a \emph{feature shift}) breaks the classifier and must be caught; a shift in its volume (a \emph{label shift}) is harmless and must be ignored. We build one, per-class and label-free: a Black Box Shift Estimation (BBSE)-corrected entropy residual. It rises precisely as the model's hidden $F_1$ falls ($\rho = -0.988$) yet stays silent under benign volume swings, cutting the false-alarm rate to 2.8\% at 90\% detection --- a 22$\times$ reduction over a global feature-distance detector (61.1\%).
+% FLAG (revision): abstract reports FAR@90 from the Week-1 CNN stream (figs/auroc_anomaly_results.json: BBSE 2.8% / uncorr 12.0% / MFWDD-style 59.3%, per AUDIT_FIXES_LOG.md). Two camera-ready reconciliations needed: (i) MFWDD-style FAR@90 = 59.3% in the source, not 61.1% (59.3/2.8 = 21x); (ii) the body reports FAR@95 on the multimodal backbone (Table~\ref{tab:auroc}), so there is no body row matching this 90%-detection operating point. Either add a FAR@90 column / multimodal FAR@90 run, or restate the abstract at the body's operating point.
+Because it names the broken application, repair becomes surgical: we recompute the prototype of \emph{only} the flagged classes from a few dozen labeled samples each --- under 0.01\% of a full retrain's labeling budget per degradation event --- recovering the cleanly teleported classes to near-original accuracy (the hardest, already-confused class recovers only partially) while leaving the stable majority untouched. Diagnosis and targeted repair together replace indiscriminate global retraining with a label-free, per-class procedure that acts only where the model has actually broken.
 \end{abstract}
 
 
@@ -244,17 +246,20 @@ unlabeled target distribution and should restore accuracy whenever that distribu
 shifts coherently enough for one global correction to track it
 \cite{wang2020tent,wang2022cotta,ganin2016dann,li2016adabn}.
 
-We show this account is incomplete in a way that determines how an operator should
-respond, and that the mismatch is what makes global adaptation hurt more often than
-it helps. The smooth, year-long accuracy curve is an aggregate that conceals many
-small, separate changes. Each application keeps its learned signature for weeks or
-months, then shifts its packet sizes and timings in a single step and lands
-somewhere new in the model's feature space
+We show this account is incomplete in a way that changes how an operator should
+respond, and that the gap between drift's smooth aggregate appearance and its actual
+per-class structure is what makes global adaptation hurt more often than help. The
+smooth, year-long accuracy curve averages over many small, separate changes. Each
+application keeps its learned signature for weeks or months, then
+shifts its packet sizes and timings in a single step --- abrupt at the dataset's
+weekly resolution --- and lands somewhere new in the model's latent space
 (Fig.~\ref{fig:hero},~Fig.~\ref{fig:density}) \cite{jancicka2024noms}. These jumps
 coincide with vendor-side changes and are therefore spread across the year, while
 the large majority of applications hold steady. The aggregate resembles one
 continuous global drift, but it is in fact the superposition of discrete,
-asynchronous, per-class shifts --- a regime we call \emph{discrete per-class drift}.
+asynchronous, per-class shifts --- a regime we call \emph{discrete per-class drift},
+which the coarse accuracy curves typically used to study ETC drift smooth out of
+view.
 
 This asynchrony is what global adaptation cannot accommodate. When only a few
 applications have moved, an update aligned to the whole target distribution chases
@@ -267,26 +272,33 @@ The same structure points to a more economical response. With the deployed model
 held frozen, an application that jumps remains a \emph{known} class whose traffic has
 simply fallen outside the region the model learned for it. Catching that condition
 resembles inference-time open-set detection far more than domain adaptation
-\cite{bendale2016openmax}, and it makes the fix affordable. Relabeling and
-retraining across the entire service catalogue every time one application changes is
-costly in labeling effort and risks the negative transfer above; instead, an
-operator need only relabel and update the handful of classes that actually moved ---
-a few dozen labeled flows each rather than a full supervised campaign. Realizing this
-requires an algorithm that works without labels, reports per application, and
-accommodates new classes as they appear.
+\cite{bendale2016openmax}. Because only a few classes move, the fix is also
+affordable: rather than relabel and retrain across the entire service catalogue every
+time one application changes --- costly in labeling effort, and needlessly disturbing
+the stable majority that never moved --- an operator need only relabel and update the
+handful of classes that actually moved, a few dozen labeled flows each. Realizing
+this requires an algorithm that works without labels and reports per application.
+
+The discrete-drift and negative-transfer results above are not specific to a single
+trace: the negative-transfer pattern holds across both source weeks of our primary
+dataset, a second protocol
+(CESNET-QUIC22), and an independent proprietary enterprise dataset, on which the
+discrete per-class teleportation also reproduces.
 
 We make four contributions:
 \begin{enumerate}[leftmargin=1.4em]
   \item \textbf{Discrete per-class drift.} We show empirically that the smooth decay
         of a frozen ETC model is not a single continuous process: it resolves into
-        one documented sensor step plus a long tail of separate, unsynchronized
-        per-class jumps. A label-versus-feature decomposition ties these jumps to
+        one documented measurement-infrastructure change plus a long tail of
+        separate, unsynchronized per-class jumps. A diagnostic label-versus-feature
+        decomposition ties these jumps to
         genuine per-class signature changes (feature shift) rather than to benign
         swings in traffic volume (Sec.~\ref{sec:discrete}).
   \item \textbf{Global adaptation does not recover per-class drift.} Test-time
         adaptation (TENT, CoTTA) causes negative transfer, and even a best-case
-        adversarial method (DANN) gains nothing against per-class drift, while
-        helping when the shift is genuinely global, exactly as our account predicts
+        adversarial method (DANN, retrained on each target week with full access to
+        the unlabeled target) gains nothing against per-class drift, while helping
+        when the shift is genuinely global, exactly as our account predicts
         (Sec.~\ref{sec:negtransfer}).
   \item \textbf{A label-free algorithm that survives label shift.} A BBSE-corrected
         entropy residual tracks the model's hidden $F_1$, stays
@@ -1166,7 +1178,7 @@ of the 180-class catalogue (Week-16 reference, forward weeks normalised to 52)
 against the mean macro-$F_1$ it delivers. Blind adaptation spends nothing and moves
 accuracy $\le0$ (Sec.~\ref{sec:negtransfer}). A global drift detector such as MFWDD
 fires often but cannot name the broken class, so each alarm it acts on forces a full
-catalogue retrain (millions of labels). Our monitor-plus-repair loop spends a few
+catalogue retrain (millions of labels). Our diagnose-and-repair algorithm spends a few
 dozen labels on each flagged class --- $5$--$25$k labels per year, $0.06$--$0.30\%$
 of a \emph{single} retrain, false alarms included --- to lift global macro-$F_1$ and
 restore the broken classes' per-class recall from ${\sim}0$ to $0.86$--$0.88$. The
@@ -1180,7 +1192,7 @@ rather than harmful.
 \emph{mean macro-$F_1$ delivered} (CESNET-TLS-Year22, 180 classes, Week-16 reference,
 normalised to 52 weeks). Blind adaptation is free but moves accuracy $\le 0$; global
 retraining recovers accuracy but at millions of labels and cannot say which class
-broke; our monitor spends a few dozen labels per flagged class, lifting global
+broke; our algorithm spends a few dozen labels per flagged class, lifting global
 macro-$F_1$ (and restoring broken-class recall from ${\sim}0$ to $0.86$--$0.88$) at
 $0.06$--$0.30\%$ of a single retrain.}
 \label{tab:labelcost}
@@ -1191,8 +1203,8 @@ $0.06$--$0.30\%$ of a single retrain.}
 \hline
 Do nothing (frozen source)            & $0$      & $0.686$ \\
 UDA/TTA (DANN, TENT, CoTTA)            & $0$      & $\le 0.686^{\,a}$ \\
-\textbf{Ours} (monitor\,+\,few-shot, $K{=}10$) & $\mathbf{4.9}$\textbf{k} & $\mathbf{0.694}^{\,b}$ \\
-\textbf{Ours} (monitor\,+\,few-shot, $K{=}50$) & $\mathbf{25}$\textbf{k}  & $\mathbf{0.694}^{\,b}$ \\
+\textbf{Ours} (algorithm\,+\,few-shot, $K{=}10$) & $\mathbf{4.9}$\textbf{k} & $\mathbf{0.712}^{\,b}$ \\
+\textbf{Ours} (algorithm\,+\,few-shot, $K{=}50$) & $\mathbf{25}$\textbf{k}  & $\mathbf{0.712}^{\,b}$ \\
 MFWDD $\rightarrow$ retrain (${\sim}6\times$/yr)$^{\,c}$ & $50$M & $0.785^{\,d}$ \\
 Periodic full retrain (monthly)       & $99$M    & $0.800^{\,d}$ \\
 Full-recovery ceiling (retrain weekly)$^{\,d}$ & ---     & $0.829$ \\
@@ -1201,12 +1213,14 @@ Full-recovery ceiling (retrain weekly)$^{\,d}$ & ---     & $0.829$ \\
 \\[2pt]
 \footnotesize{Ground truth: $1847$ degraded class-weeks / $266$ degradation episodes
 ($136/180$ classes). Our $25$k/yr ($K{=}50$) already \emph{includes} acting on the
-monitor's $4.9\%$ false alarms (${\sim}191$/yr); the budget is robust to modelling
+algorithm's $4.9\%$ false alarms (${\sim}191$/yr); the budget is robust to modelling
 choices (label-shift false alarms $\to0.82\%$ of a retrain; worst case, $K$ per
-degraded class-week, $\to1.73\%$). The accuracy column is conservative for us in
-\emph{both} directions: the $+0.009$ global lift credits only the \emph{measured}
-repair of the detected teleporters, while the label budget counts the \emph{full}
-monitor cost.
+degraded class-week, $\to1.73\%$). The $+0.026$ global lift is \emph{measured}: the
+full loop repairs every flagged-and-degraded class (${\sim}48$/week, $124$ over the
+year), and the stable never-flagged classes \emph{rise} $+0.011$ --- zero cumulative
+poaching. It is conservative for us on both axes: deploying every repair
+unconditionally (no verification) still gives $+0.014$, and the label budget counts
+the \emph{full} detection cost including false alarms.
 $^{a}$DANN forward $\Delta\text{acc}{=}{+}0.006$; TENT/CoTTA negative (Table~\ref{tab:nt_merged}).
 $^{b}$$K{=}10$ shares the $K{=}50$ lift (measured at $K{=}50$); the label cost differs, the $F_1$ estimate does not.
 $^{c}$MFWDD cannot isolate \emph{which} class broke (per-class AUROC $0.72$ vs ours $0.88$;
